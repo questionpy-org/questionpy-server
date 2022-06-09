@@ -1,7 +1,8 @@
 import logging
 from configparser import ConfigParser
 from pathlib import Path
-from typing import Tuple, Callable, List, Dict, Optional, Any
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
 from pydantic import BaseModel, BaseSettings
 from pydantic.env_settings import SettingsSourceCallable
 
@@ -15,9 +16,9 @@ class Settings(BaseSettings):
     webservice: WebserviceSettings
     _config_file_paths: List[Path]
 
-    def __init__(self, config_file: Optional[Path], *args, **kwargs):
-        if config_file:
-            self._config_file_paths = [config_file]
+    def __init__(self, config_files: Optional[List[Path]], *args, **kwargs):
+        if config_files is not None:
+            self._config_file_paths = config_files
         else:
             self._config_file_paths = [
                 Path('.', 'config.ini'),
@@ -44,6 +45,9 @@ class Settings(BaseSettings):
 
 
 def ini_config_settings_source(settings: Settings) -> Dict[str, Any]:
+    if not settings.get_config_file_paths():
+        return {}
+
     log = logging.getLogger('questionpy-server')
     for path in settings.get_config_file_paths():
         if not path.is_file():
