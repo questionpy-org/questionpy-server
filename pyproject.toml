@@ -38,8 +38,3 @@ max-line-length = 120
 plugins = "pydantic.mypy"
 disallow_untyped_defs = true
 strict_optional = true
-
-[[tool.mypy.overrides]]
-# There are no stubs for pytest_aiohttp yet :( https://github.com/aio-libs/pytest-aiohttp/issues/40
-module = "pytest_aiohttp.*"
-ignore_missing_imports = true
