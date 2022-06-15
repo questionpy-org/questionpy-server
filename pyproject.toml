@@ -1,0 +1,45 @@
+[tool.pytest.ini_options]
+# https://github.com/pytest-dev/pytest-asyncio#auto-mode
+asyncio_mode = "auto"
+addopts = "--cov --cov-config=pyproject.toml --cov-branch --cov-report term:skip-covered"
+
+
+[tool.coverage.run]
+omit = ["tests/*"]
+
+
+[tool.pylint]
+
+[tool.pylint.MAIN]
+
+extension-pkg-allow-list = "pydantic"
+# pylint_pytest removes some false positives when checking tests
+load-plugins = "pylint_pytest"
+
+fail-on = ["E", "F"]
+fail-under = 8
+
+[tool.pylint.REPORTS]
+output-format = "colorized"
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = ["missing-module-docstring", "missing-class-docstring", "missing-function-docstring"]
+enable = ""
+
+[tool.pylint.FORMAT]
+
+expected-line-ending-format = "LF"
+indent-after-paren = 4
+indent-string = "    "
+max-line-length = 120
+
+
+[tool.mypy]
+plugins = "pydantic.mypy"
+disallow_untyped_defs = true
+strict_optional = true
+
+[[tool.mypy.overrides]]
+# There are no stubs for pytest_aiohttp yet :( https://github.com/aio-libs/pytest-aiohttp/issues/40
+module = "pytest_aiohttp.*"
+ignore_missing_imports = true
