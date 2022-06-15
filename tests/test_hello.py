@@ -1,4 +1,4 @@
-from pytest_aiohttp.plugin import TestClient
+from aiohttp.test_utils import TestClient
 
 
 async def test_hello(client: TestClient) -> None:
