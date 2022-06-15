@@ -15,9 +15,9 @@ class IniFileSettingsSource:
         log = logging.getLogger('questionpy-server')
         for path in self.config_files:
             if not path.is_file():
-                log.info(f"No file found at '{path}'")
+                log.info("No file found at '%s'", path)
                 continue
-            log.info(f"Reading config file '{path}'")
+            log.info("Reading config file '%s'")
 
             parser = ConfigParser()
             parser.read(path)
