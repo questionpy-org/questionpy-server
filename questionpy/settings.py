@@ -17,7 +17,7 @@ class IniFileSettingsSource:
             if not path.is_file():
                 log.info("No file found at '%s'", path)
                 continue
-            log.info("Reading config file '%s'")
+            log.info("Reading config file '%s'", path)
 
             parser = ConfigParser()
             parser.read(path)
