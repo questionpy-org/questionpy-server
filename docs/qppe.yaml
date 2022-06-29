@@ -1,0 +1,147 @@
+openapi: 3.0.3
+info:
+  title: QPPE API
+  version: 0.1.0
+servers:
+  - url: 'https://example.org/api/qppe/v0'
+paths:
+  /packages:
+    get:
+      summary: Get all available packages
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Package"
+  /packages/{package_id}/questions:
+    parameters:
+      - name: package_id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Create a question using a given package
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionCreation"
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+  /packages/{package_id}/attempts:
+    parameters:
+      - name: package_id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Start an attempt
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptCreation"
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Attempt"
+
+components:
+  schemas:
+    Package:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Possibly partial digest/hash of package zip, as is done with container images and git commits?
+          example: bf6f896
+        name:
+          type: string
+          example: multiple_choice
+        version:
+          type: string
+          format: semver
+          # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+          pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
+          example: 0.1.0
+        description:
+          type: object
+          example:
+            en: Multiple Choice
+            de: Mehrfachauswahl
+        icon:
+          type: string
+          format: uri
+          example: "https://questionpy.org/favicon.ico"
+        question_options:
+          type: object
+          description: Documents options to be set during question creation
+      required: [ id, name, version ]
+      additionalProperties: false
+    QuestionCreation:
+      type: object
+      properties:
+        is_manually_graded:
+          type: boolean
+          default: false
+        options:
+          type: object
+          description: Options set by question creator according to package.question_options
+          default: { }
+      additionalProperties: false
+    Question:
+      allOf:
+        - $ref: "#/components/schemas/QuestionCreation"
+        - type: object
+          properties:
+            package:
+              $ref: "#/components/schemas/Package"
+            state:
+              type: object
+              description: Arbitrary values set by the question package code
+            actual_number_of_questions:
+              type: integer
+              default: 1
+            num_variants:
+              type: integer
+              default: 1
+            min_fraction:
+              type: number
+              format: double
+              default: 0
+            max_fraction:
+              type: number
+              format: double
+              default: 1
+          required: [ package ]
+          additionalProperties: false
+    AttemptCreation:
+      type: object
+      properties:
+        question:
+          $ref: "#/components/schemas/Question"
+      required: [ question ]
+      additionalProperties: false
+    Attempt:
+      allOf:
+        - $ref: "#/components/schemas/AttemptCreation"
+        - type: object
+          properties:
+            state:
+              type: object
+              description: Arbitrary values set by the question package code
+
