@@ -17,6 +17,24 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Package"
+  /packages/{package_id}:
+    parameters:
+      - name: package_id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get a specific package by ID
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Package"
+        404:
+          description: Not Found
   /packages/{package_id}/questions:
     parameters:
       - name: package_id
@@ -59,6 +77,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Attempt"
+    patch:
+      summary: Update an attempt
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Attempt"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Attempt"
 
 components:
   schemas:
@@ -86,7 +118,7 @@ components:
         icon:
           type: string
           format: uri
-          example: "https://questionpy.org/favicon.ico"
+          example: "https://example.org/favicon.ico"
         question_options:
           type: object
           description: Documents options to be set during question creation
@@ -95,9 +127,6 @@ components:
     QuestionCreation:
       type: object
       properties:
-        is_manually_graded:
-          type: boolean
-          default: false
         options:
           type: object
           description: Options set by question creator according to package.question_options
@@ -109,7 +138,9 @@ components:
         - type: object
           properties:
             package:
-              $ref: "#/components/schemas/Package"
+              allOf:
+                - $ref: "#/components/schemas/Package"
+              readOnly: true
             state:
               type: object
               description: Arbitrary values set by the question package code
@@ -127,8 +158,9 @@ components:
               type: number
               format: double
               default: 1
-          required: [ package ]
+          required: [ package_id ]
           additionalProperties: false
+
     AttemptCreation:
       type: object
       properties:
@@ -144,4 +176,48 @@ components:
             state:
               type: object
               description: Arbitrary values set by the question package code
+            response_schema:
+              type: object
+              readOnly: true
+            ui:
+              type: object
+              properties:
+                input:
+                  type: string
+                  format: text/html
+                  description: Answer input area
+                  example: '<label>Enter your answer: <input type="text"/></label>'
+              required: [ input ]
+              additionalProperties: false
+              readOnly: true
+            steps:
+              type: array
+              items:
+                $ref: "#/components/schemas/AttemptStep"
+              minItems: 1
+          required: [ response_schema, ui ]
+          additionalProperties: false
 
+    AttemptStep:
+      type: object
+      properties:
+        submitted_at:
+          type: string
+          format: date-time
+          description: Set by the LMS to the current timestamp when it adds a new pending state.
+        state:
+          type: string
+          enum:
+            - INCOMPLETE
+            - COMPLETE
+            - AUTOMATICALLY_GRADED
+            - MANUALLY_GRADED
+        pending:
+          type: boolean
+          description: |
+            Indicates that the step is newly submitted by the user and has not yet been processed by the question
+            package. The question package will then set this to false to keep the step, or remove it from the list to
+            discard it.
+          default: false
+      required: [ submitted_at, state ]
+      additionalProperties: false
