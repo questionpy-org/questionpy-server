@@ -16,12 +16,20 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Package"
-  /packages/{package_id}:
+                  $ref: "#/components/schemas/PackageInfo"
+
+  /packages/{package_hash}:
     parameters:
-      - name: package_id
+      - name: package_hash
         in: path
         required: true
+        description: SHA256 hash of package
+        schema:
+          type: string
+      - name: User-Agent
+        in: header
+        description: Name and version of the QPPE client software.
+        example: moodle-qtype_questionpy/1.0
         schema:
           type: string
     get:
@@ -32,35 +40,199 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Package"
+                $ref: "#/components/schemas/PackageInfo"
         404:
           description: Not Found
-  /packages/{package_id}/questions:
+
+  /packages/{package_hash}/options:
     parameters:
-      - name: package_id
+      - name: package_hash
         in: path
         required: true
+        description: SHA256 hash of package
+        schema:
+          type: string
+      - name: User-Agent
+        in: header
+        description: Name and version of the QPPE client software.
+        example: moodle-qtype_questionpy/1.0
+        schema:
+          type: string
+      - name: Accept-Language
+        in: header
         schema:
           type: string
     post:
-      summary: Create a question using a given package
+      summary: Get the options form definition that allow a question creator to customize a question.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/QuestionCreation"
+              $ref: "#/components/schemas/QuestionStateHash"
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                main:
+                  $ref: "#/components/schemas/QuestionStateHash"
+                package:
+                  type: string
+                  format: binary
+                  description: question package
+                question_state:
+                  type: string
+                  format: json
+                  description: Question state that was previously returned by the question endpoint or empty
+                    in order to show default option values.
+      responses:
+        200:
+          description: Definition that can be used in order to display a form.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OptionsFormDefinition"
+        404:
+          description: Package not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageQuestionStateNotFound"
+
+  /packages/{package_hash}/question:
+    parameters:
+      - name: package_hash
+        in: path
+        required: true
+        description: SHA256 hash of package
+        schema:
+          type: string
+      - name: User-Agent
+        in: header
+        description: Name and version of the QPPE client software.
+        example: moodle-qtype_questionpy/1.0
+        schema:
+          type: string
+      - name: Accept-Language
+        in: header
+        schema:
+          type: string
+    post:
+      summary: Create a new question (validate the options as set by a question creator and export to a question state).
+      requestBody:
+        required: true
+        content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionCreateArguments"
+            multipart/form-data:
+              schema:
+                type: object
+                properties:
+                  package:
+                    type: string
+                    format: binary
+                    description: question package
+                  main:
+                    $ref: "#/components/schemas/QuestionCreateArguments"
+                required: [ main ]
       responses:
         201:
-          description: Created
+          description: Successful
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Question"
-  /packages/{package_id}/attempts:
+        400:
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+        404:
+          description: Package not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageQuestionStateNotFound"
+
+  /packages/{package_hash}/question/migrate:
     parameters:
-      - name: package_id
+      - name: package_hash
         in: path
         required: true
+        description: SHA256 hash of package
+        schema:
+          type: string
+      - name: User-Agent
+        in: header
+        description: Name and version of the QPPE client software.
+        example: moodle-qtype_questionpy/1.0
+        schema:
+          type: string
+      - name: Accept-Language
+        in: header
+        schema:
+          type: string
+    post:
+      summary: Migrate/update question state that was created by another package or another version.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+              format: json
+              description: Question state that was created by another package or another version.
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                package:
+                  type: string
+                  format: binary
+                  description: question package
+                old_options:
+                  type: string
+                  format: json
+                  description: Question state that was created by another package or another version.
+              required: [ old_options ]
+      responses:
+        200:
+          description: Successfully updated data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+        400:
+          description: Question state migration error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionStateMigrationError"
+        404:
+          description: Package not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageQuestionStateNotFound"
+
+  /packages/{package_hash}/attempt/start:
+    parameters:
+      - name: package_hash
+        in: path
+        required: true
+        description: SHA256 hash of package
+        schema:
+          type: string
+      - name: User-Agent
+        in: header
+        description: Name and version of the QPPE client software.
+        example: moodle-qtype_questionpy/1.0
+        schema:
+          type: string
+      - name: Accept-Language
+        in: header
         schema:
           type: string
     post:
@@ -69,7 +241,76 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AttemptCreation"
+              $ref: "#/components/schemas/AttemptStartArguments"
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                main:
+                  $ref: "#/components/schemas/AttemptStartArguments"
+                package:
+                  type: string
+                  format: binary
+                  description: question package
+                question_state:
+                  type: string
+                  format: json
+                  description: Question state that was previously returned by the question endpoint.
+              required: [ main ]
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptStarted"
+        404:
+          description: Package not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageQuestionStateNotFound"
+
+  /packages/{package_hash}/attempt/view:
+    parameters:
+      - name: package_hash
+        in: path
+        required: true
+        description: SHA256 hash of package
+        schema:
+          type: string
+      - name: User-Agent
+        in: header
+        description: Name and version of the QPPE client software.
+        example: moodle-qtype_questionpy/1.0
+        schema:
+          type: string
+      - name: Accept-Language
+        in: header
+        schema:
+          type: string
+    post:
+      summary: View an attempt
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptViewArguments"
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                main:
+                  $ref: "#/components/schemas/AttemptViewArguments"
+                package:
+                  type: string
+                  format: binary
+                  description: question package
+                question_state:
+                  type: string
+                  format: json
+                  description: Question state that was previously returned by the question endpoint.
+              required: [ main ]
       responses:
         201:
           description: Created
@@ -77,39 +318,92 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Attempt"
-    patch:
-      summary: Update an attempt
+
+  /packages/{package_hash}/attempt/grade:
+    parameters:
+      - name: package_hash
+        in: path
+        required: true
+        description: SHA256 hash of package
+        schema:
+          type: string
+      - name: User-Agent
+        in: header
+        description: Name and version of the QPPE client software.
+        example: moodle-qtype_questionpy/1.0
+        schema:
+          type: string
+      - name: Accept-Language
+        in: header
+        schema:
+          type: string
+    post:
+      summary: Grade an attempt
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Attempt"
+              $ref: "#/components/schemas/AttemptGradeArguments"
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                main:
+                  $ref: "#/components/schemas/AttemptGradeArguments"
+                package:
+                  type: string
+                  format: binary
+                  description: question package
+                question_state:
+                  type: string
+                  format: json
+                  description: Question state that was previously returned by the question endpoint.
+              required: [ main ]
       responses:
-        200:
-          description: OK
+        201:
+          description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Attempt"
+                $ref: "#/components/schemas/AttemptGraded"
 
 components:
   schemas:
-    Package:
+    PackageInfo:
       type: object
       properties:
-        id:
+        package_hash:
           type: string
-          description: Possibly partial digest/hash of package zip, as is done with container images and git commits?
+          description: SHA256 hash of package zip
           example: bf6f896
-        name:
+        short_name:
           type: string
           example: multiple_choice
+        name:
+          type: object
+          example:
+            en: Multiple Choice
+            de: Mehrfachauswahl
         version:
           type: string
           format: semver
           # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
           pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
           example: 0.1.0
+        type:
+          type: string
+          enum:
+            - library
+            - questiontype
+            - question
+        author:
+          type: string
+        url:
+          type: string
+        languages:
+          type: array
+          items:
+            type: string
         description:
           type: object
           example:
@@ -119,105 +413,396 @@ components:
           type: string
           format: uri
           example: "https://example.org/favicon.ico"
-        question_options:
-          type: object
-          description: Documents options to be set during question creation
-      required: [ id, name, version ]
+        license:
+          type: string
+        tags:
+          type: array
+      required: [ package_hash, short_name, name, version, type ]
       additionalProperties: false
-    QuestionCreation:
-      type: object
-      properties:
-        options:
-          type: object
-          description: Options set by question creator according to package.question_options
-          default: { }
-      additionalProperties: false
-    Question:
-      allOf:
-        - $ref: "#/components/schemas/QuestionCreation"
-        - type: object
-          properties:
-            package:
-              allOf:
-                - $ref: "#/components/schemas/Package"
-              readOnly: true
-            state:
-              type: object
-              description: Arbitrary values set by the question package code
-            actual_number_of_questions:
-              type: integer
-              default: 1
-            num_variants:
-              type: integer
-              default: 1
-            min_fraction:
-              type: number
-              format: double
-              default: 0
-            max_fraction:
-              type: number
-              format: double
-              default: 1
-          required: [ package_id ]
-          additionalProperties: false
 
-    AttemptCreation:
+    OptionsFormDefinition:
       type: object
-      properties:
-        question:
-          $ref: "#/components/schemas/Question"
       required: [ question ]
       additionalProperties: false
-    Attempt:
-      allOf:
-        - $ref: "#/components/schemas/AttemptCreation"
-        - type: object
-          properties:
-            state:
-              type: object
-              description: Arbitrary values set by the question package code
-            response_schema:
-              type: object
-              readOnly: true
-            ui:
-              type: object
-              properties:
-                input:
-                  type: string
-                  format: text/html
-                  description: Answer input area
-                  example: '<label>Enter your answer: <input type="text"/></label>'
-              required: [ input ]
-              additionalProperties: false
-              readOnly: true
-            steps:
-              type: array
-              items:
-                $ref: "#/components/schemas/AttemptStep"
-              minItems: 1
-          required: [ response_schema, ui ]
-          additionalProperties: false
 
-    AttemptStep:
+    QuestionStateHash:
       type: object
       properties:
-        submitted_at:
+        question_state_hash:
           type: string
-          format: date-time
-          description: Set by the LMS to the current timestamp when it adds a new pending state.
-        state:
+          description: SHA256 hash of question state JSON data
+        context:
+          type: integer
+          description: Some context information where the question is located (e.g. course or quiz/test id).
+      required: [ question_state_hash ]
+
+    QuestionCreateArguments:
+      type: object
+      description: Information that is needed to create a new question.
+      properties:
+        form_data:
+          type: object
+          description: Options set by question creator according to OptionsFormDefinition
+          default: { }
+      additionalProperties: false
+
+    Question:
+      type: object
+      properties:
+        question_state:
+          type: string
+          format: json
+          description: Arbitrary values set by the question package code (LMS must store this data unmodified)
+        question_state_hash:
+          type: string
+          description: SHA256 hash of question state JSON data
+        num_variants:
+          type: integer
+          default: 1
+        num_subquestions:
+          type: integer
+          default: 1
+        grade_min_fraction:
+          type: number
+          format: double
+          default: 0
+        grade_max_fraction:
+          type: number
+          format: double
+          default: 1
+        grading_method:
           type: string
           enum:
-            - INCOMPLETE
-            - COMPLETE
-            - AUTOMATICALLY_GRADED
-            - MANUALLY_GRADED
-        pending:
+            - ALWAYS_MANUAL_GRADING_REQUIRED
+            - AUTOMATICALLY_GRADABLE
+            - AUTOMATICALLY_GRADABLE_WITH_COUNTBACK
+          description: AUTOMATICALLY_GRADABLE_WITH_COUNTBACK means it can compute a final grade, taking into
+            account previous submissions to this question.
+        penalty:
+          type: number
+          nullable: true
+          format: double
+          description: Penalty factor (might be used when package cannot compute a final grade).
+        random_guess_score:
+          type: number
+          nullable: true
+          format: double
+          description: Average expected grade when the response is just selected randomly.
+        subquestions:
+          type: array
+          nullable: true
+          description: Listing of subquestions if the question consists of subquestions.
+          items:
+            type: object
+            properties:
+              subquestion_id:
+                type: string
+              max_fraction:
+                type: number
+                format: double
+              response_classes:
+                type: array
+                nullable: true
+                description: All the possible types of responses per subquestion. This is used for
+                  statistics in order to classify responses. Can be null if question does not
+                  support a response analysis.
+                items:
+                  type: object
+                  properties:
+                    response_class:
+                      type: string
+                    fraction:
+                      type: number
+                      format: double
+                  required: [ response_class, fraction ]
+                  additionalProperties: false
+            required: [ subquestion_id, response_classes ]
+            additionalProperties: false
+        response_analysis_by_variant:
           type: boolean
-          description: |
-            Indicates that the step is newly submitted by the user and has not yet been processed by the question
-            package. The question package will then set this to false to keep the step, or remove it from the list to
-            discard it.
+          description: If true, the LMS should break down the stats and response analysis by the question variant.
+        render_every_view:
+          type: boolean
+          description: The question UI should not be cached and every view should be rendered by the package.
           default: false
-      required: [ submitted_at, state ]
+        general_feedback:
+          type: string
+          nullable: true
+          description: General feedback that is shown to everyone after grading.
+      required: [ package_hash, state, num_variants, num_subquestions, grade_min_fraction,
+        grade_max_fraction, grading_method, penalty, random_guess_grade, response_classes,
+        response_analysis_by_variant, render_every_view, general_feedback ]
+      additionalProperties: false
+
+    AttemptStartArguments:
+      allOf:
+        - $ref: "#/components/schemas/QuestionStateHash"
+        - type: object
+          properties:
+            variant:
+              type: integer
+              minimum: 1
+              description: Which variant of this question to start, between 1 and question.num_variants.
+          required: [ variant ]
+          additionalProperties: false
+
+    Attempt:
+      type: object
+      properties:
+        variant:
+          type: integer
+          minimum: 1
+          description: Which variant of this question to start, between 1 and question.num_variants.
+        question_summary:
+          type: string
+          description: Plain-text summary of the question.
+        right_answer_summary:
+          type: string
+          nullable: true
+          description: Plain-text summary of the right answer.
+        ui:
+          type: object
+          properties:
+            fields:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  type:
+                    type: string
+                    description: Type of the input field.
+                  default:
+                    type: string
+                    nullable: true
+                  validation_regex:
+                    type: string
+                    nullable: true
+                    description: Validate response with this regex. If the response does not match, the response might not be gradable.
+                  required:
+                    type: boolean
+                    description: This field is required. Otherwise the response will not be gradable.
+                  correct_response:
+                    type: string
+                    nullable: true
+                required: [ name, type, default, regex, required, correct_response ]
+                additionalProperties: false
+            text:
+              type: string
+              format: text/html
+              description: Answer input area
+              example: '<label>Enter your answer: <input type="text"/></label>'
+            include_inline_css:
+              type: string
+              nullable: true
+            include_css_file:
+              type: string
+              nullable: true
+            include_javascript_modules:
+              type: array
+              items:
+                type: string
+            call_javascript:
+              type: array
+              items:
+                type: object
+                properties:
+                  module:
+                    type: string
+                  function:
+                    type: string
+                  args:
+                    type: string
+                required: [ module, function, args]
+                additionalProperties: false
+            files:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: file name
+                  data:
+                    type: string
+                    format: base64
+                    description: file data
+                  mime_type:
+                    type: string
+                required: [ name, data ]
+                additionalProperties: false
+          required: [ fields, text ]
+          additionalProperties: false
+          readOnly: true
+      required: [ response_schema, ui ]
+      additionalProperties: false
+
+    AttemptStarted:
+      allOf:
+        - type: object
+          properties:
+            attempt_state:
+              type: string
+              format: json
+              description: Arbitrary values set by the question package code (LMS must store this data unmodified).
+          required: [ attempt_state ]
+          additionalProperties: false
+        - $ref: "#/components/schemas/Attempt"
+
+    AttemptViewArguments:
+      allOf:
+        - $ref: "#/components/schemas/QuestionStateHash"
+        - type: object
+          properties:
+            attempt_state:
+              type: string
+              format: json
+              description: Arbitrary values set by the question package code.
+            grading_state:
+              type: string
+              format: json
+              nullable: true
+              description: Arbitrary values set by the question package code (has to be passed
+                when the attempt was already graded).
+            response:
+              type: object
+              nullable: true
+              description: Data from the question's input fields.
+          required: [ attempt_state ]
+          additionalProperties: false
+
+    AttemptGradeArguments:
+      # nested subquestions
+      allOf:
+        - $ref: "#/components/schemas/QuestionStateHash"
+        - $ref: "#/components/schemas/AttemptViewArguments"
+        - type: object
+          properties:
+            responses:
+              type: array
+              nullable: true
+              items:
+                type: object
+                properties:
+                  response:
+                    type: object
+              description: All tries and their data from the question's input fields 
+                (only when question.grading_method is AUTOMATICALLY_GRADABLE_WITH_COUNTBACK).
+            generate_hint:
+              type: boolean
+              description: Try to give a hint on how to improve the response.
+          required: [ ]
+          additionalProperties: false
+
+    AttemptGraded:
+      allOf:
+        - type: object
+          properties:
+            grading_state:
+              type: string
+              format: json
+              nullable: true
+              description: Arbitrary values set by the question package code (LMS must store this data unmodified).
+            grading_code:
+              type: string
+              enum:
+                - AUTOMATICALLY_GRADED
+                - NEEDS_MANUAL_GRADING
+                - RESPONSE_NOT_GRADABLE
+                - INVALID_RESPONSE
+            fraction:
+              type: number
+              format: double
+              description: A fracton between question.grade_min_fraction and question.grade_max_fraction.
+            specific_feedback:
+              type: string
+              nullable: true
+              description: Might be null when there is no specific feedback or the specific feedback is shown inline
+                within the question text.
+            hint:
+              type: string
+              nullable: true
+            more_hints_available:
+              type: boolean
+              nullable: true
+              description: The question package is able to give more hints.
+            response_summary:
+              type: string
+              description: This is a plain-text summary of the response.
+            classification:
+              type: array
+              nullable: true
+              description: Classified response per subquestion. Can be null if question does not support
+                a response analysis. Must correspond to question.subquestions.
+              items:
+                type: object
+                properties:
+                  subquestion_id:
+                    type: string
+                  response_class:
+                    type: string
+                  response:
+                    type: string
+                    description: Actual response to this subquestion given by user.
+                  fraction:
+                    type: number
+                    format: double
+                required: [ subquestion_id, response_class, response, fraction ]
+                additionalProperties: false
+            graded_fields:
+              type: array
+              nullable: true
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  correct:
+                    type: boolean
+                    nullable: true
+                  fraction:
+                    type: number
+                    format: double
+                    nullable: true
+                  max_fraction:
+                    type: number
+                    format: double
+                    nullable: true
+                  feedback:
+                    type: string
+                    nullable: true
+                required: [ name, correct, score, max_score, feedback ]
+                additionalProperties: false
+              description: Give specific feedback
+          required: [ grading_state, grading_code ]
+          additionalProperties: false
+        - $ref: "#/components/schemas/Attempt"
+
+    PackageQuestionStateNotFound:
+      type: object
+      properties:
+        package_not_found:
+          type: boolean
+        question_state_not_found:
+          type: boolean
+      required: [ package_not_found, question_state_not_found ]
+      additionalProperties: false
+
+    QuestionStateMigrationError:
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+            - NOT_IMPLEMENTED
+            - DOWNGRADE_NOT_POSSIBLE
+            - PACKAGE_MISMATCH
+            - CURRENT_QUESTION_STATE_INVALID
+            - MAJOR_VERSION_MISMATCH
+            - OTHER_ERROR
+        reason:
+          type: string
+          description: Human-readable reason why there was an error.
+      required: [ code ]
       additionalProperties: false
