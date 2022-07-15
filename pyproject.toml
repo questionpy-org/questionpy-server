@@ -5,7 +5,8 @@ addopts = "--cov --cov-config=pyproject.toml --cov-branch --cov-report term:skip
 
 
 [tool.coverage.run]
-omit = ["tests/*"]
+branch = true
+source = ["questionpy"]
 
 
 [tool.pylint]
@@ -18,6 +19,10 @@ load-plugins = "pylint_pytest"
 
 fail-on = ["E", "F"]
 fail-under = 8
+
+[tool.pylint.BASIC]
+# Allow these well-known names despite usual naming conventions
+good-names = ["i", "j", "k", "e", "ex", "_"]
 
 [tool.pylint.REPORTS]
 output-format = "colorized"
@@ -38,3 +43,4 @@ max-line-length = 120
 plugins = "pydantic.mypy"
 disallow_untyped_defs = true
 strict_optional = true
+show_error_codes = true
