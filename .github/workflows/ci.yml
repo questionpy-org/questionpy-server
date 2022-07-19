@@ -10,6 +10,6 @@ on:
 jobs:
   ci:
     # https://github.com/questionpy-org/.github
-    uses: questionpy-org/.github/.github/workflows/python-ci.yml@feature/different-package-names
+    uses: questionpy-org/.github/.github/workflows/python-ci.yml@main
     with:
       packages: questionpy_server
