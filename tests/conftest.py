@@ -2,8 +2,8 @@ import pytest
 from aiohttp.pytest_plugin import AiohttpClient
 from aiohttp.test_utils import TestClient
 
-from questionpy.app import QPyServer
-from questionpy.settings import Settings, WebserviceSettings
+from questionpy_server.app import QPyServer
+from questionpy_server.settings import Settings, WebserviceSettings
 
 
 @pytest.fixture

@@ -6,7 +6,7 @@ addopts = "--cov --cov-config=pyproject.toml --cov-branch --cov-report term:skip
 
 [tool.coverage.run]
 branch = true
-source = ["questionpy"]
+source = ["questionpy_server"]
 
 
 [tool.pylint]
