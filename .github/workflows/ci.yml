@@ -10,4 +10,4 @@ on:
 jobs:
   ci:
     # https://github.com/questionpy-org/.github
-    uses: questionpy-org/.github/.github/workflows/python-ci.yml@feature/3/reusable-ci
+    uses: questionpy-org/.github/.github/workflows/python-ci.yml@main
