@@ -860,6 +860,14 @@ components:
         required:
           type: boolean
           default: false
+        default:
+          type: string
+          description: The initial value in this element, if any
+          nullable: true
+        placeholder:
+          type: string
+          description: Text to show while no value is entered
+          nullable: true
       required: [ kind, label, name ]
 
     CheckboxElement:
@@ -880,6 +888,10 @@ components:
           $ref: "#/components/schemas/FormName"
         required:
           type: boolean
+          default: false
+        selected:
+          type: boolean
+          description: Whether this checkbox is initially selected
           default: false
       required: [ kind, name ]
 
@@ -915,6 +927,10 @@ components:
                 type: string
               value:
                 type: string
+              selected:
+                type: string
+                description: Whether this option is initially selected
+                default: false
             required: [ label, value ]
           minItems: 1
         required:
@@ -943,6 +959,7 @@ components:
                 type: string
               selected:
                 type: boolean
+                description: Whether this option is initially selected
                 default: false
             required: [ label, value ]
           minItems: 1
