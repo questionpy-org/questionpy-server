@@ -961,6 +961,22 @@ components:
           type: string
       required: [ kind, name, value ]
 
+    GroupElement:
+      type: object
+      description: Groups arbitrary elements with a common label
+      properties:
+        kind:
+          type: string
+          enum: [ group ]
+        label:
+          $ref: "#/components/schemas/FormLabel"
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormElement"
+          minItems: 1
+      required: [ kind, label, elements, ]
+
     FormElement:
       oneOf:
         - $ref: "#/components/schemas/StaticTextElement"
@@ -970,3 +986,4 @@ components:
         - $ref: "#/components/schemas/RadioGroupElement"
         - $ref: "#/components/schemas/SelectElement"
         - $ref: "#/components/schemas/HiddenElement"
+        - $ref: "#/components/schemas/GroupElement"
