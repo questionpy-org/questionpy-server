@@ -868,14 +868,20 @@ components:
         kind:
           type: string
           enum: [ checkbox ]
-        label:
-          $ref: "#/components/schemas/FormLabel"
+        left_label:
+          type: string
+          description: A label displayed to the left of the checkbox
+          nullable: true
+        right_label:
+          type: string
+          description: A label displayed to the right of the checkbox
+          nullable: true
         name:
           $ref: "#/components/schemas/FormName"
         required:
           type: boolean
           default: false
-      required: [ kind, label, name ]
+      required: [ kind, name ]
 
     CheckboxGroupElement:
       type: object
