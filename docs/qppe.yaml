@@ -122,20 +122,20 @@ paths:
       requestBody:
         required: true
         content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/QuestionCreateArguments"
-            multipart/form-data:
-              schema:
-                type: object
-                properties:
-                  package:
-                    type: string
-                    format: binary
-                    description: question package
-                  main:
-                    $ref: "#/components/schemas/QuestionCreateArguments"
-                required: [ main ]
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionCreateArguments"
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                package:
+                  type: string
+                  format: binary
+                  description: question package
+                main:
+                  $ref: "#/components/schemas/QuestionCreateArguments"
+              required: [ main ]
       responses:
         201:
           description: Successful
@@ -422,7 +422,26 @@ components:
 
     OptionsFormDefinition:
       type: object
-      required: [ question ]
+      properties:
+        general:
+          type: array
+          description: Elements to add to the general settings section
+          items:
+            $ref: "#/components/schemas/FormElement"
+        sections:
+          type: array
+          description: Custom sections
+          items:
+            type: object
+            properties:
+              header:
+                type: string
+              elements:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FormElement"
+            required: [ header, elements ]
+            additionalProperties: false
       additionalProperties: false
 
     QuestionStateHash:
@@ -530,8 +549,8 @@ components:
           nullable: true
           description: General feedback that is shown to everyone after grading.
       required: [ package_hash, state, num_variants, num_subquestions, grade_min_fraction,
-        grade_max_fraction, grading_method, penalty, random_guess_grade, response_classes,
-        response_analysis_by_variant, render_every_view, general_feedback ]
+                  grade_max_fraction, grading_method, penalty, random_guess_grade, response_classes,
+                  response_analysis_by_variant, render_every_view, general_feedback ]
       additionalProperties: false
 
     AttemptStartArguments:
@@ -614,7 +633,7 @@ components:
                     type: string
                   args:
                     type: string
-                required: [ module, function, args]
+                required: [ module, function, args ]
                 additionalProperties: false
             files:
               type: array
@@ -687,7 +706,7 @@ components:
                 properties:
                   response:
                     type: object
-              description: All tries and their data from the question's input fields 
+              description: All tries and their data from the question's input fields
                 (only when question.grading_method is AUTOMATICALLY_GRADABLE_WITH_COUNTBACK).
             generate_hint:
               type: boolean
@@ -806,3 +825,188 @@ components:
           description: Human-readable reason why there was an error.
       required: [ code ]
       additionalProperties: false
+
+    FormLabel:
+      type: string
+      description: The displayed label for this form element
+    FormName:
+      type: string
+      pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+      description: The key of the form data field produced by this form element
+
+    StaticTextElement:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [ static_text ]
+        label:
+          $ref: "#/components/schemas/FormLabel"
+        text:
+          type: string
+          description: Static text to display
+      required: [ kind, label, text ]
+
+    TextInputElement:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [ input ]
+        label:
+          $ref: "#/components/schemas/FormLabel"
+        name:
+          $ref: "#/components/schemas/FormName"
+        required:
+          type: boolean
+          default: false
+        default:
+          type: string
+          description: The initial value in this element, if any
+          nullable: true
+        placeholder:
+          type: string
+          description: Text to show while no value is entered
+          nullable: true
+      required: [ kind, label, name ]
+
+    CheckboxElement:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [ checkbox ]
+        left_label:
+          type: string
+          description: A label displayed to the left of the checkbox
+          nullable: true
+        right_label:
+          type: string
+          description: A label displayed to the right of the checkbox
+          nullable: true
+        name:
+          $ref: "#/components/schemas/FormName"
+        required:
+          type: boolean
+          default: false
+        selected:
+          type: boolean
+          description: Whether this checkbox is initially selected
+          default: false
+      required: [ kind, name ]
+
+    CheckboxGroupElement:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [ checkbox_group ]
+        checkboxes:
+          type: array
+          items:
+            $ref: "#/components/schemas/CheckboxElement"
+          minItems: 1
+      required: [ kind, checkboxes ]
+
+    RadioGroupElement:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [ radio_group ]
+        label:
+          $ref: "#/components/schemas/FormLabel"
+        name:
+          $ref: "#/components/schemas/FormName"
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              value:
+                type: string
+              selected:
+                type: string
+                description: Whether this option is initially selected
+                default: false
+            required: [ label, value ]
+          minItems: 1
+        required:
+          type: boolean
+          default: false
+      required: [ kind, label, name, options ]
+
+    SelectElement:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [ select ]
+        label:
+          $ref: "#/components/schemas/FormLabel"
+        name:
+          $ref: "#/components/schemas/FormName"
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              value:
+                type: string
+              selected:
+                type: boolean
+                description: Whether this option is initially selected
+                default: false
+            required: [ label, value ]
+          minItems: 1
+        multiple:
+          type: boolean
+          default: false
+        required:
+          type: boolean
+          default: false
+      required: [ kind, label, name, options ]
+
+    HiddenElement:
+      type: object
+      description: Pseudo-element which is not shown at all but adds a fixed value to the form data
+      properties:
+        kind:
+          type: string
+          enum: [ hidden ]
+        name:
+          $ref: "#/components/schemas/FormName"
+        value:
+          type: string
+      required: [ kind, name, value ]
+
+    GroupElement:
+      type: object
+      description: Groups arbitrary elements with a common label
+      properties:
+        kind:
+          type: string
+          enum: [ group ]
+        label:
+          $ref: "#/components/schemas/FormLabel"
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormElement"
+          minItems: 1
+      required: [ kind, label, elements, ]
+
+    FormElement:
+      oneOf:
+        - $ref: "#/components/schemas/StaticTextElement"
+        - $ref: "#/components/schemas/TextInputElement"
+        - $ref: "#/components/schemas/CheckboxElement"
+        - $ref: "#/components/schemas/CheckboxGroupElement"
+        - $ref: "#/components/schemas/RadioGroupElement"
+        - $ref: "#/components/schemas/SelectElement"
+        - $ref: "#/components/schemas/HiddenElement"
+        - $ref: "#/components/schemas/GroupElement"
