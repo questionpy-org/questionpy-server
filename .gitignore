@@ -1,7 +1,10 @@
-/venv/
-/.idea/
+/venv
+/.venv
+/.idea
+*.iml
 config.ini
 __pycache__
+/dist
 
 /.mypy_cache
 /.pytest_cache

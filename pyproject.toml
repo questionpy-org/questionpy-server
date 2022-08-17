@@ -1,3 +1,29 @@
+[build-system]
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "questionpy-server"
+description = "QuestionPy application server"
+authors = ["innoCampus <info@isis.tu-berlin.de>"]
+homepage = "https://questionpy.org"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+aiohttp = "^3.8.1"
+pydantic = "^1.9.1"
+
+[tool.poetry.dev-dependencies]
+pylint = "^2.14.5"
+pytest = "^7.1.2"
+pytest-aiohttp = "^1.0.4"
+pytest-md = "^0.2.0"
+pytest-cov = "^3.0.0"
+pylint-pytest = "^1.1.2"
+mypy = "^0.971"
+flake8 = "^4.0.1"
+
 [tool.pytest.ini_options]
 # https://github.com/pytest-dev/pytest-asyncio#auto-mode
 asyncio_mode = "auto"
