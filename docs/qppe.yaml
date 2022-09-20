@@ -842,12 +842,10 @@ components:
           enum: [ static_text ]
         label:
           $ref: "#/components/schemas/FormLabel"
-        name:
-          $ref: "#/components/schemas/FormName"
         text:
           type: string
           description: Static text to display
-      required: [ kind, label, name, text ]
+      required: [ kind, label, text ]
 
     TextInputElement:
       type: object
@@ -995,14 +993,12 @@ components:
           enum: [ group ]
         label:
           $ref: "#/components/schemas/FormLabel"
-        name:
-          $ref: "#/components/schemas/FormName"
         elements:
           type: array
           items:
             $ref: "#/components/schemas/FormElement"
           minItems: 1
-      required: [ kind, label, name, elements, ]
+      required: [ kind, label, elements, ]
 
     FormElement:
       oneOf:

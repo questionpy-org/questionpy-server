@@ -23,6 +23,7 @@ pytest-cov = "^3.0.0"
 pylint-pytest = "^1.1.2"
 mypy = "^0.971"
 flake8 = "^4.0.1"
+pydantic-factories = "^1.5.4"
 
 [tool.pytest.ini_options]
 # https://github.com/pytest-dev/pytest-asyncio#auto-mode
@@ -54,7 +55,8 @@ good-names = ["i", "j", "k", "e", "ex", "_"]
 output-format = "colorized"
 
 [tool.pylint."MESSAGES CONTROL"]
-disable = ["missing-module-docstring", "missing-class-docstring", "missing-function-docstring"]
+disable = ["missing-module-docstring", "missing-class-docstring", "missing-function-docstring",
+           "too-few-public-methods"]
 enable = ""
 
 [tool.pylint.FORMAT]
@@ -63,6 +65,7 @@ expected-line-ending-format = "LF"
 indent-after-paren = 4
 indent-string = "    "
 max-line-length = 120
+class-const-naming-style = "snake_case"
 
 
 [tool.mypy]
