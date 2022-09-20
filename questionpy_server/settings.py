@@ -1,9 +1,9 @@
 import logging
 from configparser import ConfigParser
 from pathlib import Path
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Dict, Tuple, Optional
 
-from pydantic import BaseModel, BaseSettings
+from pydantic import BaseModel, BaseSettings, validator
 from pydantic.env_settings import InitSettingsSource, SettingsSourceCallable
 
 
@@ -21,7 +21,7 @@ class IniFileSettingsSource:
 
             parser = ConfigParser()
             parser.read(path)
-            return {'webservice': dict(parser['webservice'])}
+            return {key: section for key, section in parser.items() if key != 'DEFAULT'}
 
         log.fatal('No config file found!')
         return {}
@@ -30,10 +30,36 @@ class IniFileSettingsSource:
 class WebserviceSettings(BaseModel):
     listen_address: str = '127.0.0.1'
     listen_port: int = 9010
+    client_max_size: int = 20_971_520
+
+
+class PackageCacheSettings(BaseModel):
+    size: int = 104_857_600
+    directory: str = 'cache/packages'
+
+
+class QuestionStateCacheSettings(BaseModel):
+    size: int = 20_971_520
+    directory: str = 'cache/question_state'
+
+
+class CollectorSettings(BaseModel):
+    local_directory: Optional[str]
+
+    @validator('local_directory')
+    # pylint: disable=no-self-argument
+    def transform_empty_string_to_none(cls, v: Optional[str]) -> Optional[str]:
+        if v == '':
+            return None
+        return v
 
 
 class Settings(BaseSettings):
     webservice: WebserviceSettings
+    cache_package: PackageCacheSettings
+    cache_question_state: QuestionStateCacheSettings
+    collector: CollectorSettings
+
     config_files: Tuple[Path, ...] = ()
 
     class Config:
