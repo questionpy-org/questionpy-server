@@ -22,7 +22,7 @@ pytest-md = "^0.2.0"
 pytest-cov = "^3.0.0"
 pylint-pytest = "^1.1.2"
 mypy = "^0.971"
-flake8 = "^4.0.1"
+flake8 = "^5.0.4"
 pydantic-factories = "^1.5.4"
 
 [tool.pytest.ini_options]
