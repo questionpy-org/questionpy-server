@@ -1,0 +1,74 @@
+[build-system]
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "questionpy-common"
+description = "Common classes for QuestionPy"
+authors = ["innoCampus <info@isis.tu-berlin.de>"]
+homepage = "https://questionpy.org"
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+pydantic = "^1.9.1"
+pydantic-yaml = "^0.8.0"
+PyYAML = "^6.0"
+pydantic-factories = "^1.6.2"
+
+[tool.poetry.dev-dependencies]
+pylint = "^2.14.5"
+pytest = "^7.1.2"
+pytest-md = "^0.2.0"
+pytest-cov = "^3.0.0"
+pylint-pytest = "^1.1.2"
+mypy = "^0.971"
+flake8 = "^5.0.4"
+
+[tool.pytest.ini_options]
+addopts = "--cov --cov-config=pyproject.toml --cov-branch --cov-report term:skip-covered"
+
+[tool.coverage.run]
+branch = true
+source = ["questionpy_common"]
+
+[tool.pylint.MAIN]
+extension-pkg-allow-list = "pydantic"
+# pylint_pytest removes some false positives when checking tests
+load-plugins = "pylint_pytest"
+fail-on = ["E", "F"]
+fail-under = 8
+
+[tool.pylint.BASIC]
+# Allow these well-known names despite usual naming conventions
+good-names = ["i", "j", "k", "e", "ex", "_"]
+# Allow any name for test methods
+function-rgx = "^test_.+|[a-z0-9_]+$"
+
+[tool.pylint.CLASSES]
+valid-metaclass-classmethod-first-arg = "mcs"
+
+[tool.pylint.REPORTS]
+output-format = "colorized"
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+    "missing-module-docstring", "missing-class-docstring", "missing-function-docstring",
+    "unused-wildcard-import"
+]
+enable = ""
+
+[tool.pylint.FORMAT]
+expected-line-ending-format = "LF"
+indent-after-paren = 4
+indent-string = "    "
+max-line-length = 120
+
+[tool.pylint.IMPORTS]
+allow-wildcard-with-all = true
+
+[tool.mypy]
+plugins = "pydantic.mypy"
+disallow_untyped_defs = true
+strict_optional = true
+show_error_codes = true
