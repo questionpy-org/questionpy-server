@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "questionpy-common"
-description = "Common classes for QuestionPy"
+description = "Common classes and functions for QuestionPy"
 authors = ["innoCampus <info@isis.tu-berlin.de>"]
 homepage = "https://questionpy.org"
 version = "0.1.0"
@@ -53,8 +53,7 @@ output-format = "colorized"
 
 [tool.pylint."MESSAGES CONTROL"]
 disable = [
-    "missing-module-docstring", "missing-class-docstring", "missing-function-docstring",
-    "unused-wildcard-import"
+    "missing-module-docstring", "missing-class-docstring", "missing-function-docstring"
 ]
 enable = ""
 
