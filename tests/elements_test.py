@@ -27,7 +27,7 @@ from questionpy_common.elements import StaticTextElement, TextInputElement, Chec
 ))
 def test_factory_builds_valid_model(factory: ModelFactory, model: Type[BaseModel]) -> None:
     fake_model = factory.build()
-    assert type(fake_model) == model  # pylint: disable=unidiomatic-typecheck
+    assert isinstance(fake_model, model)
 
 
 @pytest.mark.parametrize("factory, model", (
@@ -46,5 +46,5 @@ def test_factory_builds_valid_model(factory: ModelFactory, model: Type[BaseModel
 ))
 def test_ignore_additional_properties(factory: ModelFactory, model: Type[BaseModel]) -> None:
     data = factory.build().dict()
-    created_model = model(**data, additional_properties='test')
-    assert not hasattr(created_model, 'additional_properties')
+    created_model = model(**data, additional_property='test')
+    assert not hasattr(created_model, 'additional_property')
