@@ -2,7 +2,6 @@
 /.venv
 /.idea
 *.iml
-config.ini
 __pycache__
 /dist
 
