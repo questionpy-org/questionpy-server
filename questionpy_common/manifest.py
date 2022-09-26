@@ -1,26 +1,28 @@
-import typing as _typing
+from enum import Enum
+from typing import Optional, Union
 
-import pydantic_yaml as _pydantic_yaml
-
-
-class PackageType(_pydantic_yaml.YamlStrEnum):
-    QUESTION_TYPE = "QUESTION_TYPE"
-    LIBRARY = "LIBRARY"
+from pydantic import BaseModel
 
 
-class Manifest(_pydantic_yaml.YamlModel):
+class PackageType(str, Enum):
+    library = 'library'
+    questiontype = 'questiontype'
+    question = 'question'
+
+
+class Manifest(BaseModel):
     short_name: str
     version: str
     api_version: str
     author: str
-    name: _typing.Dict[str, str] = {}
+    name: dict[str, str] = {}
     entrypoint: str = "__main__"
-    url: _typing.Optional[str] = None
-    languages: _typing.Set[str] = set()
-    description: _typing.Dict[str, str] = {}
-    icon: _typing.Optional[str] = None
-    type: PackageType = PackageType.QUESTION_TYPE
-    license: _typing.Optional[str] = None
-    permissions: _typing.Set[str] = set()
-    tags: _typing.Set[str] = set()
-    requirements: _typing.Optional[_typing.Union[str, _typing.List[str]]]
+    url: Optional[str] = None
+    languages: set[str] = set()
+    description: dict[str, str] = {}
+    icon: Optional[str] = None
+    type: PackageType = PackageType.questiontype
+    license: Optional[str] = None
+    permissions: set[str] = set()
+    tags: set[str] = set()
+    requirements: Optional[Union[str, list[str]]] = None
