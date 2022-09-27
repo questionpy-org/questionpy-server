@@ -16,7 +16,7 @@ multidict = ">=4.5,<7.0"
 yarl = ">=1.0,<2.0"
 
 [package.extras]
-speedups = ["aiodns", "brotli", "cchardet"]
+speedups = ["Brotli", "aiodns", "cchardet"]
 
 [[package]]
 name = "aiosignal"
@@ -115,7 +115,7 @@ graph = ["objgraph (>=1.7.2)"]
 name = "faker"
 version = "14.2.0"
 description = "Faker is a Python package that generates fake data for you."
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -293,7 +293,7 @@ email = ["email-validator (>=1.0.3)"]
 name = "pydantic-factories"
 version = "1.6.2"
 description = "Mock data generation for pydantic based models"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7,<4.0"
 
@@ -437,7 +437,7 @@ pytest = ">=4.2.1"
 name = "python-dateutil"
 version = "2.8.2"
 description = "Extensions to the standard Python datetime module"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 
@@ -445,10 +445,29 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 six = ">=1.5"
 
 [[package]]
+name = "questionpy-common"
+version = "0.1.0"
+description = "Common classes and functions for QuestionPy"
+category = "main"
+optional = false
+python-versions = "^3.9"
+develop = false
+
+[package.dependencies]
+pydantic = "^1.9.1"
+pydantic-factories = "^1.6.2"
+
+[package.source]
+type = "git"
+url = "https://github.com/questionpy-org/questionpy-common.git"
+reference = "7bbc4e4bacf9a7d9c85be2556faa16d476bbd307"
+resolved_reference = "7bbc4e4bacf9a7d9c85be2556faa16d476bbd307"
+
+[[package]]
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 
@@ -488,7 +507,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 name = "xeger"
 version = "0.3.5"
 description = "A library for generating random strings from a valid regular expression."
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -507,7 +526,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "2e428998bfefcec9d72de7dcbd1827e43bc45773cfd3d9d8e81135333604ed8a"
+content-hash = "97329eb1e0111d634276748955850efb50a36cb4d822ab6f217ffc52dd14253e"
 
 [metadata.files]
 aiohttp = [
@@ -994,6 +1013,7 @@ python-dateutil = [
     {file = "python-dateutil-2.8.2.tar.gz", hash = "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86"},
     {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
 ]
+questionpy-common = []
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
     {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},

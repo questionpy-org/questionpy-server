@@ -4,7 +4,9 @@ from typing import Tuple
 from aiohttp import FormData
 from aiohttp.test_utils import TestClient
 
-from questionpy_server.api.models import Form, QuestionStateHash
+from questionpy_common.elements import OptionsFormDefinition
+
+from questionpy_server.api.models import QuestionStateHash
 from questionpy_server.factories.question_state import QuestionStateHashFactory
 from tests.conftest import Packages, Package
 
@@ -42,7 +44,7 @@ async def test_no_package(client: TestClient) -> None:
     assert res.status == 200
 
     res_data = await res.json()
-    Form(**res_data)
+    OptionsFormDefinition(**res_data)
 
 
 async def test_no_question_state(client: TestClient) -> None:
@@ -64,7 +66,7 @@ async def test_no_question_state(client: TestClient) -> None:
     assert res.status == 200
 
     res_data = await res.json()
-    Form(**res_data)
+    OptionsFormDefinition(**res_data)
 
 
 async def test_no_package_and_no_question_state(client: TestClient) -> None:
@@ -92,4 +94,4 @@ async def test_complete(client: TestClient) -> None:
     assert res.status == 200
 
     res_data = await res.json()
-    Form(**res_data)
+    OptionsFormDefinition(**res_data)
