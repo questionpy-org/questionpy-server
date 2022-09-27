@@ -10,7 +10,7 @@ minimal_manifest: Dict[str, Any] = {'short_name': 'short_name', 'version': '0.1.
 maximal_manifest = {**minimal_manifest, 'name': {'en': 'test_name'}, 'entrypoint': 'test_entrypoint',
                     'url': 'https://example.com/package', 'languages': {'en'},
                     'description': {'en': 'test_description'}, 'icon': 'https://example.com/icon.png',
-                    'type': PackageType.questiontype, 'license': 'MIT', 'permissions': {'test_permission'},
+                    'type': PackageType.QUESTIONTYPE, 'license': 'MIT', 'permissions': {'test_permission'},
                     'tags': {'test_tag'}, 'requirements': ['req_1', 'req_2']}
 
 

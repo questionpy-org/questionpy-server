@@ -5,9 +5,9 @@ from pydantic import BaseModel
 
 
 class PackageType(str, Enum):
-    library = 'library'
-    questiontype = 'questiontype'
-    question = 'question'
+    LIBRARY = 'LIBRARY'
+    QUESTIONTYPE = 'QUESTIONTYPE'
+    QUESTION = 'QUESTION'
 
 
 class Manifest(BaseModel):
@@ -21,7 +21,7 @@ class Manifest(BaseModel):
     languages: set[str] = set()
     description: dict[str, str] = {}
     icon: Optional[str] = None
-    type: PackageType = PackageType.questiontype
+    type: PackageType = PackageType.QUESTIONTYPE
     license: Optional[str] = None
     permissions: set[str] = set()
     tags: set[str] = set()
