@@ -4,9 +4,11 @@ from pathlib import Path
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPMethodNotAllowed
 
+from questionpy_common.dev.factories import OptionsFormDefinitionFactory
+
 from questionpy_server.web import ensure_package_and_question_state_exists, json_response
 from questionpy_server.factories import AttemptFactory, AttemptGradedFactory, AttemptStartedFactory,\
-    PackageInfoFactory, FormFactory
+    PackageInfoFactory
 
 from .models import QuestionStateHash, AttemptStartArguments, AttemptGradeArguments, AttemptViewArguments
 
@@ -38,7 +40,7 @@ async def get_package(request: web.Request) -> web.Response:
 @ensure_package_and_question_state_exists
 async def post_options(_request: web.Request, package: Path, question_state: Path,
                        _data: QuestionStateHash) -> web.Response:
-    return json_response(data=FormFactory.build())
+    return json_response(data=OptionsFormDefinitionFactory.build())
 
 
 @routes.post(r'/packages/{package_hash:\w+}/attempt/start')  # type: ignore[arg-type]
