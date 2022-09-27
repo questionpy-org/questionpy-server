@@ -1,10 +1,9 @@
 from hashlib import sha1
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPMethodNotAllowed
-
-from questionpy_common.dev.factories import OptionsFormDefinitionFactory
 
 from questionpy_server.web import ensure_package_and_question_state_exists, json_response
 from questionpy_server.factories import AttemptFactory, AttemptGradedFactory, AttemptStartedFactory,\
@@ -12,6 +11,8 @@ from questionpy_server.factories import AttemptFactory, AttemptGradedFactory, At
 
 from .models import QuestionStateHash, AttemptStartArguments, AttemptGradeArguments, AttemptViewArguments
 
+if TYPE_CHECKING:
+    from questionpy_server.app import QPyServer
 
 routes = web.RouteTableDef()
 
@@ -38,9 +39,17 @@ async def get_package(request: web.Request) -> web.Response:
 
 @routes.post(r'/packages/{package_hash:\w+}/options')  # type: ignore[arg-type]
 @ensure_package_and_question_state_exists
-async def post_options(_request: web.Request, package: Path, question_state: Path,
-                       _data: QuestionStateHash) -> web.Response:
-    return json_response(data=OptionsFormDefinitionFactory.build())
+async def post_options(request: web.Request, package: Path, question_state: Path,
+                       data: QuestionStateHash) -> web.Response:
+    """
+    Get the options form definition that allow a question creator to customize a question.
+    """
+    qpyserver: 'QPyServer' = request.app['qpy_server_app']
+
+    async with qpyserver.worker_pool.get_worker(package, 0, data.context) as worker:
+        options = await worker.get_options_form_definition()
+
+    return json_response(data=options)
 
 
 @routes.post(r'/packages/{package_hash:\w+}/attempt/start')  # type: ignore[arg-type]
