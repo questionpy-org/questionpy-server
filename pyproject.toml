@@ -12,8 +12,6 @@ version = "0.1.0"
 [tool.poetry.dependencies]
 python = "^3.9"
 pydantic = "^1.9.1"
-pydantic-yaml = "^0.8.0"
-PyYAML = "^6.0"
 pydantic-factories = "^1.6.2"
 
 [tool.poetry.dev-dependencies]

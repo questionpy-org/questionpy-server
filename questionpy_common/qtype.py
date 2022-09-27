@@ -27,4 +27,3 @@ class OptionsFormValidationError(Exception):
         """There was at least one validation error."""
         self.errors = errors  # input element name -> error description
         super().__init__("Form input data could not be validated successfully.")
-

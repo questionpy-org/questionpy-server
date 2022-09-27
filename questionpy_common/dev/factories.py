@@ -47,5 +47,5 @@ class FormSectionFactory(_ModelFactory):
     __model__ = _elements.FormSection
 
 
-class FormFactory(_ModelFactory):
-    __model__ = _elements.Form
+class OptionsFormDefinitionFactory(_ModelFactory):
+    __model__ = _elements.OptionsFormDefinition

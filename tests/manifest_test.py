@@ -3,16 +3,15 @@ from typing import Any, Dict
 import pytest
 from pydantic import ValidationError
 
-from questionpy_common.manifest import Manifest
-
+from questionpy_common.manifest import Manifest, PackageType
 
 minimal_manifest: Dict[str, Any] = {'short_name': 'short_name', 'version': '0.1.0', 'api_version': '0.1.0',
                                     'author': 'John Doe'}
 maximal_manifest = {**minimal_manifest, 'name': {'en': 'test_name'}, 'entrypoint': 'test_entrypoint',
                     'url': 'https://example.com/package', 'languages': {'en'},
                     'description': {'en': 'test_description'}, 'icon': 'https://example.com/icon.png',
-                    'type': 'QUESTION_TYPE', 'license': 'MIT', 'permissions': {'test_permission'}, 'tags': {'test_tag'},
-                    'requirements': ['req_1', 'req_2']}
+                    'type': PackageType.questiontype, 'license': 'MIT', 'permissions': {'test_permission'},
+                    'tags': {'test_tag'}, 'requirements': ['req_1', 'req_2']}
 
 
 @pytest.mark.parametrize("data", (
