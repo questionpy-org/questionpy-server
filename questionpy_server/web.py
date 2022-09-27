@@ -49,10 +49,10 @@ def create_model_from_json(json: Union[object, str], param_class: Type[M]) -> M:
             json = loads(json)
         model = param_class.parse_obj(json)
     except ValidationError as error:
-        web_logger.info('JSON does not match model: %s', error)
+        web_logger.warning('JSON does not match model: %s', error)
         raise HTTPBadRequest from error
     except JSONDecodeError as error:
-        web_logger.info('Invalid JSON in request')
+        web_logger.warning('Invalid JSON in request')
         raise HTTPBadRequest from error
     return model
 
@@ -65,18 +65,32 @@ async def parse_package_and_question_state_form_data(request: Request) \
 
     # Get main field.
     main = data.get('main')
-    if main is None or not isinstance(main, str):
-        raise HTTPBadRequest()
+    if main is None:
+        msg = "Multipart/form field 'main' is not set"
+        web_logger.warning(msg)
+        raise HTTPBadRequest(text=msg)
+    if isinstance(main, (bytearray, bytes)):
+        main = main.decode()
+    elif not isinstance(main, str):
+        msg = "Multipart/form field 'main' has an invalid type " + str(type(main))
+        web_logger.error(msg)
+        raise HTTPBadRequest(text=msg)
 
     # Get package field.
     package = data.get('package')
     if package is not None and not isinstance(package, FileField):
-        raise HTTPBadRequest()
+        msg = "Multipart/form field 'package' is not set or has an invalid type"
+        web_logger.warning(msg)
+        raise HTTPBadRequest(text=msg)
 
     # Get question_state field.
     question_state = data.get('question_state')
-    if question_state is not None and not isinstance(question_state, str):
-        raise HTTPBadRequest()
+    if isinstance(question_state, (bytearray, bytes)):
+        question_state = question_state.decode()
+    elif question_state is not None and not isinstance(question_state, str):
+        msg = "Multipart/form field 'question_state' has an invalid type" + str(type(question_state))
+        web_logger.error(msg)
+        raise HTTPBadRequest(text=msg)
 
     return main, package, question_state
 

@@ -7,6 +7,7 @@ from .api.routes import routes
 from .cache import FileLimitLRU
 from .collector import PackageCollector
 from .settings import Settings
+from .worker.controller import WorkerPool
 
 
 class QPyServer:
@@ -15,6 +16,7 @@ class QPyServer:
         self.web_app = web.Application(client_max_size=settings.webservice.client_max_size)
         self.web_app.add_routes(routes)
         self.web_app['qpy_server_app'] = self
+        self.worker_pool = WorkerPool(0, 0)
 
         self.package_cache = FileLimitLRU(settings.cache_package.directory, settings.cache_package.size, '.qpy')
         self.collector = PackageCollector(settings.collector.local_directory, self.package_cache)

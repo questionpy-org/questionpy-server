@@ -40,11 +40,9 @@ source = ["questionpy_server"]
 [tool.pylint]
 
 [tool.pylint.MAIN]
-
 extension-pkg-allow-list = "pydantic"
 # pylint_pytest removes some false positives when checking tests
 load-plugins = "pylint_pytest"
-
 fail-on = ["E", "F"]
 fail-under = 8
 
@@ -57,6 +55,10 @@ function-rgx = "^test_.+|[a-z0-9_]+$"
 [tool.pylint.CLASSES]
 valid-metaclass-classmethod-first-arg = "mcs"
 
+[tool.pylint.DESIGN]
+max-attributes = 15
+max-branches = 15
+
 [tool.pylint.REPORTS]
 output-format = "colorized"
 
@@ -68,15 +70,12 @@ disable = [
 enable = ""
 
 [tool.pylint.FORMAT]
-
 expected-line-ending-format = "LF"
 indent-after-paren = 4
 indent-string = "    "
 max-line-length = 120
-class-const-naming-style = "snake_case"
 
 [tool.pylint.IMPORTS]
-
 allow-wildcard-with-all = true
 
 [tool.mypy]
