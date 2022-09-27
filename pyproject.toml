@@ -30,6 +30,8 @@ addopts = "--cov --cov-config=pyproject.toml --cov-branch --cov-report term:skip
 branch = true
 source = ["questionpy_common"]
 
+[tool.pylint]
+
 [tool.pylint.MAIN]
 extension-pkg-allow-list = "pydantic"
 # pylint_pytest removes some false positives when checking tests
@@ -46,12 +48,17 @@ function-rgx = "^test_.+|[a-z0-9_]+$"
 [tool.pylint.CLASSES]
 valid-metaclass-classmethod-first-arg = "mcs"
 
+[tool.pylint.DESIGN]
+max-attributes = 15
+max-branches = 15
+
 [tool.pylint.REPORTS]
 output-format = "colorized"
 
 [tool.pylint."MESSAGES CONTROL"]
 disable = [
-    "missing-module-docstring", "missing-class-docstring", "missing-function-docstring"
+    "missing-module-docstring", "missing-class-docstring", "missing-function-docstring",
+    "unused-wildcard-import", "too-few-public-methods",
 ]
 enable = ""
 
