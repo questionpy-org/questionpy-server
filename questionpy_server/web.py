@@ -1,14 +1,17 @@
 import functools
+from io import BytesIO
 from json import loads, JSONDecodeError
 from pathlib import Path
 from typing import Optional, Union, Callable, Any, cast, Type, List, TYPE_CHECKING, Tuple
 
+from aiohttp import BodyPartReader
 from aiohttp.abc import Request
 from aiohttp.log import web_logger
 from aiohttp.web_exceptions import HTTPBadRequest, HTTPRequestEntityTooLarge, HTTPNotFound
-from aiohttp.web_request import FileField
 from aiohttp.web_response import Response
 from pydantic import BaseModel, ValidationError
+
+from questionpy_common import constants
 
 from questionpy_server.api.models import PackageQuestionStateNotFound, QuestionStateHash
 from questionpy_server.cache import SizeError
@@ -58,44 +61,48 @@ def create_model_from_json(json: Union[object, str], param_class: Type[M]) -> M:
 
 
 async def parse_package_and_question_state_form_data(request: Request) \
-        -> Tuple[str, Optional[FileField], Optional[str]]:
+        -> Tuple[str, Optional[bytes], Optional[str]]:
 
-    # TODO: consider using aiohttp.multipart()?
-    data = await request.post()
+    async def read_field(field: BodyPartReader, max_size: int) -> bytes:
+        size = 0
+        buffer = BytesIO()
+        while True:
+            chunk = await field.read_chunk()  # TODO: Make chunk size configurable? (default: 8 KB)
+            if not chunk:
+                break
+            size += len(chunk)
+            if size > max_size:
+                raise HTTPRequestEntityTooLarge(max_size=max_size, actual_size=size)
+            buffer.write(chunk)
+        return buffer.getvalue()
 
-    # Get main field.
-    main = data.get('main')
+    server: 'QPyServer' = request.app['qpy_server_app']
+    main = package = question_state = None
+
+    reader = await request.multipart()
+    while part := await reader.next():
+        # TODO: Stop after a total of three iterations? (=> more than three request body parts were received)
+        if not isinstance(part, BodyPartReader):
+            raise HTTPBadRequest
+
+        if part.name == 'main':
+            main_binary = await read_field(part, server.settings.webservice.max_bytes_main)
+            main = main_binary.decode()
+        elif part.name == 'package':
+            package = await read_field(part, constants.MAX_BYTES_PACKAGE)
+        elif part.name == 'question_state':
+            question_state_binary = await read_field(part, constants.MAX_BYTES_QUESTION_STATE)
+            question_state = question_state_binary.decode()
+
     if main is None:
         msg = "Multipart/form field 'main' is not set"
         web_logger.warning(msg)
-        raise HTTPBadRequest(text=msg)
-    if isinstance(main, (bytearray, bytes)):
-        main = main.decode()
-    elif not isinstance(main, str):
-        msg = "Multipart/form field 'main' has an invalid type " + str(type(main))
-        web_logger.error(msg)
-        raise HTTPBadRequest(text=msg)
-
-    # Get package field.
-    package = data.get('package')
-    if package is not None and not isinstance(package, FileField):
-        msg = "Multipart/form field 'package' is not set or has an invalid type"
-        web_logger.warning(msg)
-        raise HTTPBadRequest(text=msg)
-
-    # Get question_state field.
-    question_state = data.get('question_state')
-    if isinstance(question_state, (bytearray, bytes)):
-        question_state = question_state.decode()
-    elif question_state is not None and not isinstance(question_state, str):
-        msg = "Multipart/form field 'question_state' has an invalid type" + str(type(question_state))
-        web_logger.error(msg)
         raise HTTPBadRequest(text=msg)
 
     return main, package, question_state
 
 
-def get_package(server: 'QPyServer', package_hash: str, package: Optional[FileField]) -> Optional[Path]:
+def get_package(server: 'QPyServer', package_hash: str, package: Optional[bytes]) -> Optional[Path]:
     """
     Saves a package on `server` or retrieves it from cache if `package` is None, and returns `Path` to the package.
     Raises `HTTPRequestEntityTooLarge` if the `package` is too big for the cache.
@@ -110,7 +117,7 @@ def get_package(server: 'QPyServer', package_hash: str, package: Optional[FileFi
         if not package:
             package_path = server.collector.get(package_hash)
         else:
-            package_path = server.package_cache.put(package_hash, package.file.read())
+            package_path = server.package_cache.put(package_hash, package)
     except SizeError as error:
         raise HTTPRequestEntityTooLarge(max_size=error.max_size, actual_size=error.actual_size,
                                         body=str(error)) from error
