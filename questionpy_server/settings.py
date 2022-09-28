@@ -29,7 +29,7 @@ class IniFileSettingsSource:
 
 class WebserviceSettings(BaseModel):
     listen_address: str = '127.0.0.1'
-    listen_port: int = 9010
+    listen_port: int = 9020
     client_max_size: int = 20_971_520
 
 
