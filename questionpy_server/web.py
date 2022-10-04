@@ -83,7 +83,7 @@ async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = 
     :param part: body part
     :param max_size: maximum size of the body part
     :param calculate_hash: if True, returns a tuple of the body part and its hash
-
+    :return: body part or tuple of body part and its hash
     """
 
     buffer = BytesIO()
