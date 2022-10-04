@@ -1,8 +1,9 @@
 import functools
+from hashlib import sha256
 from io import BytesIO
 from json import loads, JSONDecodeError
 from pathlib import Path
-from typing import Optional, Union, Callable, Any, cast, Type, List, TYPE_CHECKING, Tuple
+from typing import Optional, Union, Callable, Any, cast, Type, List, TYPE_CHECKING, Tuple, overload, Literal, NamedTuple
 
 from aiohttp import BodyPartReader
 from aiohttp.abc import Request
@@ -14,7 +15,7 @@ from pydantic import BaseModel, ValidationError
 from questionpy_common import constants
 
 from questionpy_server.api.models import PackageQuestionStateNotFound, QuestionStateHash
-from questionpy_server.cache import SizeError
+from questionpy_server.cache import SizeError, FileLimitLRU
 from questionpy_server.collector import PackageNotFound
 from questionpy_server.misc import get_route_model_param
 from questionpy_server.types import RouteHandler, M
@@ -60,22 +61,62 @@ def create_model_from_json(json: Union[object, str], param_class: Type[M]) -> M:
     return model
 
 
-async def read_part(part: BodyPartReader, max_size: int) -> bytes:
-    size = 0
+class HashContainer(NamedTuple):
+    data: bytes
+    hash: str
+
+
+@overload
+async def read_part(part: BodyPartReader, max_size: int, calculate_hash: Literal[True]) -> HashContainer:
+    ...
+
+
+@overload
+async def read_part(part: BodyPartReader, max_size: int, calculate_hash: Literal[False]) -> bytes:
+    ...
+
+
+async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = False) -> Union[HashContainer, bytes]:
+    """
+    Reads a body part of a multipart/form-data request.
+
+    :param part: body part
+    :param max_size: maximum size of the body part
+    :param calculate_hash: if True, returns a tuple of the body part and its hash
+
+    """
+
     buffer = BytesIO()
-    while True:
-        chunk = await part.read_chunk()  # TODO: Make chunk size configurable? (default: 8 KB)
-        if not chunk:
-            break
+    hash_object = sha256()
+
+    size = 0
+
+    while chunk := await part.read_chunk():  # TODO: Make chunk size configurable? (default: 8 KB)
+        # Check if size limit is exceeded.
         size += len(chunk)
         if size > max_size:
             raise HTTPRequestEntityTooLarge(max_size=max_size, actual_size=size)
+
+        # Calculate hash.
+        if calculate_hash:
+            hash_object.update(chunk)
+
+        # Write chunk to buffer.
         buffer.write(chunk)
+
+    if calculate_hash:
+        return HashContainer(data=buffer.getvalue(), hash=hash_object.hexdigest())
     return buffer.getvalue()
 
 
-async def parse_package_and_question_state_form_data(request: Request) \
-        -> Tuple[str, Optional[bytes], Optional[str]]:
+async def parse_form_data(request: Request) \
+        -> Tuple[bytes, Optional[HashContainer], Optional[HashContainer]]:
+    """
+    Parses a multipart/form-data request.
+
+    :param request: request to be parsed
+    :return: tuple of main field, package, and question state
+    """
 
     server: 'QPyServer' = request.app['qpy_server_app']
     main = package = question_state = None
@@ -86,13 +127,11 @@ async def parse_package_and_question_state_form_data(request: Request) \
             continue
 
         if part.name == 'main':
-            main_binary = await read_part(part, server.settings.webservice.max_bytes_main)
-            main = main_binary.decode()
+            main = await read_part(part, server.settings.webservice.max_bytes_main, calculate_hash=False)
         elif part.name == 'package':
-            package = await read_part(part, constants.MAX_BYTES_PACKAGE)
+            package = await read_part(part, constants.MAX_BYTES_PACKAGE, calculate_hash=True)
         elif part.name == 'question_state':
-            question_state_binary = await read_part(part, constants.MAX_BYTES_QUESTION_STATE)
-            question_state = question_state_binary.decode()
+            question_state = await read_part(part, constants.MAX_BYTES_QUESTION_STATE, calculate_hash=True)
 
     if main is None:
         msg = "Multipart/form field 'main' is not set"
@@ -102,54 +141,27 @@ async def parse_package_and_question_state_form_data(request: Request) \
     return main, package, question_state
 
 
-def get_package(server: 'QPyServer', package_hash: str, package: Optional[bytes]) -> Optional[Path]:
+def get_or_save_cache(cache: FileLimitLRU, container: Optional[HashContainer], hash_value: str) -> Optional[Path]:
     """
-    Saves a package on `server` or retrieves it from cache if `package` is None, and returns `Path` to the package.
-    Raises `HTTPRequestEntityTooLarge` if the `package` is too big for the cache.
+    Gets a file from the cache or saves it if it is not in the cache.
 
-    :param server: server where to save the package on
-    :param package_hash: hash of the package
-    :param package: package to be saved on the server
-    :return: `Path` of the package if it was created or found on the server, else `None`.
-    """
-
-    try:
-        if not package:
-            package_path = server.collector.get(package_hash)
-        else:
-            package_path = server.package_cache.put(package_hash, package)
-    except SizeError as error:
-        raise HTTPRequestEntityTooLarge(max_size=error.max_size, actual_size=error.actual_size,
-                                        body=str(error)) from error
-    except PackageNotFound:
-        return None
-    return package_path
-
-
-def get_question_state(server: 'QPyServer', question_state_hash: str, question_state: Optional[str]) -> Optional[Path]:
-    """
-    Saves a question state on `server` or retrieves it from cache if `question_state` is None, and returns `Path` to
-    the question state.
-    Raises `SizeError` if the `question_state` is too big for the cache.
-
-    :param server: server where to save the package on
-    :param question_state_hash: hash of the question state
-    :param question_state: question state to be saved on the server
-    :return: `Path` of the question state if it was created or found on the server, else `None`.
+    :param cache: cache
+    :param container: container with the file data and its hash
+    :param hash_value: hash of the file
+    :return: path to the file
     """
 
     try:
-        if not question_state:
-            question_state_path = server.question_state_cache.get(question_state_hash)
+        if not container:
+            path = cache.get(hash_value)
         else:
-            question_state_path = server.question_state_cache.put(question_state_hash,
-                                                                  question_state.encode())
+            path = cache.put(container.hash, container.data)
     except SizeError as error:
         raise HTTPRequestEntityTooLarge(max_size=error.max_size, actual_size=error.actual_size,
                                         body=str(error)) from error
     except FileNotFoundError:
         return None
-    return question_state_path
+    return path
 
 
 def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = None) \
@@ -175,14 +187,25 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
 
             if request.content_type == 'multipart/form-data':
                 # Parse form-data.
-                main, package, question_state = await parse_package_and_question_state_form_data(request)
+                main, package, question_state = await parse_form_data(request)
+
+                # Check if package hash matches.
+                if package and package_hash != package.hash:
+                    raise HTTPBadRequest(text=f'Package hash does not match: '
+                                              f'{package_hash} != {package.hash}')
 
                 # Create model from data.
-                model = create_model_from_json(main, param_class)
+                model = create_model_from_json(main.decode(), param_class)
+
+                # Check if question state hash matches.
+                if question_state and model.question_state_hash != question_state.hash:
+                    raise HTTPBadRequest(text=f'Question state hash does not match: '
+                                              f'{model.question_state_hash} != {question_state.hash}')
 
                 # Get or save package and question_state.
-                package_path = get_package(server, package_hash, package)
-                question_state_path = get_question_state(server, model.question_state_hash, question_state)
+                package_path = get_or_save_cache(server.package_cache, package, package_hash)
+                question_state_path = get_or_save_cache(server.question_state_cache, question_state,
+                                                        model.question_state_hash)
 
                 # Check if package and question_state exist.
                 package_not_found = package_path is None
