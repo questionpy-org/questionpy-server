@@ -170,11 +170,6 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
         async def wrapper(request: Request, *args: Any, **kwargs: Any) -> Any:
             """Wrapper around the actual function call."""
 
-            if request.content_type not in ['multipart/form-data', 'application/json']:
-                web_logger.info('Wrong content type, json or multipart/form-data expected, got %s',
-                                request.content_type)
-                raise HTTPBadRequest
-
             server: 'QPyServer' = request.app['qpy_server_app']
             package_hash: str = request.match_info['package_hash']
 
@@ -200,7 +195,7 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
                         content_type='application/json'
                     )
 
-            else:  # request.content_type == 'application/json'
+            elif request.content_type == 'application/json':
                 try:
                     data = await request.json()
                     model = create_model_from_json(data, param_class)
@@ -221,6 +216,11 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
                                                           question_state_not_found=question_state_not_found).json(),
                         content_type='application/json'
                     ) from error
+
+            else:
+                web_logger.info('Wrong content type, json or multipart/form-data expected, got %s',
+                                request.content_type)
+                raise HTTPBadRequest
 
             kwargs[param_name] = model
             kwargs['package'] = package_path
