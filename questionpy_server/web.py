@@ -83,7 +83,7 @@ async def parse_package_and_question_state_form_data(request: Request) \
     reader = await request.multipart()
     while part := await reader.next():
         if not isinstance(part, BodyPartReader):
-            raise HTTPBadRequest
+            continue
 
         if part.name == 'main':
             main_binary = await read_part(part, server.settings.webservice.max_bytes_main)
