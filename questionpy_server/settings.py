@@ -36,10 +36,11 @@ class WebserviceSettings(BaseModel):
     max_bytes_package: int = constants.MAX_BYTES_PACKAGE
 
     @validator('max_bytes_package')
-    def max_bytes_package_bigger_then_predefined_value(cls, v: int) -> int:
-        if v < constants.MAX_BYTES_PACKAGE:
+    # pylint: disable=no-self-argument
+    def max_bytes_package_bigger_then_predefined_value(cls, value: int) -> int:
+        if value < constants.MAX_BYTES_PACKAGE:
             raise ValueError(f'max_bytes_package must be bigger than {constants.MAX_BYTES_PACKAGE}')
-        return v
+        return value
 
 
 class PackageCacheSettings(BaseModel):
@@ -57,10 +58,10 @@ class CollectorSettings(BaseModel):
 
     @validator('local_directory')
     # pylint: disable=no-self-argument
-    def transform_empty_string_to_none(cls, v: Optional[str]) -> Optional[str]:
-        if v == '':
+    def transform_empty_string_to_none(cls, value: Optional[str]) -> Optional[str]:
+        if value == '':
             return None
-        return v
+        return value
 
 
 class Settings(BaseSettings):
