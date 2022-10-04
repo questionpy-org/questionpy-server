@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, Tuple, Optional
 
 from pydantic import BaseModel, BaseSettings, validator
 from pydantic.env_settings import InitSettingsSource, SettingsSourceCallable
+from questionpy_common import constants
 
 
 class IniFileSettingsSource:
@@ -31,7 +32,13 @@ class WebserviceSettings(BaseModel):
     listen_address: str = '127.0.0.1'
     listen_port: int = 9020
     max_bytes_client: int = 31_457_280
-    max_bytes_main: int = 5_242_880
+    max_bytes_package: int = constants.MAX_BYTES_PACKAGE
+
+    @validator('max_bytes_package')
+    def max_bytes_package_bigger_then_predefined_value(cls, v: int) -> int:
+        if v < constants.MAX_BYTES_PACKAGE:
+            raise ValueError(f'max_bytes_package must be bigger than {constants.MAX_BYTES_PACKAGE}')
+        return v
 
 
 class PackageCacheSettings(BaseModel):
