@@ -32,6 +32,7 @@ class WebserviceSettings(BaseModel):
     listen_address: str = '127.0.0.1'
     listen_port: int = 9020
     max_bytes_client: int = 31_457_280
+    max_bytes_main: int = 5_242_880
     max_bytes_package: int = constants.MAX_BYTES_PACKAGE
 
     @validator('max_bytes_package')
