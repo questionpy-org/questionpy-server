@@ -60,38 +60,38 @@ def create_model_from_json(json: Union[object, str], param_class: Type[M]) -> M:
     return model
 
 
+async def read_part(part: BodyPartReader, max_size: int) -> bytes:
+    size = 0
+    buffer = BytesIO()
+    while True:
+        chunk = await part.read_chunk()  # TODO: Make chunk size configurable? (default: 8 KB)
+        if not chunk:
+            break
+        size += len(chunk)
+        if size > max_size:
+            raise HTTPRequestEntityTooLarge(max_size=max_size, actual_size=size)
+        buffer.write(chunk)
+    return buffer.getvalue()
+
+
 async def parse_package_and_question_state_form_data(request: Request) \
         -> Tuple[str, Optional[bytes], Optional[str]]:
-
-    async def read_field(field: BodyPartReader, max_size: int) -> bytes:
-        size = 0
-        buffer = BytesIO()
-        while True:
-            chunk = await field.read_chunk()  # TODO: Make chunk size configurable? (default: 8 KB)
-            if not chunk:
-                break
-            size += len(chunk)
-            if size > max_size:
-                raise HTTPRequestEntityTooLarge(max_size=max_size, actual_size=size)
-            buffer.write(chunk)
-        return buffer.getvalue()
 
     server: 'QPyServer' = request.app['qpy_server_app']
     main = package = question_state = None
 
     reader = await request.multipart()
     while part := await reader.next():
-        # TODO: Stop after a total of three iterations? (=> more than three request body parts were received)
         if not isinstance(part, BodyPartReader):
             raise HTTPBadRequest
 
         if part.name == 'main':
-            main_binary = await read_field(part, server.settings.webservice.max_bytes_main)
+            main_binary = await read_part(part, server.settings.webservice.max_bytes_main)
             main = main_binary.decode()
         elif part.name == 'package':
-            package = await read_field(part, constants.MAX_BYTES_PACKAGE)
+            package = await read_part(part, constants.MAX_BYTES_PACKAGE)
         elif part.name == 'question_state':
-            question_state_binary = await read_field(part, constants.MAX_BYTES_QUESTION_STATE)
+            question_state_binary = await read_part(part, constants.MAX_BYTES_QUESTION_STATE)
             question_state = question_state_binary.decode()
 
     if main is None:
