@@ -129,7 +129,7 @@ async def parse_form_data(request: Request) \
         if part.name == 'main':
             main = await read_part(part, server.settings.webservice.max_bytes_main, calculate_hash=False)
         elif part.name == 'package':
-            package = await read_part(part, constants.MAX_BYTES_PACKAGE, calculate_hash=True)
+            package = await read_part(part, server.settings.webservice.max_bytes_package, calculate_hash=True)
         elif part.name == 'question_state':
             question_state = await read_part(part, constants.MAX_BYTES_QUESTION_STATE, calculate_hash=True)
 
