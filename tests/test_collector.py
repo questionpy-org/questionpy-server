@@ -6,7 +6,7 @@ import pytest
 from _pytest.tmpdir import TempPathFactory
 
 from questionpy_server.cache import FileLimitLRU
-from questionpy_server.collector import PackageCollector, PackageNotFound
+from questionpy_server.collector import PackageCollector
 
 
 @dataclass
@@ -82,7 +82,7 @@ def test_get(settings: Settings) -> None:
     assert expected_cache_path == collector.get(settings.cache_files[0])
 
     # Get not existing file.
-    with pytest.raises(PackageNotFound):
+    with pytest.raises(FileNotFoundError):
         collector.get('A')
 
     # Without local directory.
@@ -92,5 +92,5 @@ def test_get(settings: Settings) -> None:
     assert expected_cache_path.is_file()
     assert expected_cache_path == collector.get(settings.cache_files[0])
 
-    with pytest.raises(PackageNotFound):
+    with pytest.raises(FileNotFoundError):
         collector.get(settings.local_files[0])

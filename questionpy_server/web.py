@@ -16,7 +16,7 @@ from questionpy_common import constants
 
 from questionpy_server.api.models import PackageQuestionStateNotFound, QuestionStateHash
 from questionpy_server.cache import SizeError, FileLimitLRU
-from questionpy_server.collector import PackageNotFound
+from questionpy_server.collector import PackageCollector
 from questionpy_server.misc import get_route_model_param
 from questionpy_server.types import RouteHandler, M
 
@@ -141,11 +141,11 @@ async def parse_form_data(request: Request) \
     return main, package, question_state
 
 
-def get_or_save_cache(cache: FileLimitLRU, container: Optional[HashContainer], hash_value: str) -> Optional[Path]:
+def get_or_save_data(location: Union[FileLimitLRU, PackageCollector], container: Optional[HashContainer],
+                     hash_value: str) -> Optional[Path]:
     """
     Gets a file from the cache or saves it if it is not in the cache.
-
-    :param cache: cache
+    :param location: cache or collector
     :param container: container with the file data and its hash
     :param hash_value: hash of the file
     :return: path to the file
@@ -153,9 +153,10 @@ def get_or_save_cache(cache: FileLimitLRU, container: Optional[HashContainer], h
 
     try:
         if not container:
-            path = cache.get(hash_value)
+            path = location.get(hash_value)
         else:
-            path = cache.put(container.hash, container.data)
+            location = location.cache if isinstance(location, PackageCollector) else location
+            path = location.put(container.hash, container.data)
     except SizeError as error:
         raise HTTPRequestEntityTooLarge(max_size=error.max_size, actual_size=error.actual_size,
                                         body=str(error)) from error
@@ -203,9 +204,8 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
                                               f'{model.question_state_hash} != {question_state.hash}')
 
                 # Get or save package and question_state.
-                package_path = get_or_save_cache(server.package_cache, package, package_hash)
-                question_state_path = get_or_save_cache(server.question_state_cache, question_state,
-                                                        model.question_state_hash)
+                package_path = get_or_save_data(server.package_cache, package, package_hash)
+                question_state_path = get_or_save_data(server.collector, question_state, model.question_state_hash)
 
                 # Check if package and question_state exist.
                 package_not_found = package_path is None
@@ -229,7 +229,7 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
                 try:
                     package_path = server.collector.get(package_hash)
                     question_state_path = server.question_state_cache.get(model.question_state_hash)
-                except (FileNotFoundError, PackageNotFound) as error:
+                except FileNotFoundError as error:
                     # Check if package or question state does not exist.
                     package_not_found = not server.collector.contains(package_hash)
                     question_state_not_found = not server.question_state_cache.contains(model.question_state_hash)
