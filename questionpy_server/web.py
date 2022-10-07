@@ -95,7 +95,9 @@ async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = 
         # Check if size limit is exceeded.
         size += len(chunk)
         if size > max_size:
-            raise HTTPRequestEntityTooLarge(max_size=max_size, actual_size=size)
+            msg = f"Size limit of {max_size} bytes exceeded for field '{part.name}'"
+            web_logger.warning(msg)
+            raise HTTPRequestEntityTooLarge(text=msg, max_size=max_size, actual_size=size)
 
         # Calculate hash.
         if calculate_hash:
@@ -159,7 +161,7 @@ def get_or_save_data(location: Union[FileLimitLRU, PackageCollector], container:
             path = location.put(container.hash, container.data)
     except SizeError as error:
         raise HTTPRequestEntityTooLarge(max_size=error.max_size, actual_size=error.actual_size,
-                                        body=str(error)) from error
+                                        text=str(error)) from error
     except FileNotFoundError:
         return None
     return path
@@ -192,16 +194,18 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
 
                 # Check if package hash matches.
                 if package and package_hash != package.hash:
-                    raise HTTPBadRequest(text=f'Package hash does not match: '
-                                              f'{package_hash} != {package.hash}')
+                    msg = f'Package hash does not match: {package_hash} != {package.hash}'
+                    web_logger.warning(msg)
+                    raise HTTPBadRequest(text=msg)
 
                 # Create model from data.
                 model = create_model_from_json(main.decode(), param_class)
 
                 # Check if question state hash matches.
                 if question_state and model.question_state_hash != question_state.hash:
-                    raise HTTPBadRequest(text=f'Question state hash does not match: '
-                                              f'{model.question_state_hash} != {question_state.hash}')
+                    msg = f'Question state hash does not match: {model.question_state_hash} != {question_state.hash}'
+                    web_logger.warning(msg)
+                    raise HTTPBadRequest(text=msg)
 
                 # Get or save package and question_state.
                 package_path = get_or_save_data(server.package_cache, package, package_hash)
