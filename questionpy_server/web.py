@@ -91,7 +91,7 @@ async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = 
 
     size = 0
 
-    while chunk := await part.read_chunk():  # TODO: Make chunk size configurable? (default: 8 KB)
+    while chunk := await part.read_chunk(size=262_144):
         # Check if size limit is exceeded.
         size += len(chunk)
         if size > max_size:
