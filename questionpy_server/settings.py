@@ -3,7 +3,7 @@ from configparser import ConfigParser
 from pathlib import Path
 from typing import Any, Callable, Dict, Tuple, Optional
 
-from pydantic import BaseModel, BaseSettings, validator
+from pydantic import BaseModel, BaseSettings, validator, Field
 from pydantic.env_settings import InitSettingsSource, SettingsSourceCallable
 from questionpy_common import constants
 
@@ -31,8 +31,7 @@ class IniFileSettingsSource:
 class WebserviceSettings(BaseModel):
     listen_address: str = '127.0.0.1'
     listen_port: int = 9020
-    max_bytes_client: int = 31_457_280
-    max_bytes_main: int = 5_242_880
+    max_bytes_main: int = Field(5_242_880, const=True)
     max_bytes_package: int = constants.MAX_BYTES_PACKAGE
 
     @validator('max_bytes_package')
