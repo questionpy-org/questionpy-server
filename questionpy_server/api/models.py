@@ -6,9 +6,9 @@ from pydantic import BaseModel, Field, FilePath, HttpUrl, Json
 
 
 class PackageType(Enum):
-    library = 'library'
-    questiontype = 'questiontype'
-    question = 'question'
+    library = 'LIBRARY'
+    questiontype = 'QUESTIONTYPE'
+    question = 'QUESTION'
 
 
 class PackageInfo(BaseModel):

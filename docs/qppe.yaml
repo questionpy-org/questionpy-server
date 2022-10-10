@@ -413,9 +413,9 @@ components:
         type:
           type: string
           enum:
-            - library
-            - questiontype
-            - question
+            - LIBRARY
+            - QUESTIONTYPE
+            - QUESTION
         author:
           type: string
         url:
