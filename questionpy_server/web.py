@@ -263,3 +263,53 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
     if _func is None:
         return decorator
     return decorator(_func)
+
+
+def ensure_package_exists(_func: Optional[RouteHandler] = None) \
+        -> Union[RouteHandler, Callable[[RouteHandler], RouteHandler]]:
+
+    def decorator(function: RouteHandler) -> RouteHandler:
+        """internal decorator function"""
+
+        @functools.wraps(function)
+        async def wrapper(request: Request, *args: Any, **kwargs: Any) -> Any:
+            """Wrapper around the actual function call."""
+
+            if request.content_type != 'multipart/form-data':
+                web_logger.info('Wrong content type, json or multipart/form-data expected, got %s',
+                                request.content_type)
+                raise HTTPBadRequest
+
+            server: 'QPyServer' = request.app['qpy_server_app']
+            package_hash: str = request.match_info['package_hash']
+
+            package: Optional[HashContainer] = None
+
+            reader = await request.multipart()
+            while part := await reader.next():
+                if not isinstance(part, BodyPartReader):
+                    continue
+                if part.name == 'package':
+                    package = await read_part(part, server.settings.webservice.max_bytes_package, calculate_hash=True)
+                    break
+
+            if not package:
+                msg = 'No package found in multipart/form-data'
+                web_logger.warning(msg)
+                raise HTTPBadRequest(text=msg)
+
+            if package_hash != package.hash:
+                msg = f'Package hash does not match: {package_hash} != {package.hash}'
+                web_logger.warning(msg)
+                raise HTTPBadRequest(text=msg)
+
+            package_path = get_or_save_data(server.collector, package, package_hash)
+            kwargs['package'] = package_path
+
+            return await function(request, *args, **kwargs)
+
+        return cast(RouteHandler, wrapper)
+
+    if _func is None:
+        return decorator
+    return decorator(_func)

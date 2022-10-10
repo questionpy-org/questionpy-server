@@ -43,6 +43,26 @@ paths:
                 $ref: "#/components/schemas/PackageInfo"
         404:
           description: Not Found
+    post:
+      summary: Get package information
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                package:
+                  type: string
+                  format: binary
+                  description: QuestionPy Package
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageInfo"
 
   /packages/{package_hash}/options:
     parameters:

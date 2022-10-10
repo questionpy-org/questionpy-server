@@ -4,12 +4,13 @@ from typing import TYPE_CHECKING, Optional
 
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPMethodNotAllowed
+from questionpy_common.manifest import Manifest
 
-from questionpy_server.web import ensure_package_and_question_state_exists, json_response
+from questionpy_server.web import ensure_package_and_question_state_exists, json_response, ensure_package_exists
 from questionpy_server.factories import AttemptFactory, AttemptGradedFactory, AttemptStartedFactory,\
     PackageInfoFactory
 
-from .models import QuestionStateHash, AttemptStartArguments, AttemptGradeArguments, AttemptViewArguments
+from .models import QuestionStateHash, AttemptStartArguments, AttemptGradeArguments, AttemptViewArguments, PackageInfo
 
 if TYPE_CHECKING:
     from questionpy_server.app import QPyServer
@@ -20,6 +21,18 @@ routes = web.RouteTableDef()
 @routes.get('/helloworld')
 async def hello(_request: web.Request) -> web.Response:
     return web.Response(text="Hello, world")
+
+
+@routes.post(r'/packages/{package_hash:\w+}')  # type: ignore[arg-type]
+@ensure_package_exists
+async def post_package(request: web.Request, package: Path) -> web.Response:
+    """Get package information."""
+    qpyserver: 'QPyServer' = request.app['qpy_server_app']
+
+    async with qpyserver.worker_pool.get_worker(package, 0, None) as worker:
+        manifest: Manifest = await worker.get_manifest()
+
+    return json_response(data=PackageInfo(**manifest.dict(), package_hash=request.match_info['package_hash']))
 
 
 @routes.get('/packages')
