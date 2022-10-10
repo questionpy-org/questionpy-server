@@ -1,4 +1,3 @@
-from functools import cache
 from hashlib import sha256
 from pathlib import Path
 
@@ -12,11 +11,10 @@ from questionpy_server.settings import Settings, WebserviceSettings, PackageCach
     QuestionStateCacheSettings
 
 
-@cache
-def get_file_hash(file: Path) -> str:
+def get_file_hash(path: Path) -> str:
     hash_value = sha256()
-    with file.open('rb') as f:
-        while chunk := f.read(4096):
+    with path.open('rb') as file:
+        while chunk := file.read(4096):
             hash_value.update(chunk)
     return hash_value.hexdigest()
 
