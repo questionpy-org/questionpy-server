@@ -1,6 +1,6 @@
 from hashlib import sha1
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPMethodNotAllowed
@@ -38,8 +38,8 @@ async def get_package(request: web.Request) -> web.Response:
 
 
 @routes.post(r'/packages/{package_hash:\w+}/options')  # type: ignore[arg-type]
-@ensure_package_and_question_state_exists
-async def post_options(request: web.Request, package: Path, question_state: Path,
+@ensure_package_and_question_state_exists(optional_question_state=True)
+async def post_options(request: web.Request, package: Path, question_state: Optional[Path],
                        data: QuestionStateHash) -> web.Response:
     """
     Get the options form definition that allow a question creator to customize a question.

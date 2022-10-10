@@ -167,7 +167,16 @@ def get_or_save_data(location: Union[FileLimitLRU, PackageCollector], container:
     return path
 
 
-def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = None) \
+def get_data(location: Union[FileLimitLRU, PackageCollector], hash_value: str) -> Optional[Path]:
+    try:
+        path = location.get(hash_value)
+    except FileNotFoundError:
+        return None
+    return path
+
+
+def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = None,
+                                             optional_question_state: bool = False) \
         -> Union[RouteHandler, Callable[[RouteHandler], RouteHandler]]:
     """
     Decorator function used to ensure that the package and question type exists and that the json
@@ -175,6 +184,7 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
 
     :param _func: Control parameter; allows using the decorator with or without arguments.
             If this decorator is used with any arguments, this will always be the decorated function itself.
+    :param optional_question_state: if True, the question state is optional
     """
 
     def decorator(function: RouteHandler) -> RouteHandler:
@@ -208,19 +218,9 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
                     raise HTTPBadRequest(text=msg)
 
                 # Get or save package and question_state.
-                package_path = get_or_save_data(server.package_cache, package, package_hash)
-                question_state_path = get_or_save_data(server.collector, question_state, model.question_state_hash)
-
-                # Check if package and question_state exist.
-                package_not_found = package_path is None
-                question_state_not_found = question_state_path is None
-
-                if package_not_found or question_state_not_found:
-                    raise HTTPNotFound(
-                        text=PackageQuestionStateNotFound(package_not_found=package_not_found,
-                                                          question_state_not_found=question_state_not_found).json(),
-                        content_type='application/json'
-                    )
+                package_path = get_or_save_data(server.collector, package, package_hash)
+                question_state_path = get_or_save_data(server.question_state_cache, question_state,
+                                                       model.question_state_hash)
 
             elif request.content_type == 'application/json':
                 try:
@@ -230,24 +230,27 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
                     web_logger.info('Invalid JSON in request')
                     raise HTTPBadRequest from error
 
-                try:
-                    package_path = server.collector.get(package_hash)
-                    question_state_path = server.question_state_cache.get(model.question_state_hash)
-                except FileNotFoundError as error:
-                    # Check if package or question state does not exist.
-                    package_not_found = not server.collector.contains(package_hash)
-                    question_state_not_found = not server.question_state_cache.contains(model.question_state_hash)
-
-                    raise HTTPNotFound(
-                        text=PackageQuestionStateNotFound(package_not_found=package_not_found,
-                                                          question_state_not_found=question_state_not_found).json(),
-                        content_type='application/json'
-                    ) from error
+                package_path = get_data(server.collector, package_hash)
+                question_state_path = get_data(server.question_state_cache, model.question_state_hash)
 
             else:
                 web_logger.info('Wrong content type, json or multipart/form-data expected, got %s',
                                 request.content_type)
                 raise HTTPBadRequest
+
+            # Check if package and question_state exist.
+            package_not_found = package_path is None
+            question_state_not_found = question_state_path is None
+
+            if (
+                    package_not_found or
+                    (question_state_not_found and (model.question_state_hash != '' or not optional_question_state))
+            ):
+                raise HTTPNotFound(
+                    text=PackageQuestionStateNotFound(package_not_found=package_not_found,
+                                                      question_state_not_found=question_state_not_found).json(),
+                    content_type='application/json'
+                )
 
             kwargs[param_name] = model
             kwargs['package'] = package_path
