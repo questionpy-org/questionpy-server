@@ -76,7 +76,7 @@ def get_directory_size(directory: str) -> int:
     :return: size of directory in bytes
     """
 
-    return sum([file.stat().st_size for file in Path(directory).iterdir() if file.is_file()])
+    return sum(file.stat().st_size for file in Path(directory).iterdir() if file.is_file())
 
 
 @pytest.fixture

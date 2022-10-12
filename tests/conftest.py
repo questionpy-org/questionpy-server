@@ -1,5 +1,5 @@
-from enum import Enum
-from typing import Callable
+from hashlib import sha256
+from pathlib import Path
 
 import pytest
 from _pytest.tmpdir import TempPathFactory
@@ -11,26 +11,12 @@ from questionpy_server.settings import Settings, WebserviceSettings, PackageCach
     QuestionStateCacheSettings
 
 
-class PackageName(str, Enum):
-    complete = 'complete'
-    no_package = 'no_package'
-    no_question_state = 'no_question_state'
-    nothing = 'nothing'
-
-
-class Package:
-    def __init__(self, package_hash: str, route: Callable[[str], str]):
-        self.package_hash = package_hash
-        self.question_state_hash = package_hash
-        self.route = route(package_hash)
-
-
-class Packages:
-    def __init__(self, route: Callable[[str], str]):
-        self.complete: Package = Package(PackageName.complete, route)
-        self.no_package: Package = Package(PackageName.no_package, route)
-        self.no_question_state: Package = Package(PackageName.no_question_state, route)
-        self.nothing: Package = Package(PackageName.nothing, route)
+def get_file_hash(path: Path) -> str:
+    hash_value = sha256()
+    with path.open('rb') as file:
+        while chunk := file.read(4096):
+            hash_value.update(chunk)
+    return hash_value.hexdigest()
 
 
 @pytest.fixture
@@ -45,11 +31,6 @@ def qpy_server(tmp_path_factory: TempPathFactory) -> QPyServer:
         cache_question_state=QuestionStateCacheSettings(directory=question_state_cache_directory),
         collector=CollectorSettings()
     ))
-
-    server.package_cache.put(PackageName.complete, b'.')
-    server.question_state_cache.put(PackageName.complete, b'{}')
-    server.question_state_cache.put(PackageName.no_package, b'{}')
-    server.package_cache.put(PackageName.no_question_state, b'{}')
 
     return server
 

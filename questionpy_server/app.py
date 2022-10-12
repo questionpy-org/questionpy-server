@@ -13,7 +13,7 @@ from .worker.controller import WorkerPool
 class QPyServer:
     def __init__(self, settings: Settings):
         self.settings: Settings = settings
-        self.web_app = web.Application(client_max_size=settings.webservice.client_max_size)
+        self.web_app = web.Application(client_max_size=settings.webservice.max_bytes_main)
         self.web_app.add_routes(routes)
         self.web_app['qpy_server_app'] = self
         self.worker_pool = WorkerPool(0, 0)

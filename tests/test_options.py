@@ -1,75 +1,97 @@
-from io import StringIO
-from typing import Tuple
+from io import BytesIO
+from pathlib import Path
 
 from aiohttp import FormData
 from aiohttp.test_utils import TestClient
 
 from questionpy_common.elements import OptionsFormDefinition
 
-from questionpy_server.api.models import QuestionStateHash
-from questionpy_server.factories.question_state import QuestionStateHashFactory
-from tests.conftest import Packages, Package
+from tests.conftest import get_file_hash
 
 
-def route(package_hash: str) -> str:
-    return f'/packages/{package_hash}/options'
+PACKAGE = Path('./tests/test_data/package.qpy')
+PACKAGE_HASH = get_file_hash(PACKAGE)
+
+METHOD = 'POST'
+URL = f'packages/{PACKAGE_HASH}/options'
+
+path = Path('./tests/test_data/question_state/')
+QUESTION_STATE = (path / 'question_state.json').read_text()
+QUESTION_STATE_REQUEST = (path / 'main.json').read_text()
 
 
-PKG = Packages(route)
+async def test_optional_question_state(client: TestClient) -> None:
+    # Even though the question state is optional, it
+    # ...is still required to be valid JSON.
+    res = await client.request(METHOD, URL, json="{not_valid!}")
+    assert res.status == 400
 
-
-def get_method_url_data(dataitem: Package) -> Tuple[str, str, str]:
-    question_state_hash_model: QuestionStateHash = QuestionStateHashFactory.build()
-    question_state_hash_model.question_state_hash = dataitem.question_state_hash
-    question_state_hash_json = question_state_hash_model.json()
-
-    return 'POST', dataitem.route, question_state_hash_json
-
-
-async def test_no_package(client: TestClient) -> None:
-    method, url, data = get_method_url_data(PKG.no_package)
-
-    res = await client.request(method, url, json=data)
-    assert res.status == 404
-
+    # ...should return the status code 404 with 'question_state_not_found: True'.
+    res = await client.request(METHOD, URL, json=QUESTION_STATE_REQUEST)
     res_data = await res.json()
-    assert res_data == {"package_not_found": True, "question_state_not_found": False}
+    assert res_data == {"package_not_found": True, "question_state_not_found": True}
 
+    # ...should return the status code 200 if a package is provided and question_state_hash is empty.
+    with PACKAGE.open('rb') as file:
+        payload = FormData()
+        payload.add_field('main', '{"question_state_hash": "", "context": null}')
+        payload.add_field('package', file, filename=PACKAGE.name)
 
-async def test_no_question_state(client: TestClient) -> None:
-    method, url, data = get_method_url_data(PKG.no_question_state)
+        res = await client.request(METHOD, URL, data=payload)
 
-    res = await client.request(method, url, json=data)
+    assert res.status == 200
+    res_data = await res.json()
+    OptionsFormDefinition(**res_data)
+
+    # ...should return 404 with 'question_state_not_found: True' if question_state_hash does not exist and is not empty.
+    with PACKAGE.open('rb') as file:
+        payload = FormData()
+        payload.add_field('main', '{"question_state_hash": "not_valid", "context": null}')
+        payload.add_field('package', file, filename=PACKAGE.name)
+
+        res = await client.request(METHOD, URL, data=payload)
+
     assert res.status == 404
-
     res_data = await res.json()
     assert res_data == {"package_not_found": False, "question_state_not_found": True}
 
 
-async def test_no_package_and_no_question_state(client: TestClient) -> None:
-    method, url, data = get_method_url_data(PKG.nothing)
-
-    res = await client.request(method, url, json=data)
-    assert res.status == 404
-
-    res_data = await res.json()
-    assert res_data == {"package_not_found": True, "question_state_not_found": True}
-
-    # Sending everything is tested in test_complete - therefore we can skip it here.
-
-
-async def test_complete(client: TestClient) -> None:
-    return  # TODO Add a testcase with a real package.
-    method, url, data = get_method_url_data(PKG.complete)
-
+async def test_no_package(client: TestClient) -> None:
     payload = FormData()
-    payload.add_field('main', data)
-    payload.add_field('package', StringIO())
-    payload.add_field('question_state', "{'test': 'hallo'}")
+    payload.add_field('main', QUESTION_STATE_REQUEST)
+    payload.add_field('question_state', QUESTION_STATE)
+    payload.add_field('ignore', BytesIO())  # Additional fields get ignored.
 
-    res = await client.request(method, url, data=payload)
+    res = await client.request(METHOD, URL, data=payload)
+
+    assert res.status == 404
+    res_data = await res.json()
+    assert res_data == {"package_not_found": True, "question_state_not_found": False}
+
+
+async def test_data_gets_cached(client: TestClient) -> None:
+    with PACKAGE.open('rb') as file:
+        payload = FormData()
+        payload.add_field('main', QUESTION_STATE_REQUEST)
+        payload.add_field('question_state', QUESTION_STATE)
+        payload.add_field('package', file, filename=PACKAGE.name)
+
+        res = await client.request(METHOD, URL, data=payload)
 
     assert res.status == 200
+    reference = await res.json()
+    OptionsFormDefinition(**reference)
 
+    # Package and question state should be stored in cache.
+    res = await client.request(METHOD, URL, json=QUESTION_STATE_REQUEST)
+    assert res.status == 200
     res_data = await res.json()
-    OptionsFormDefinition(**res_data)
+    assert res_data == reference
+
+    payload = FormData()
+    payload.add_field('main', QUESTION_STATE_REQUEST)
+    payload.add_field('ignore', BytesIO())  # Additional fields get ignored.
+    res = await client.request(METHOD, URL, data=payload)
+    assert res.status == 200
+    res_data = await res.json()
+    assert res_data == reference

@@ -3,8 +3,9 @@ from configparser import ConfigParser
 from pathlib import Path
 from typing import Any, Callable, Dict, Tuple, Optional
 
-from pydantic import BaseModel, BaseSettings, validator
+from pydantic import BaseModel, BaseSettings, validator, Field
 from pydantic.env_settings import InitSettingsSource, SettingsSourceCallable
+from questionpy_common import constants
 
 
 class IniFileSettingsSource:
@@ -29,8 +30,16 @@ class IniFileSettingsSource:
 
 class WebserviceSettings(BaseModel):
     listen_address: str = '127.0.0.1'
-    listen_port: int = 9010
-    client_max_size: int = 20_971_520
+    listen_port: int = 9020
+    max_bytes_main: int = Field(5_242_880, const=True)
+    max_bytes_package: int = constants.MAX_BYTES_PACKAGE
+
+    @validator('max_bytes_package')
+    # pylint: disable=no-self-argument
+    def max_bytes_package_bigger_then_predefined_value(cls, value: int) -> int:
+        if value < constants.MAX_BYTES_PACKAGE:
+            raise ValueError(f'max_bytes_package must be bigger than {constants.MAX_BYTES_PACKAGE}')
+        return value
 
 
 class PackageCacheSettings(BaseModel):
@@ -48,10 +57,10 @@ class CollectorSettings(BaseModel):
 
     @validator('local_directory')
     # pylint: disable=no-self-argument
-    def transform_empty_string_to_none(cls, v: Optional[str]) -> Optional[str]:
-        if v == '':
+    def transform_empty_string_to_none(cls, value: Optional[str]) -> Optional[str]:
+        if value == '':
             return None
-        return v
+        return value
 
 
 class Settings(BaseSettings):

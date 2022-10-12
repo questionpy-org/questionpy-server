@@ -6,9 +6,9 @@ from pydantic import BaseModel, Field, FilePath, HttpUrl, Json
 
 
 class PackageType(Enum):
-    library = 'library'
-    questiontype = 'questiontype'
-    question = 'question'
+    LIBRARY = 'LIBRARY'
+    QUESTIONTYPE = 'QUESTIONTYPE'
+    QUESTION = 'QUESTION'
 
 
 class PackageInfo(BaseModel):
@@ -42,9 +42,9 @@ class QuestionCreateArguments(BaseModel):
 
 
 class GradingMethod(Enum):
-    always_manual_grading_required = 'ALWAYS_MANUAL_GRADING_REQUIRED'
-    automatically_gradable = 'AUTOMATICALLY_GRADABLE'
-    automatically_gradable_with_countback = 'AUTOMATICALLY_GRADABLE_WITH_COUNTBACK'
+    ALWAYS_MANUAL_GRADING_REQUIRED = 'ALWAYS_MANUAL_GRADING_REQUIRED'
+    AUTOMATICALLY_GRADABLE = 'AUTOMATICALLY_GRADABLE'
+    AUTOMATICALLY_GRADABLE_WITH_COUNTBACK = 'AUTOMATICALLY_GRADABLE_WITH_COUNTBACK'
 
 
 class ResponseClass(BaseModel):
@@ -139,10 +139,10 @@ class AttemptGradeArguments(AttemptViewArguments):
 
 
 class GradingCode(Enum):
-    automatically_graded = 'AUTOMATICALLY_GRADED'
-    needs_manual_grading = 'NEEDS_MANUAL_GRADING'
-    response_not_gradable = 'RESPONSE_NOT_GRADABLE'
-    invalid_response = 'INVALID_RESPONSE'
+    AUTOMATICALLY_GRADED = 'AUTOMATICALLY_GRADED'
+    NEEDS_MANUAL_GRADING = 'NEEDS_MANUAL_GRADING'
+    RESPONSE_NOT_GRADABLE = 'RESPONSE_NOT_GRADABLE'
+    INVALID_RESPONSE = 'INVALID_RESPONSE'
 
 
 class ClassificationItem(BaseModel):

@@ -4,13 +4,9 @@ from typing import Optional
 from .cache import FileLimitLRU
 
 
-class PackageNotFound(Exception):
-    pass
-
-
 class PackageCollector:
     def __init__(self, local_dir: Optional[str], cache: FileLimitLRU):
-        self._cache = cache
+        self.cache = cache
         self._local_dir: Optional[Path]
 
         if local_dir:
@@ -29,13 +25,11 @@ class PackageCollector:
 
         if self._local_dir and (self._local_dir / (package_hash + '.qpy')).is_file():
             return True
-        return self._cache.contains(package_hash)
+        return self.cache.contains(package_hash)
 
     def get(self, package_hash: str) -> Path:
         """
         Returns path of a package if it exists.
-
-        TODO: Change search logic.
 
         :param package_hash: hash value of the package
         :return: path to the package
@@ -49,10 +43,10 @@ class PackageCollector:
 
         # check cache
         try:
-            return self._cache.get(package_hash)
+            return self.cache.get(package_hash)
         except FileNotFoundError:
             pass
 
         # TODO: check repos
 
-        raise PackageNotFound(f'Package with hash {package_hash} was not found.')
+        raise FileNotFoundError(f'Package with hash {package_hash} was not found.')
