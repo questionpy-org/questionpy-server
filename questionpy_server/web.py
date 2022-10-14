@@ -143,8 +143,8 @@ async def parse_form_data(request: Request) \
     return main, package, question_state
 
 
-def get_or_save_data(location: Union[FileLimitLRU, PackageCollector], container: Optional[HashContainer],
-                     hash_value: str) -> Optional[Path]:
+async def get_or_save_data(location: Union[FileLimitLRU, PackageCollector], container: Optional[HashContainer],
+                           hash_value: str) -> Optional[Path]:
     """
     Gets a file from the cache or saves it if it is not in the cache.
     :param location: cache or collector
@@ -158,7 +158,7 @@ def get_or_save_data(location: Union[FileLimitLRU, PackageCollector], container:
             path = location.get(hash_value)
         else:
             location = location.cache if isinstance(location, PackageCollector) else location
-            path = location.put(container.hash, container.data)
+            path = await location.put(container.hash, container.data)
     except SizeError as error:
         raise HTTPRequestEntityTooLarge(max_size=error.max_size, actual_size=error.actual_size,
                                         text=str(error)) from error
@@ -218,9 +218,9 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
                     raise HTTPBadRequest(text=msg)
 
                 # Get or save package and question_state.
-                package_path = get_or_save_data(server.collector, package, package_hash)
-                question_state_path = get_or_save_data(server.question_state_cache, question_state,
-                                                       model.question_state_hash)
+                package_path = await get_or_save_data(server.collector, package, package_hash)
+                question_state_path = await get_or_save_data(server.question_state_cache, question_state,
+                                                             model.question_state_hash)
 
             elif request.content_type == 'application/json':
                 try:
@@ -303,7 +303,7 @@ def ensure_package_exists(_func: Optional[RouteHandler] = None) \
                 web_logger.warning(msg)
                 raise HTTPBadRequest(text=msg)
 
-            package_path = get_or_save_data(server.collector, package, package_hash)
+            package_path = await get_or_save_data(server.collector, package, package_hash)
             kwargs['package'] = package_path
 
             return await function(request, *args, **kwargs)

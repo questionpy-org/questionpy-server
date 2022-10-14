@@ -99,6 +99,7 @@ class FileLimitLRU:
         If after adding the item `._total_bytes` exceeds `.max_bytes`, items are deleted in order from least to most
         recently accessed until the total size (in bytes) is in line with the specified maximum.
         """
+
         async with self._lock:
             if not isinstance(value, bytes):
                 raise TypeError("Not a bytes object:", repr(value))
