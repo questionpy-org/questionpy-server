@@ -100,17 +100,17 @@ class FileLimitLRU:
         recently accessed until the total size (in bytes) is in line with the specified maximum.
         """
 
+        if not isinstance(value, bytes):
+            raise TypeError("Not a bytes object:", repr(value))
+
+        size = len(value)
+        if size > self.max_bytes:
+            # If we allowed this, the loop at the end would remove all items from the dictionary,
+            # so we raise an error to allow exceptions for this case.
+            raise SizeError(f"Item itself exceeds maximum allowed size of {self.max_bytes} bytes",
+                            max_size=self.max_bytes, actual_size=size)
+
         async with self._lock:
-            if not isinstance(value, bytes):
-                raise TypeError("Not a bytes object:", repr(value))
-
-            size = len(value)
-            if size > self.max_bytes:
-                # If we allowed this, the loop at the end would remove all items from the dictionary,
-                # so we raise an error to allow exceptions for this case.
-                raise SizeError(f"Item itself exceeds maximum allowed size of {self.max_bytes} bytes",
-                                max_size=self.max_bytes, actual_size=size)
-
             # Update `_total_bytes` depending on whether the key existed already or not.
             if key in self._files:
                 self._total_bytes -= self._files[key].size
