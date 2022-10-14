@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from pathlib import Path
 from typing import NamedTuple
+from asyncio import gather, to_thread, Lock
 
 
 class File(NamedTuple):
@@ -23,6 +24,10 @@ class FileLimitLRU:
     """
 
     def __init__(self, directory: str, max_bytes: int, extension: str = None) -> None:
+        """
+        A cache should be initialised while starting a server therefore it is not necessary for it to be async.
+        """
+
         self.max_bytes = max_bytes
         self._total_bytes = 0
         self._extension: str = '' if extension is None else '.' + extension.lstrip('.')
@@ -31,6 +36,8 @@ class FileLimitLRU:
 
         self.directory: Path = Path(directory).resolve()
         self.directory.mkdir(exist_ok=True)
+
+        self._lock = Lock()
 
         for path in self.directory.iterdir():
             if not path.is_file():
@@ -55,14 +62,6 @@ class FileLimitLRU:
         if key not in self._files:
             return False
 
-        file = self._files[key]
-
-        if not file.path.is_file():
-            # File was deleted from filesystem - update internal dict.
-            self._total_bytes -= file.size
-            del self._files[key]
-            return False
-
         self._files.move_to_end(key)
         return True
 
@@ -75,22 +74,22 @@ class FileLimitLRU:
     def get(self, key: str) -> Path:
         return self._get_file(key).path
 
-    def remove(self, key: str) -> None:
+    async def remove(self, key: str) -> None:
+        """
+        Removes file from the cache and the filesystem.
+        """
+
         file = self._get_file(key)
-
-        file.path.unlink(missing_ok=True)
+        await to_thread(file.path.unlink, missing_ok=True)
         self._total_bytes -= file.size
-
         del self._files[key]
 
-    def clear(self) -> None:
-        for file in self._files.values():
-            file.path.unlink(missing_ok=True)
-
+    async def clear(self) -> None:
+        await gather(*[to_thread(file.path.unlink, missing_ok=True) for file in self._files.values()])
         self._total_bytes = 0
         self._files.clear()
 
-    def put(self, key: str, value: bytes) -> Path:
+    async def put(self, key: str, value: bytes) -> Path:
         """
         Only accepts `bytes` objects as values; raises a `TypeError` otherwise.
         If the length/size of the provided `value` exceeds `.max_bytes` a `SizeError` is raised.
@@ -100,45 +99,45 @@ class FileLimitLRU:
         If after adding the item `._total_bytes` exceeds `.max_bytes`, items are deleted in order from least to most
         recently accessed until the total size (in bytes) is in line with the specified maximum.
         """
+        async with self._lock:
+            if not isinstance(value, bytes):
+                raise TypeError("Not a bytes object:", repr(value))
 
-        if not isinstance(value, bytes):
-            raise TypeError("Not a bytes object:", repr(value))
+            size = len(value)
+            if size > self.max_bytes:
+                # If we allowed this, the loop at the end would remove all items from the dictionary,
+                # so we raise an error to allow exceptions for this case.
+                raise SizeError(f"Item itself exceeds maximum allowed size of {self.max_bytes} bytes",
+                                max_size=self.max_bytes, actual_size=size)
 
-        size = len(value)
-        if size > self.max_bytes:
-            # If we allowed this, the loop at the end would remove all items from the dictionary,
-            # so we raise an error to allow exceptions for this case.
-            raise SizeError(f"Item itself exceeds maximum allowed size of {self.max_bytes} bytes",
-                            max_size=self.max_bytes, actual_size=size)
+            # Update `_total_bytes` depending on whether the key existed already or not.
+            if key in self._files:
+                self._total_bytes -= self._files[key].size
+            self._total_bytes += size
 
-        # Update `_total_bytes` depending on whether the key existed already or not.
-        if key in self._files:
-            self._total_bytes -= self._files[key].size
-        self._total_bytes += size
+            # Save the bytes on filesystem.
+            path = self.directory / (key + self._extension)
 
-        # Save the bytes on filesystem.
-        path = self.directory / (key + self._extension)
+            if not self.directory.is_dir():
+                self.directory.mkdir(parents=True, exist_ok=True)
 
-        if not self.directory.is_dir():
-            self.directory.mkdir(parents=True, exist_ok=True)
+            if size != path.write_bytes(value):
+                raise IOError("Failed to write bytes to file")
 
-        if size != path.write_bytes(value):
-            raise IOError("Failed to write bytes to file")
+            # Update internal file dictionary.
+            self._files[key] = File(path, size)
 
-        # Update internal file dictionary.
-        self._files[key] = File(path, size)
+            # If size is too large now, remove items until it is less than or equal to the defined maximum.
+            while self._total_bytes > self.max_bytes:
+                # Delete the current oldest item, by instantiating an iterator over all keys (in order)
+                # and passing its next item (i.e. the first one in order) to self.remove.
+                try:
+                    await self.remove(next(iter(self._files)))
+                except FileNotFoundError:
+                    # The file was deleted from the filesystem.
+                    pass
 
-        # If size is too large now, remove items until it is less than or equal to the defined maximum.
-        while self._total_bytes > self.max_bytes:
-            # Delete the current oldest item, by instantiating an iterator over all keys (in order)
-            # and passing its next item (i.e. the first one in order) to self.remove.
-            try:
-                self.remove(next(iter(self._files)))
-            except FileNotFoundError:
-                # The file was deleted from the filesystem.
-                pass
-
-        return path
+            return path
 
     @property
     def total_bytes(self) -> int:

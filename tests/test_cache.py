@@ -111,36 +111,36 @@ def test_init(cache: FileLimitLRU, settings: Settings, path_with_too_many_bytes:
     FileLimitLRU(settings.cache.directory, settings.cache.max_bytes)
 
 
-def test_remove(cache: FileLimitLRU, settings: Settings) -> None:
+async def test_remove(cache: FileLimitLRU, settings: Settings) -> None:
     file, _ = settings.items.list[0]
-    cache.remove(file)
-    expected_total_bytes = settings.items.total_bytes - settings.items.bytes_per_item
+    await cache.remove(file)
     assert not (cache.directory / file).is_file()
+    expected_total_bytes = settings.items.total_bytes - settings.items.bytes_per_item
     assert cache.total_bytes == expected_total_bytes
 
     file, _ = settings.items.list[-1]
-    cache.remove(file)
+    await cache.remove(file)
     expected_total_bytes = settings.items.total_bytes - 2 * settings.items.bytes_per_item
     assert not (cache.directory / file).is_file()
     assert cache.total_bytes == expected_total_bytes
 
     with pytest.raises(FileNotFoundError):
-        cache.remove(file)
+        await cache.remove(file)
     assert cache.total_bytes == expected_total_bytes
 
     with pytest.raises(FileNotFoundError):
-        cache.remove('doesnotexist')
+        await cache.remove('doesnotexist')
     assert cache.total_bytes == expected_total_bytes
 
 
-def test_clear(cache: FileLimitLRU, settings: Settings) -> None:
-    cache.clear()
+async def test_clear(cache: FileLimitLRU, settings: Settings) -> None:
+    await cache.clear()
 
     assert cache.total_bytes == 0
     assert get_file_count(settings.cache.directory) == 0
 
     # Clear cache after clearing it before.
-    cache.clear()
+    await cache.clear()
 
 
 def test_get(cache: FileLimitLRU, settings: Settings) -> None:
@@ -170,36 +170,31 @@ def test_contains(cache: FileLimitLRU, settings: Settings) -> None:
     file, _ = settings.items.list[-1]
     assert cache.contains(file)
 
-    # Check file which was deleted from filesystem.
-    file, _ = settings.items.list[1]
-    (Path(settings.cache.directory) / file).unlink()
-    assert not cache.contains(file)
-
     # Check not existing file.
     assert not cache.contains('doesnotexist')
 
 
-def test_put(cache: FileLimitLRU, settings: Settings) -> None:
+async def test_put(cache: FileLimitLRU, settings: Settings) -> None:
     # Content type is not bytes.
     with pytest.raises(TypeError):
-        cache.put('new', 'string')  # type: ignore[arg-type]
+        await cache.put('new', 'string')  # type: ignore[arg-type]
     assert cache.total_bytes == settings.items.total_bytes
     assert get_file_count(settings.cache.directory) == settings.items.num_of_items
 
     # Content size is bigger than cache size.
     with pytest.raises(SizeError):
-        cache.put('new', b'.' * (settings.cache.max_bytes + 1))
+        await cache.put('new', b'.' * (settings.cache.max_bytes + 1))
 
     # Replace existing file.
     file, _ = settings.items.list[0]
     new_content = b'.' * settings.items.bytes_per_item
-    cache.put(file, new_content)
+    await cache.put(file, new_content)
     assert (Path(settings.cache.directory) / file).read_bytes() == new_content
     assert cache.total_bytes == settings.items.total_bytes
 
     # Put max sized content into cache.
     file, content = 'A', b'.' * settings.cache.max_bytes
-    cache.put(file, content)
+    await cache.put(file, content)
     assert (Path(settings.cache.directory) / file).is_file()
     assert cache.total_bytes == settings.cache.max_bytes
     assert get_file_count(settings.cache.directory) == 1
@@ -211,7 +206,7 @@ def test_put(cache: FileLimitLRU, settings: Settings) -> None:
 
     # Put file into cache where directory does not exist.
     file, content = 'B', b'.' * settings.items.bytes_per_item
-    cache.put(file, content)
+    await cache.put(file, content)
     assert (Path(settings.cache.directory) / file).is_file()
     assert cache.total_bytes == settings.items.bytes_per_item
     assert get_file_count(settings.cache.directory) == 1
@@ -222,12 +217,12 @@ def test_put(cache: FileLimitLRU, settings: Settings) -> None:
     files, content = [str(i) for i in range(filecount)], b'.' * datasize
 
     for file in files:
-        cache.put(file, content)
+        await cache.put(file, content)
 
     for i in range(filecount):
         # Add new file to cache and check if the oldest file is removed.
         new_file = str(filecount + i + 1)
-        cache.put(new_file, content)
+        await cache.put(new_file, content)
 
         assert cache.total_bytes == datasize * filecount
         assert cache.total_bytes <= settings.cache.max_bytes
