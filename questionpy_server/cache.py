@@ -72,6 +72,10 @@ class FileLimitLRU:
         return self._files[key]
 
     def get(self, key: str) -> Path:
+        """
+        Returns path of the file in the cache.
+        """
+
         return self._get_file(key).path
 
     async def remove(self, key: str) -> None:
@@ -85,6 +89,10 @@ class FileLimitLRU:
         del self._files[key]
 
     async def clear(self) -> None:
+        """
+        Removes all files from the cache (and filesystem).
+        """
+
         await gather(*[to_thread(file.path.unlink, missing_ok=True) for file in self._files.values()])
         self._total_bytes = 0
         self._files.clear()
