@@ -65,7 +65,7 @@ def get_file_count(directory: str) -> int:
     :return: count of files in directory
     """
 
-    return len(list(Path(directory).iterdir()))
+    return len(list(file for file in Path(directory).iterdir() if file.is_file()))
 
 
 def get_directory_size(directory: str) -> int:
@@ -109,6 +109,14 @@ def test_init(cache: FileLimitLRU, settings: Settings, path_with_too_many_bytes:
     # Ignore directories.
     (Path(settings.cache.directory) / "test_dir").mkdir()
     FileLimitLRU(settings.cache.directory, settings.cache.max_bytes)
+
+    # Remove files with temporary extension.
+    tmp_file = Path(settings.cache.directory) / ("file.txt" + cache._tmp_extension)
+    tmp_file.write_bytes(b'.')
+    new_cache = FileLimitLRU(settings.cache.directory, settings.cache.max_bytes)
+    assert not tmp_file.is_file()
+    assert get_file_count(settings.cache.directory) == settings.items.num_of_items
+    assert new_cache.total_bytes == settings.items.total_bytes
 
 
 async def test_remove(cache: FileLimitLRU, settings: Settings) -> None:

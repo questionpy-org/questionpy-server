@@ -1,3 +1,4 @@
+import logging
 from collections import OrderedDict
 from pathlib import Path
 from typing import NamedTuple
@@ -31,6 +32,7 @@ class FileLimitLRU:
         self.max_bytes = max_bytes
         self._total_bytes = 0
         self._extension: str = '' if extension is None else '.' + extension.lstrip('.')
+        self._tmp_extension: str = '.tmp'
 
         self._files: OrderedDict[str, File] = OrderedDict()
 
@@ -43,6 +45,10 @@ class FileLimitLRU:
             if not path.is_file():
                 continue
 
+            if path.suffix == self._tmp_extension:
+                path.unlink(missing_ok=True)
+                continue
+
             size = path.stat().st_size
             total = self._total_bytes + size
 
@@ -53,6 +59,9 @@ class FileLimitLRU:
 
             self._total_bytes = total
             self._files[path.stem] = File(path, size)
+
+        log = logging.getLogger('questionpy-server')
+        log.info(f"Cache initialised with {len(self._files)} files and {self._total_bytes} bytes")
 
     def contains(self, key: str) -> bool:
         """
@@ -119,19 +128,19 @@ class FileLimitLRU:
                             max_size=self.max_bytes, actual_size=size)
 
         async with self._lock:
+            # Save the bytes on filesystem.
+            path = self.directory / (key + self._extension)
+            tmp_path = path.parent / (path.name + self._tmp_extension)
+
+            if size != await to_thread(tmp_path.write_bytes, value):
+                raise IOError("Failed to write bytes to file")
+
+            await to_thread(tmp_path.rename, path)
+
             # Update `_total_bytes` depending on whether the key existed already or not.
             if key in self._files:
                 self._total_bytes -= self._files[key].size
             self._total_bytes += size
-
-            # Save the bytes on filesystem.
-            path = self.directory / (key + self._extension)
-
-            if not self.directory.is_dir():
-                self.directory.mkdir(parents=True, exist_ok=True)
-
-            if size != path.write_bytes(value):
-                raise IOError("Failed to write bytes to file")
 
             # Update internal file dictionary.
             self._files[key] = File(path, size)
