@@ -212,13 +212,6 @@ async def test_put(cache: FileLimitLRU, settings: Settings) -> None:
         filepath.unlink()
     Path(settings.cache.directory).rmdir()
 
-    # Put file into cache where directory does not exist.
-    file, content = 'B', b'.' * settings.items.bytes_per_item
-    await cache.put(file, content)
-    assert (Path(settings.cache.directory) / file).is_file()
-    assert cache.total_bytes == settings.items.bytes_per_item
-    assert get_file_count(settings.cache.directory) == 1
-
     # Remove the oldest file in cache.
     filecount = 3
     datasize = settings.cache.max_bytes // filecount
