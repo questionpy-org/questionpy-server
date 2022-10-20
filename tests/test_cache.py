@@ -207,10 +207,9 @@ async def test_put(cache: FileLimitLRU, settings: Settings) -> None:
     assert cache.total_bytes == settings.cache.max_bytes
     assert get_file_count(settings.cache.directory) == 1
 
-    # Delete every file in directory and remove folder.
+    # Delete every file in directory.
     for filepath in Path(settings.cache.directory).iterdir():
         filepath.unlink()
-    Path(settings.cache.directory).rmdir()
 
     # Remove the oldest file in cache.
     filecount = 3
