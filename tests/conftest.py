@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 
@@ -17,6 +18,17 @@ def get_file_hash(path: Path) -> str:
         while chunk := file.read(4096):
             hash_value.update(chunk)
     return hash_value.hexdigest()
+
+
+@dataclass
+class TestPackage:
+    path: Path
+
+    def __post_init__(self) -> None:
+        self.hash = get_file_hash(self.path)
+
+
+PACKAGES: list[TestPackage] = [TestPackage(path) for path in Path('tests/test_data/package').iterdir()]
 
 
 @pytest.fixture

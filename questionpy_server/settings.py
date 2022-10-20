@@ -63,14 +63,14 @@ class QuestionStateCacheSettings(BaseModel):
 
 
 class CollectorSettings(BaseModel):
-    local_directory: Optional[str]
+    local_directory: Optional[DirectoryPath]
 
     @validator('local_directory')
     # pylint: disable=no-self-argument
-    def transform_empty_string_to_none(cls, value: Optional[str]) -> Optional[str]:
-        if value == '':
+    def transform_to_path(cls, value: Optional[DirectoryPath]) -> Optional[DirectoryPath]:
+        if value is None or value == Path(''):
             return None
-        return value
+        return value.resolve()
 
 
 class Settings(BaseSettings):

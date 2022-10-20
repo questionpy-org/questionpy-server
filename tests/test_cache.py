@@ -120,35 +120,31 @@ def test_init(cache: FileLimitLRU, settings: Settings, path_with_too_many_bytes:
 
 
 async def test_remove(cache: FileLimitLRU, settings: Settings) -> None:
+    # Remove a file.
     file, _ = settings.items.list[0]
     await cache.remove(file)
     assert not (cache.directory / file).is_file()
     expected_total_bytes = settings.items.total_bytes - settings.items.bytes_per_item
     assert cache.total_bytes == expected_total_bytes
 
-    file, _ = settings.items.list[-1]
-    await cache.remove(file)
-    expected_total_bytes = settings.items.total_bytes - 2 * settings.items.bytes_per_item
-    assert not (cache.directory / file).is_file()
-    assert cache.total_bytes == expected_total_bytes
+    # Removing a file should fire the callback.
+    with patch.object(cache, 'on_remove') as mock:
+        file, _ = settings.items.list[-1]
+        await cache.remove(file)
+        expected_total_bytes = settings.items.total_bytes - 2 * settings.items.bytes_per_item
+        assert not (cache.directory / file).is_file()
+        assert cache.total_bytes == expected_total_bytes
+        mock.assert_called_once()
 
+    # Remove previously removed file.
     with pytest.raises(FileNotFoundError):
         await cache.remove(file)
     assert cache.total_bytes == expected_total_bytes
 
+    # Remove not existing file.
     with pytest.raises(FileNotFoundError):
         await cache.remove('doesnotexist')
     assert cache.total_bytes == expected_total_bytes
-
-
-async def test_clear(cache: FileLimitLRU, settings: Settings) -> None:
-    await cache.clear()
-
-    assert cache.total_bytes == 0
-    assert get_file_count(settings.cache.directory) == 0
-
-    # Clear cache after clearing it before.
-    await cache.clear()
 
 
 def test_get(cache: FileLimitLRU, settings: Settings) -> None:

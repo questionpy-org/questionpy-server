@@ -9,7 +9,7 @@ from questionpy_common.elements import OptionsFormDefinition
 from tests.conftest import get_file_hash
 
 
-PACKAGE = Path('./tests/test_data/package.qpy')
+PACKAGE = Path('./tests/test_data/package/package_1.qpy')
 PACKAGE_HASH = get_file_hash(PACKAGE)
 
 METHOD = 'POST'
