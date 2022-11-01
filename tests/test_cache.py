@@ -207,6 +207,11 @@ async def test_put(cache: FileLimitLRU, settings: Settings) -> None:
     assert cache.total_bytes == settings.cache.max_bytes
     assert get_file_count(settings.cache.directory) == 1
 
+    # Partially written file raises error.
+    with patch('questionpy_server.cache.Path.write_bytes', return_value=-1):
+        with pytest.raises(IOError):
+            await cache.put('B', b'.')
+
     # Delete every file in directory.
     for filepath in Path(settings.cache.directory).iterdir():
         filepath.unlink()
