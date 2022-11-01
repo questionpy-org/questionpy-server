@@ -18,10 +18,11 @@ class QPyServer:
         self.web_app['qpy_server_app'] = self
         self.worker_pool = WorkerPool(0, 0)
 
-        self.package_cache = FileLimitLRU(settings.cache_package.directory, settings.cache_package.size, '.qpy')
+        self.package_cache = FileLimitLRU(settings.cache_package.directory, settings.cache_package.size,
+                                          extension='.qpy', name='PackageCache')
         self.collector = PackageCollector(settings.collector.local_directory, self.package_cache)
         self.question_state_cache = FileLimitLRU(settings.cache_question_state.directory,
-                                                 settings.cache_question_state.size)
+                                                 settings.cache_question_state.size, name='QuestionStateCache')
 
     def start_server(self) -> None:
         port = self.settings.webservice.listen_port

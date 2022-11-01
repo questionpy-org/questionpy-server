@@ -33,8 +33,11 @@ class FileLimitLRU:
 
         self.max_bytes = max_bytes
         self._total_bytes = 0
+
         self._extension: str = '' if extension is None else '.' + extension.lstrip('.')
         self._tmp_extension: str = '.tmp'
+
+        self._name = name or "Cache"
 
         self._files: OrderedDict[str, File] = OrderedDict()
 
@@ -60,7 +63,8 @@ class FileLimitLRU:
             self._files[path.stem] = File(path, size)
 
         log = logging.getLogger('questionpy-server')
-        log.info(f"Cache initialised with {len(self._files)} files and {self._total_bytes} bytes")
+        log.info('%s initialised at %s with %d file(s) and %d/%d byte(s)', self._name, self.directory,
+                 len(self._files), self._total_bytes, self.max_bytes)
 
     def contains(self, key: str) -> bool:
         """
