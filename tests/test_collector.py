@@ -35,7 +35,7 @@ def create_collector(local_dir: Path, cache_dir: Path) -> PackageCollector:
     return PackageCollector(
         local_dir=str(local_dir),
         cache=FileLimitLRU(
-            directory=str(cache_dir),
+            directory=cache_dir,
             max_bytes=10,
             extension='.qpy',
         ))
@@ -52,7 +52,7 @@ def settings(tmp_path_factory: TempPathFactory) -> Settings:
 
 def test_init(tmp_path_factory: TempPathFactory) -> None:
     # Test PackageCollector initialization without local directory.
-    PackageCollector(None, FileLimitLRU(directory=str(tmp_path_factory.mktemp('qpy')), max_bytes=1))
+    PackageCollector(None, FileLimitLRU(tmp_path_factory.mktemp('qpy'), 1))
 
 
 def test_contains(settings: Settings) -> None:

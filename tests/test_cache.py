@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from string import ascii_lowercase
 from typing import NamedTuple, List, Tuple
+from unittest.mock import patch
 
 import pytest
 from _pytest.tmpdir import TempPathFactory
@@ -19,10 +20,9 @@ class ItemSettings:
         self.total_bytes = self.bytes_per_item * self.num_of_items
 
 
-@dataclass
-class CacheSettings:
+class CacheSettings(NamedTuple):
     max_bytes: int
-    directory: str
+    directory: Path
 
 
 class Settings(NamedTuple):
@@ -35,7 +35,7 @@ def settings(tmp_path_factory: TempPathFactory) -> Settings:
     return Settings(
         cache=CacheSettings(
             max_bytes=100,
-            directory=str(tmp_path_factory.mktemp('qpy')),
+            directory=tmp_path_factory.mktemp('qpy'),
         ),
         items=ItemSettings(
             bytes_per_item=15,
@@ -57,7 +57,7 @@ def write_files_to_directory(files: List[Tuple[str, bytes]], directory: Path) ->
         file_path.write_bytes(content)
 
 
-def get_file_count(directory: str) -> int:
+def get_file_count(directory: Path) -> int:
     """
     Counts files in a directory.
 
@@ -65,7 +65,7 @@ def get_file_count(directory: str) -> int:
     :return: count of files in directory
     """
 
-    return len(list(file for file in Path(directory).iterdir() if file.is_file()))
+    return len(list(file for file in directory.iterdir() if file.is_file()))
 
 
 def get_directory_size(directory: str) -> int:
@@ -102,7 +102,7 @@ def test_init(cache: FileLimitLRU, settings: Settings, path_with_too_many_bytes:
     assert get_file_count(settings.cache.directory) == settings.items.num_of_items
 
     # Existing path contains more bytes than the cache can hold.
-    small_cache = FileLimitLRU(str(path_with_too_many_bytes), settings.cache.max_bytes)
+    small_cache = FileLimitLRU(path_with_too_many_bytes, settings.cache.max_bytes)
     assert small_cache.total_bytes <= settings.cache.max_bytes
     assert get_directory_size(str(path_with_too_many_bytes)) <= settings.cache.max_bytes
 

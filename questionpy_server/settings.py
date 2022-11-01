@@ -3,7 +3,7 @@ from configparser import ConfigParser
 from pathlib import Path
 from typing import Any, Callable, Dict, Tuple, Optional
 
-from pydantic import BaseModel, BaseSettings, validator, Field
+from pydantic import BaseModel, BaseSettings, validator, Field, DirectoryPath
 from pydantic.env_settings import InitSettingsSource, SettingsSourceCallable
 from questionpy_common import constants
 
@@ -44,12 +44,22 @@ class WebserviceSettings(BaseModel):
 
 class PackageCacheSettings(BaseModel):
     size: int = 104_857_600
-    directory: str = 'cache/packages'
+    directory: DirectoryPath = Path('cache/packages').resolve()
+
+    @validator('directory')
+    # pylint: disable=no-self-argument
+    def resolve_path(cls, value: Path) -> Path:
+        return value.resolve()
 
 
 class QuestionStateCacheSettings(BaseModel):
     size: int = 20_971_520
-    directory: str = 'cache/question_state'
+    directory: DirectoryPath = Path('cache/question_state').resolve()
+
+    @validator('directory')
+    # pylint: disable=no-self-argument
+    def resolve_path(cls, value: Path) -> Path:
+        return value.resolve()
 
 
 class CollectorSettings(BaseModel):

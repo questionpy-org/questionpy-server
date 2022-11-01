@@ -24,10 +24,12 @@ class FileLimitLRU:
     Only `bytes` type values are accepted. Their size is calculated by passing them into the builtin `len()` function.
     """
 
-    def __init__(self, directory: str, max_bytes: int, extension: str = None) -> None:
+    def __init__(self, directory: Path, max_bytes: int, extension: str = None, name: str = None) -> None:
         """
         A cache should be initialised while starting a server therefore it is not necessary for it to be async.
         """
+
+        self.directory: Path = directory
 
         self.max_bytes = max_bytes
         self._total_bytes = 0
@@ -35,9 +37,6 @@ class FileLimitLRU:
         self._tmp_extension: str = '.tmp'
 
         self._files: OrderedDict[str, File] = OrderedDict()
-
-        self.directory: Path = Path(directory).resolve()
-        self.directory.mkdir(exist_ok=True)
 
         self._lock = Lock()
 
