@@ -87,24 +87,29 @@ class FileLimitLRU:
 
         return self._get_file(key).path
 
+    async def _remove(self, key: str) -> None:
+        file = self._get_file(key)
+        await to_thread(file.path.unlink, missing_ok=True)
+        self._total_bytes -= file.size
+        del self._files[key]
+
     async def remove(self, key: str) -> None:
         """
         Removes file from the cache and the filesystem.
         """
 
-        file = self._get_file(key)
-        await to_thread(file.path.unlink, missing_ok=True)
-        self._total_bytes -= file.size
-        del self._files[key]
+        async with self._lock:
+            await self._remove(key)
 
     async def clear(self) -> None:
         """
         Removes all files from the cache (and filesystem).
         """
 
-        await gather(*[to_thread(file.path.unlink, missing_ok=True) for file in self._files.values()])
-        self._total_bytes = 0
-        self._files.clear()
+        async with self._lock:
+            await gather(*[to_thread(file.path.unlink, missing_ok=True) for file in self._files.values()])
+            self._total_bytes = 0
+            self._files.clear()
 
     async def put(self, key: str, value: bytes) -> Path:
         """
@@ -148,12 +153,8 @@ class FileLimitLRU:
             # If size is too large now, remove items until it is less than or equal to the defined maximum.
             while self._total_bytes > self.max_bytes:
                 # Delete the current oldest item, by instantiating an iterator over all keys (in order)
-                # and passing its next item (i.e. the first one in order) to self.remove.
-                try:
-                    await self.remove(next(iter(self._files)))
-                except FileNotFoundError:
-                    # The file was deleted from the filesystem.
-                    pass
+                # and passing its next item (i.e. the first one in order) to self.remove().
+                await self._remove(next(iter(self._files)))
 
             return path
 
