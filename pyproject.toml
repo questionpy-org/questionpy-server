@@ -7,13 +7,13 @@ name = "questionpy-server"
 description = "QuestionPy application server"
 authors = ["innoCampus <info@isis.tu-berlin.de>"]
 homepage = "https://questionpy.org"
-version = "0.1.0"
+version = "0.1.1"
 
 [tool.poetry.dependencies]
 python = "^3.9"
 aiohttp = "^3.8.1"
 pydantic = "^1.9.1"
-questionpy-common = {git = "https://github.com/questionpy-org/questionpy-common.git", rev = "231b8f01a6105265aa520bc855c723fd8bdcfa11"}
+questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "a217e38" }
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.14.5"
