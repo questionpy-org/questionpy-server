@@ -7,7 +7,7 @@ name = "questionpy-common"
 description = "Common classes and functions for QuestionPy"
 authors = ["innoCampus <info@isis.tu-berlin.de>"]
 homepage = "https://questionpy.org"
-version = "0.1.0"
+version = "0.2.0"
 
 [tool.poetry.dependencies]
 python = "^3.9"
