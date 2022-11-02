@@ -39,10 +39,6 @@ class GroupElementFactory(_ModelFactory):
     __model__ = _elements.GroupElement
 
 
-class FormElementFactory(_ModelFactory):
-    __model__ = _elements.FormElement
-
-
 class FormSectionFactory(_ModelFactory):
     __model__ = _elements.FormSection
 

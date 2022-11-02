@@ -1,85 +1,101 @@
-import typing as _typing
+from typing import List, Literal, Union, Optional, get_args
 
-from pydantic import BaseModel as _BaseModel
+from pydantic import BaseModel
+from typing_extensions import TypeGuard, TypeAlias
+
+from questionpy_common.conditions import Condition
+
+__all__ = ["CanHaveConditions", "StaticTextElement", "TextInputElement", "CheckboxElement", "CheckboxGroupElement",
+           "Option", "RadioGroupElement", "SelectElement", "HiddenElement", "GroupElement", "FormElement",
+           "FormSection", "OptionsFormDefinition", "is_form_element"]
 
 
-class _Labelled(_BaseModel):
+class _Labelled(BaseModel):
     label: str
 
 
-class _Named(_BaseModel):
+class _Named(BaseModel):
     name: str
 
 
-class StaticTextElement(_Labelled):
-    kind: _typing.Literal["static_text"] = "static_text"
+class CanHaveConditions(BaseModel):
+    disable_if: list[Condition] = []
+    hide_if: list[Condition] = []
+
+
+class StaticTextElement(_Labelled, _Named, CanHaveConditions):
+    kind: Literal["static_text"] = "static_text"
     text: str
 
 
-class TextInputElement(_Labelled, _Named):
-    kind: _typing.Literal["input"] = "input"
+class TextInputElement(_Labelled, _Named, CanHaveConditions):
+    kind: Literal["input"] = "input"
     required: bool = False
-    default: _typing.Optional[str] = None
-    placeholder: _typing.Optional[str] = None
+    default: Optional[str] = None
+    placeholder: Optional[str] = None
 
 
-class CheckboxElement(_Named):
-    kind: _typing.Literal["checkbox"] = "checkbox"
-    left_label: _typing.Optional[str] = None
-    right_label: _typing.Optional[str] = None
+class CheckboxElement(_Named, CanHaveConditions):
+    kind: Literal["checkbox"] = "checkbox"
+    left_label: Optional[str] = None
+    right_label: Optional[str] = None
     required: bool = False
     selected: bool = False
 
 
-class CheckboxGroupElement(_BaseModel):
-    kind: _typing.Literal["checkbox_group"] = "checkbox_group"
-    checkboxes: list[CheckboxElement]
+class CheckboxGroupElement(BaseModel):
+    kind: Literal["checkbox_group"] = "checkbox_group"
+    checkboxes: List[CheckboxElement]
 
 
-class Option(_BaseModel):
+class Option(BaseModel):
     label: str
     value: str
     selected: bool = False
 
 
-class RadioGroupElement(_Labelled, _Named):
-    kind: _typing.Literal["radio_group"] = "radio_group"
-    options: list[Option]
+class RadioGroupElement(_Labelled, _Named, CanHaveConditions):
+    kind: Literal["radio_group"] = "radio_group"
+    options: List[Option]
     required: bool = False
 
 
-class SelectElement(_Labelled, _Named):
-    kind: _typing.Literal["select"] = "select"
+class SelectElement(_Labelled, _Named, CanHaveConditions):
+    kind: Literal["select"] = "select"
     multiple: bool = False
-    options: list[Option]
+    options: List[Option]
     required: bool = False
 
 
-class HiddenElement(_Named):
-    kind: _typing.Literal["hidden"] = "hidden"
+class HiddenElement(_Named, CanHaveConditions):
+    kind: Literal["hidden"] = "hidden"
     value: str
 
 
-class GroupElement(_Labelled, _Named):
-    kind: _typing.Literal["group"] = "group"
-    elements: list["FormElement"]
+class GroupElement(_Labelled, _Named, CanHaveConditions):
+    kind: Literal["group"] = "group"
+    elements: List["FormElement"]
 
 
-class FormElement(_BaseModel):
-    __root__: _typing.Union[
-        StaticTextElement, TextInputElement, CheckboxElement, CheckboxGroupElement,
-        RadioGroupElement, SelectElement, HiddenElement, GroupElement
-    ]
-
+FormElement: TypeAlias = Union[
+    StaticTextElement, TextInputElement, CheckboxElement, CheckboxGroupElement,
+    RadioGroupElement, SelectElement, HiddenElement, GroupElement
+]
 
 GroupElement.update_forward_refs()
 
 
-class FormSection(_BaseModel):
+class FormSection(BaseModel):
     header: str
-    elements: list[FormElement] = []
+    elements: List[FormElement] = []
 
 
-class OptionsFormDefinition(_BaseModel):
-    general: list[FormElement] = []
-    sections: list[FormSection] = []
+class OptionsFormDefinition(BaseModel):
+    general: List[FormElement] = []
+    sections: List[FormSection] = []
+
+
+def is_form_element(value: object) -> TypeGuard[FormElement]:
+    # unions don't support runtime type checking through isinstance
+    # this checks if value is an instance of any of the union members
+    return isinstance(value, get_args(FormElement))
