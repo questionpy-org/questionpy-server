@@ -2,10 +2,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from aiohttp import web
-from aiohttp.web_exceptions import HTTPMethodNotAllowed, HTTPNotFound, HTTPBadRequest
+from aiohttp.web_exceptions import HTTPMethodNotAllowed, HTTPNotFound
 
-from questionpy_server.web import ensure_package_and_question_state_exists, json_response, ensure_package_exists, \
-    parse_form_data
+from questionpy_server.web import ensure_package_and_question_state_exists, json_response, ensure_package_exists
 from questionpy_server.factories import AttemptFactory, AttemptGradedFactory, AttemptStartedFactory
 
 from .models import QuestionStateHash, AttemptStartArguments, AttemptGradeArguments, AttemptViewArguments, PackageInfo
