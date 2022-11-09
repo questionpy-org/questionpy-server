@@ -349,7 +349,7 @@ def ensure_package_exists(_func: Optional[RouteHandler] = None) \
                 web_logger.warning(msg)
                 raise HTTPBadRequest(text=msg)
 
-            if package_hash != package_container.hash:
+            if package_hash and package_hash != package_container.hash:
                 msg = f'Package hash does not match: {package_hash} != {package_container.hash}'
                 web_logger.warning(msg)
                 raise HTTPBadRequest(text=msg)

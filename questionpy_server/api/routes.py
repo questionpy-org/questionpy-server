@@ -22,7 +22,7 @@ async def hello(_request: web.Request) -> web.Response:
     return web.Response(text="Hello, world")
 
 
-@routes.post(r'/packages/{package_hash:\w+}')  # type: ignore[arg-type]
+@routes.post(r'/packages/{package_hash:\w*}')  # type: ignore[arg-type]
 @ensure_package_exists
 async def post_package(_request: web.Request, package: Package) -> web.Response:
     """Get package information."""
@@ -94,14 +94,3 @@ async def post_question(_request: web.Request) -> web.Response:
 @routes.post(r'/packages/{package_hash:\w+}/question/migrate')
 async def post_question_migrate(_request: web.Request) -> web.Response:
     raise HTTPMethodNotAllowed("", "")
-
-
-@routes.post(r'/package')
-async def post_question_to_repo(request: web.Request) -> web.Response:
-    qpyserver: 'QPyServer' = request.app['qpy_server_app']
-    _, package_container, _ = await parse_form_data(request)
-    if not package_container:
-        raise HTTPBadRequest()
-    package = await qpyserver.collector.put(package_container)
-    response = json_response(package.get_info(), status=201)
-    return response
