@@ -2,9 +2,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from aiohttp import web
-from aiohttp.web_exceptions import HTTPMethodNotAllowed, HTTPNotFound
+from aiohttp.web_exceptions import HTTPMethodNotAllowed, HTTPNotFound, HTTPBadRequest
 
-from questionpy_server.web import ensure_package_and_question_state_exists, json_response, ensure_package_exists
+from questionpy_server.web import ensure_package_and_question_state_exists, json_response, ensure_package_exists, \
+    parse_form_data
 from questionpy_server.factories import AttemptFactory, AttemptGradedFactory, AttemptStartedFactory
 
 from .models import QuestionStateHash, AttemptStartArguments, AttemptGradeArguments, AttemptViewArguments, PackageInfo
@@ -93,3 +94,14 @@ async def post_question(_request: web.Request) -> web.Response:
 @routes.post(r'/packages/{package_hash:\w+}/question/migrate')
 async def post_question_migrate(_request: web.Request) -> web.Response:
     raise HTTPMethodNotAllowed("", "")
+
+
+@routes.post(r'/package')
+async def post_question_to_repo(request: web.Request) -> web.Response:
+    qpyserver: 'QPyServer' = request.app['qpy_server_app']
+    _, package_container, _ = await parse_form_data(request)
+    if not package_container:
+        raise HTTPBadRequest()
+    package = await qpyserver.collector.put(package_container)
+    response = json_response(package.get_info(), status=201)
+    return response
