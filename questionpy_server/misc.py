@@ -26,7 +26,8 @@ def get_route_model_param(route_handler: RouteHandler, model: Type[M]) -> Tuple[
     return params[0].name, params[0].annotation
 
 
-def calculate_hash(path: Path, chunk_size: int = -1) -> str:
+def calculate_hash(path: Path, chunk_size: int = 5_242_880) -> str:
+    """Calculate SHA256 hash of a file."""
     package_hash = sha256()
 
     with path.open('rb') as file:

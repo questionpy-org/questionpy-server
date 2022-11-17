@@ -17,11 +17,12 @@ class LocalCollector(FixedCollector):
     _directory: Path
 
     # Maps package hashes to their file paths.
-    _map: dict[str, Path] = {}
+    _map: dict[str, Path]
 
     def __init__(self, directory: Path, worker_pool: WorkerPool):
         super().__init__(worker_pool=worker_pool)
         self._directory = directory
+        self._map = {}
 
         for file in self._directory.iterdir():
             if file.suffix == '.qpy':
@@ -112,7 +113,7 @@ class PackageCollector:
 
     async def put(self, package_container: 'HashContainer') -> Package:
         """
-        Handles package send by an LMS.
+        Handles a package sent by an LMS.
 
         :param package_container: package container
         :return: package

@@ -7,7 +7,7 @@ from aiohttp.web_exceptions import HTTPMethodNotAllowed, HTTPNotFound
 from questionpy_server.web import ensure_package_and_question_state_exists, json_response, ensure_package_exists
 from questionpy_server.factories import AttemptFactory, AttemptGradedFactory, AttemptStartedFactory
 
-from .models import QuestionStateHash, AttemptStartArguments, AttemptGradeArguments, AttemptViewArguments, PackageInfo
+from .models import QuestionStateHash, AttemptStartArguments, AttemptGradeArguments, AttemptViewArguments
 from ..package import Package
 
 if TYPE_CHECKING:
@@ -16,16 +16,11 @@ if TYPE_CHECKING:
 routes = web.RouteTableDef()
 
 
-@routes.get('/helloworld')
-async def hello(_request: web.Request) -> web.Response:
-    return web.Response(text="Hello, world")
-
-
 @routes.post(r'/packages/{package_hash:\w+}')  # type: ignore[arg-type]
 @ensure_package_exists
 async def post_package(_request: web.Request, package: Package) -> web.Response:
     """Get package information."""
-    return json_response(data=PackageInfo(**package.manifest.dict(), package_hash=package.hash))
+    return json_response(data=package.get_info())
 
 
 @routes.get('/packages')
