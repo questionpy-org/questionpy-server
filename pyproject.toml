@@ -18,14 +18,18 @@ pydantic-factories = "^1.6.2"
 pylint = "^2.14.5"
 pytest = "^7.1.2"
 pytest-md = "^0.2.0"
-pytest-cov = "^3.0.0"
 pylint-pytest = "^1.1.2"
 mypy = "^0.971"
 flake8 = "^5.0.4"
+coverage = { extras = ["toml"], version = "^6.5.0" }
 
 [tool.pytest.ini_options]
-addopts = "--cov --cov-config=pyproject.toml --cov-branch --cov-report term:skip-covered"
+# https://github.com/pytest-dev/pytest-asyncio#auto-mode
+asyncio_mode = "auto"
 
+
+# This section is read automatically by Coverage.py when its working directory is .
+# https://coverage.readthedocs.io/en/6.5.0/config.html#configuration-reference
 [tool.coverage.run]
 branch = true
 source = ["questionpy_common"]

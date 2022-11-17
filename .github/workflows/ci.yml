@@ -10,6 +10,6 @@ on:
 jobs:
   ci:
     # https://github.com/questionpy-org/.github
-    uses: questionpy-org/.github/.github/workflows/python-ci.yml@v2
+    uses: questionpy-org/.github/.github/workflows/python-ci.yml@v3
     with:
       packages: questionpy_common
