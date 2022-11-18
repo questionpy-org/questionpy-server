@@ -88,3 +88,10 @@ async def post_question(_request: web.Request) -> web.Response:
 @routes.post(r'/packages/{package_hash:\w+}/question/migrate')
 async def post_question_migrate(_request: web.Request) -> web.Response:
     raise HTTPMethodNotAllowed("", "")
+
+
+@routes.post(r'/package-extract-info')  # type: ignore[arg-type]
+@ensure_package_exists(required_hash=False)
+async def package_extract_info(_request: web.Request, package: Package) -> web.Response:
+    """Get package information."""
+    return json_response(data=package.get_info(), status=201)
