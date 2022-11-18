@@ -21,7 +21,7 @@ async def hello(_request: web.Request) -> web.Response:
     return web.Response(text="Hello, world")
 
 
-@routes.post(r'/packages/{package_hash:\w*}')  # type: ignore[arg-type]
+@routes.post(r'/packages/{package_hash:\w+}')  # type: ignore[arg-type]
 @ensure_package_exists
 async def post_package(_request: web.Request, package: Package) -> web.Response:
     """Get package information."""
@@ -93,3 +93,10 @@ async def post_question(_request: web.Request) -> web.Response:
 @routes.post(r'/packages/{package_hash:\w+}/question/migrate')
 async def post_question_migrate(_request: web.Request) -> web.Response:
     raise HTTPMethodNotAllowed("", "")
+
+
+@routes.post(r'/package-extract-info')  # type: ignore[arg-type]
+@ensure_package_exists(required_hash=False)
+async def package_extract_info(_request: web.Request, package: Package) -> web.Response:
+    """Get package information."""
+    return json_response(data=PackageInfo(**package.manifest.dict(), package_hash=package.hash))

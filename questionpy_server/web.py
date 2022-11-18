@@ -315,7 +315,7 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
     return decorator(_func)
 
 
-def ensure_package_exists(_func: Optional[RouteHandler] = None) \
+def ensure_package_exists(_func: Optional[RouteHandler] = None, required_hash: bool = True) \
         -> Union[RouteHandler, Callable[[RouteHandler], RouteHandler]]:
 
     def decorator(function: RouteHandler) -> RouteHandler:
@@ -331,8 +331,6 @@ def ensure_package_exists(_func: Optional[RouteHandler] = None) \
                 raise HTTPBadRequest
 
             server: 'QPyServer' = request.app['qpy_server_app']
-            package_hash: str = request.match_info['package_hash']
-
             package_container: Optional[HashContainer] = None
 
             reader = await request.multipart()
@@ -349,10 +347,13 @@ def ensure_package_exists(_func: Optional[RouteHandler] = None) \
                 web_logger.warning(msg)
                 raise HTTPBadRequest(text=msg)
 
-            if package_hash and package_hash != package_container.hash:
-                msg = f'Package hash does not match: {package_hash} != {package_container.hash}'
-                web_logger.warning(msg)
-                raise HTTPBadRequest(text=msg)
+            package_hash: str = ""
+            if required_hash:
+                package_hash = request.match_info['package_hash']
+                if package_hash != package_container.hash:
+                    msg = f'Package hash does not match: {package_hash} != {package_container.hash}'
+                    web_logger.warning(msg)
+                    raise HTTPBadRequest(text=msg)
 
             package = await get_or_save_package(server.collector, package_hash, package_container)
             kwargs['package'] = package
