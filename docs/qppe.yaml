@@ -387,6 +387,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/AttemptGraded"
 
+  /package-extract-info:
+    parameters:
+      - name: User-Agent
+        in: header
+        description: Name and version of the QPPE client software.
+        example: moodle-qtype_questionpy/1.0
+        schema:
+          type: string
+    post:
+      summary: Post a new package to the server. Returns the package info.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                package:
+                  type: string
+                  format: binary
+                  description: QuestionPy Package
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageInfo"
+        400:
+          description: Bad Request
+
+
 components:
   schemas:
     PackageInfo:
