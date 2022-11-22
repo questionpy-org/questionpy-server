@@ -99,4 +99,4 @@ async def post_question_migrate(_request: web.Request) -> web.Response:
 @ensure_package_exists(required_hash=False)
 async def package_extract_info(_request: web.Request, package: Package) -> web.Response:
     """Get package information."""
-    return json_response(data=PackageInfo(**package.manifest.dict(), package_hash=package.hash))
+    return json_response(data=PackageInfo(**package.manifest.dict(), package_hash=package.hash), status=201)
