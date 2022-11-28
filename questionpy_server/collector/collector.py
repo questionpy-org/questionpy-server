@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 class LocalCollector(FixedCollector):
     """
     Handles packages located in a local directory.
+
+    TODO: use the library `watchdog` for better and more efficient actions on filesystem changes?
     """
 
     _directory: Path
@@ -46,6 +48,13 @@ class LocalCollector(FixedCollector):
         return await self._create_package(package_hash, file)
 
     async def get_packages(self) -> set[Package]:
+        """
+        Returns a set of all packages in the local directory.
+
+        NOTE: We need to calculate the hash of each file in the directory even if the filename is already self._map
+              because we cannot detect the renaming of modification of a file.
+        """
+
         packages: set[Package] = set()
 
         for file in await to_thread(self._directory.iterdir):

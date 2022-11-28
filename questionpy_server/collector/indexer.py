@@ -39,6 +39,13 @@ class Indexer:
         return self._index_by_hash.get(package_hash, None)
 
     async def get_by_name(self, short_name: str) -> dict[str, Package]:
+        """
+        Returns a dict of packages with the given short name and available versions.
+
+        :param short_name: short name of the package
+        :return: dict of packages and versions
+        """
+
         await self.update()
         return self._index_by_name.get(short_name, {}).copy()
 
@@ -78,6 +85,13 @@ class Indexer:
             self._index_by_name.setdefault(package.manifest.short_name, {})[package.manifest.version] = package
 
     def register_packages(self, packages: Iterable[Package], from_lms: bool = False) -> None:
+        """
+        Registers multiple packages in the index.
+
+        :param packages: The packages to register.
+        :param from_lms: Whether the packages originate from an LMS.
+        """
+
         for package in packages:
             self.register_package(package, from_lms)
 
