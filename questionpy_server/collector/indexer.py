@@ -1,3 +1,4 @@
+from asyncio import Lock
 from time import time
 from typing import Optional, Iterable, TYPE_CHECKING
 
@@ -23,6 +24,8 @@ class Indexer:
 
         self._update_interval = update_interval
         self._last_update: float = 0.0
+
+        self._lock = Lock()
 
     async def get_by_hash(self, package_hash: str) -> Optional[Package]:
         """
@@ -98,9 +101,10 @@ class Indexer:
         """
 
         if force or time() - self._last_update > self._update_interval:
-            self._last_update = time()
-            self._index_by_hash = {}
-            self._index_by_name = {}
-            for collector in self._collectors:
-                collector_packages = await collector.get_packages()
-                self.register_packages(collector_packages)
+            async with self._lock:
+                self._last_update = time()
+                self._index_by_hash = {}
+                self._index_by_name = {}
+                for collector in self._collectors:
+                    collector_packages = await collector.get_packages()
+                    self.register_packages(collector_packages)
