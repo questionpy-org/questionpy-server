@@ -21,6 +21,7 @@ class Indexer:
 
         self._index_by_hash: dict[str, Package] = {}
         self._index_by_name: dict[str, dict[str, Package]] = {}
+        self._index_lms: dict[str, Package] = {}
 
         self._update_interval = update_interval
         self._last_update: float = 0.0
@@ -36,7 +37,7 @@ class Indexer:
         """
 
         await self.update()
-        return self._index_by_hash.get(package_hash, None)
+        return self._index_by_hash.get(package_hash, None) or self._index_lms.get(package_hash, None)
 
     async def get_by_name(self, short_name: str) -> dict[str, Package]:
         """
@@ -80,8 +81,10 @@ class Indexer:
         :param from_lms: Whether the package originates from an LMS.
         """
 
-        self._index_by_hash[package.hash] = package
-        if not from_lms:
+        if from_lms:
+            self._index_lms[package.hash] = package
+        else:
+            self._index_by_hash[package.hash] = package
             self._index_by_name.setdefault(package.manifest.short_name, {})[package.manifest.version] = package
 
     def register_packages(self, packages: Iterable[Package], from_lms: bool = False) -> None:
@@ -102,10 +105,11 @@ class Indexer:
         :param package_hash: The hash of the package to unregister.
         """
 
-        package = self._index_by_hash.get(package_hash, None)
+        package = self._index_by_hash.pop(package_hash, None)
         if package:
-            self._index_by_hash.pop(package_hash, None)
             self._index_by_name.get(package.manifest.short_name, {}).pop(package.manifest.version, None)
+
+        self._index_lms.pop(package_hash, None)
 
     async def update(self, force: bool = False) -> None:
         """
