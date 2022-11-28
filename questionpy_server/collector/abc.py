@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
 
 from questionpy_common.manifest import Manifest
 
@@ -16,7 +15,7 @@ class BaseCollector(ABC):
 
     _worker_pool: WorkerPool
 
-    def __init__(self, worker_pool: WorkerPool, *args: Any, **kwargs: Any):
+    def __init__(self, worker_pool: WorkerPool):
         self._worker_pool = worker_pool
 
     async def _get_manifest(self, path: Path) -> Manifest:
@@ -70,6 +69,6 @@ class CachedCollector(BaseCollector, ABC):
 
     _cache: FileLimitLRU
 
-    def __init__(self, cache: FileLimitLRU, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
+    def __init__(self, cache: FileLimitLRU, worker_pool: WorkerPool):
+        super().__init__(worker_pool)
         self._cache = cache
