@@ -14,6 +14,10 @@ if TYPE_CHECKING:
 
 
 class LocalCollector(FixedCollector):
+    """
+    Handles packages located in a local directory.
+    """
+
     _directory: Path
 
     # Maps package hashes to their file paths.
@@ -57,6 +61,12 @@ class LocalCollector(FixedCollector):
 
 
 class RepoCollector(FixedCollector, CachedCollector):
+    """
+    Handles packages located in a remote repository.
+
+    This collector is responsible for downloading packages from a remote repository and caching them locally.
+    """
+
     _url: str
 
     def __init__(self, cache: FileLimitLRU, url: str, worker_pool: WorkerPool):
@@ -74,6 +84,14 @@ class RepoCollector(FixedCollector, CachedCollector):
 
 
 class LMSCollector(CachedCollector):
+    """
+    Handles packages received by an LMS.
+
+    This collector is a bit different from the others, as it does not have a fixed source of packages.
+    Instead, it is used to store packages that are received by an LMS. These packages are stored in
+    a cache, and can be retrieved exclusively by their hash.
+    """
+
     def __init__(self, cache: FileLimitLRU, worker_pool: WorkerPool):
         super().__init__(cache=cache, worker_pool=worker_pool)
 
@@ -91,6 +109,10 @@ class LMSCollector(CachedCollector):
 
 
 class PackageCollector:
+    """
+    Handles packages from a local directory, remote repositories, and packages received by an LMS.
+    """
+
     def __init__(self, local_dir: Optional[Path], repo_urls: list[str], cache: FileLimitLRU, worker_pool: WorkerPool):
         self._cache = cache
         self._worker_pool = worker_pool

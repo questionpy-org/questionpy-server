@@ -32,6 +32,7 @@ class BaseCollector(ABC):
         Get the path of a package.
 
         :param package: The package to get the path of.
+        :raises FileNotFoundError: If the collector does not contain the package.
         :return: The path of the package.
         """
         raise NotImplementedError
@@ -42,6 +43,7 @@ class BaseCollector(ABC):
         Get a package by its hash.
 
         :param package_hash: The hash of the package to get.
+        :raises FileNotFoundError: If the collector does not contain the package.
         :return: The package.
         """
         raise NotImplementedError
