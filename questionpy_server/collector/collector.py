@@ -44,10 +44,6 @@ class LocalCollector(FixedCollector):
 
         return file
 
-    async def get(self, package_hash: str) -> Package:
-        file = self.get_path_by_hash(package_hash)
-        return await self._create_package(package_hash, file)
-
     async def get_packages(self) -> set[Package]:
         """
         Returns a set of all packages in the local directory.
@@ -86,9 +82,6 @@ class RepoCollector(FixedCollector, CachedCollector):
         super().__init__(cache=cache, worker_pool=worker_pool)
         self._url = url
 
-    async def get(self, package_hash: str) -> Package:
-        raise FileNotFoundError
-
     async def get_path(self, package: Package) -> Path:
         raise FileNotFoundError
 
@@ -110,10 +103,6 @@ class LMSCollector(CachedCollector):
 
     async def get_path(self, package: Package) -> Path:
         return self._cache.get(package.hash)
-
-    async def get(self, package_hash: str) -> Package:
-        file = self._cache.get(package_hash)
-        return await self._create_package(package_hash, file)
 
     async def put(self, package_container: 'HashContainer') -> Package:
         file = await self._cache.put(package_container.hash, package_container.data)
@@ -172,14 +161,6 @@ class PackageCollector:
         # Check if package was indexed
         if package := await self._indexer.get_by_hash(package_hash):
             return package
-
-        for collector in self._collectors:
-            try:
-                package = await collector.get(package_hash)
-                self._indexer.register_package(package)
-                return package
-            except FileNotFoundError:
-                continue
 
         raise FileNotFoundError(f'Package with {package_hash=} was not found.')
 

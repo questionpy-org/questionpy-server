@@ -37,17 +37,6 @@ class BaseCollector(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
-    async def get(self, package_hash: str) -> Package:
-        """
-        Get a package by its hash.
-
-        :param package_hash: The hash of the package to get.
-        :raises FileNotFoundError: If the collector does not contain the package.
-        :return: The package.
-        """
-        raise NotImplementedError
-
 
 class FixedCollector(BaseCollector, ABC):
     """
