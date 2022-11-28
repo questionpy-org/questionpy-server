@@ -39,6 +39,7 @@ class LocalCollector(FixedCollector):
         file = self._map.get(package_hash, None)
 
         if file is None or not file.is_file():
+            self._map.pop(package_hash, None)
             raise FileNotFoundError
 
         return file
@@ -56,10 +57,13 @@ class LocalCollector(FixedCollector):
         """
 
         packages: set[Package] = set()
+        self._map = {}
 
         for file in await to_thread(self._directory.iterdir):
             if file.suffix == '.qpy':
                 package_hash = await to_thread(calculate_hash, file)
+                self._map[package_hash] = file
+
                 package = await self._create_package(package_hash, file)
                 packages.add(package)
 
