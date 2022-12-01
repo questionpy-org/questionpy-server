@@ -20,17 +20,17 @@ class LocalCollector(FixedCollector):
     TODO: use the library `watchdog` for better and more efficient actions on filesystem changes?
     """
 
-    _directory: Path
+    directory: Path
 
     # Maps package hashes to their file paths.
     _map: dict[str, Path]
 
     def __init__(self, directory: Path, worker_pool: WorkerPool):
         super().__init__(worker_pool=worker_pool)
-        self._directory = directory
+        self.directory = directory
         self._map = {}
 
-        for file in self._directory.iterdir():
+        for file in self.directory.iterdir():
             if file.suffix == '.qpy':
                 package_hash = calculate_hash(file)
                 self._map[package_hash] = file
@@ -49,13 +49,13 @@ class LocalCollector(FixedCollector):
         Returns a set of all packages in the local directory.
 
         NOTE: We need to calculate the hash of each file in the directory even if the filename is already self._map
-              because we cannot detect the renaming of modification of a file.
+              because we cannot detect the renaming or modification of a file.
         """
 
         packages: set[Package] = set()
         self._map = {}
 
-        for file in await to_thread(self._directory.iterdir):
+        for file in await to_thread(self.directory.iterdir):
             if file.suffix == '.qpy':
                 package_hash = await to_thread(calculate_hash, file)
                 self._map[package_hash] = file
@@ -101,7 +101,7 @@ class LMSCollector(CachedCollector):
     def __init__(self, cache: FileLimitLRU, worker_pool: WorkerPool):
         super().__init__(cache=cache, worker_pool=worker_pool)
 
-    async def get_path(self, package: Package) -> Path:
+    def get_path(self, package: Package) -> Path:
         return self._cache.get(package.hash)
 
     async def put(self, package_container: 'HashContainer') -> Package:
