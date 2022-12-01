@@ -14,6 +14,7 @@ class Package:
     manifest: Manifest
 
     _collector: 'BaseCollector'
+    _info: Optional[PackageInfo]
     _path: Optional[Path]
 
     def __init__(self, package_hash: str, manifest: Manifest, collector: 'BaseCollector', path: Path = None):
@@ -21,6 +22,7 @@ class Package:
         self.manifest = manifest
 
         self._collector = collector
+        self._info = None
         self._path = path
 
     def __hash__(self) -> int:
@@ -32,7 +34,9 @@ class Package:
         return self.hash == other.hash
 
     def get_info(self) -> PackageInfo:
-        return PackageInfo(**self.manifest.dict(), package_hash=self.hash)
+        if not self._info:
+            self._info = PackageInfo(**self.manifest.dict(), package_hash=self.hash)
+        return self._info
 
     async def get_path(self) -> Path:
         if not (self._path and self._path.is_file()):
