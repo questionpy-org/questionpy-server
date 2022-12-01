@@ -114,8 +114,6 @@ class Indexer:
             if package:
                 self._index_by_name.get(package.manifest.short_name, {}).pop(package.manifest.version, None)
 
-
-
     async def update(self, force: bool = False) -> None:
         """
         Updates the index.
