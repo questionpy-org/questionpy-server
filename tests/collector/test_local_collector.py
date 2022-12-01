@@ -68,4 +68,3 @@ async def test_package_exists_after_init(tmp_path_factory: TempPathFactory) -> N
     assert package.hash == PACKAGES[0].hash
 
     assert local_collector.get_path_by_hash(PACKAGES[0].hash) == package_path
-
