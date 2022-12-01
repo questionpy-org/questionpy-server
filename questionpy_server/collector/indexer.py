@@ -99,18 +99,22 @@ class Indexer:
         for package in packages:
             self.register_package(package, from_lms)
 
-    def unregister_package(self, package_hash: str) -> None:
+    def unregister_package(self, package_hash: str, only_lms: bool = False) -> None:
         """
         Unregisters a package from the index.
 
         :param package_hash: The hash of the package to unregister.
+        :param only_lms: Whether to only unregister the package if it originates from an LMS.
         """
 
-        package = self._index_by_hash.pop(package_hash, None)
-        if package:
-            self._index_by_name.get(package.manifest.short_name, {}).pop(package.manifest.version, None)
-
         self._index_lms.pop(package_hash, None)
+
+        if not only_lms:
+            package = self._index_by_hash.pop(package_hash, None)
+            if package:
+                self._index_by_name.get(package.manifest.short_name, {}).pop(package.manifest.version, None)
+
+
 
     async def update(self, force: bool = False) -> None:
         """

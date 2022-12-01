@@ -133,7 +133,16 @@ class PackageCollector:
         self._indexer = Indexer(self._collectors)
 
         # Update indexer if package in cache gets removed.
-        self._cache.on_remove = self._indexer.unregister_package
+        self._cache.on_remove = self._unregister_package_from_index
+
+    def _unregister_package_from_index(self, package_hash: str):
+        """
+        This function should be called when a package gets removed from the cache. A package from a repository should
+        not be removed from the index, as it might be still available. The update function of the
+        indexer will take care of removing packages from the index if they are not available anymore.
+        """
+
+        self._indexer.unregister_package(package_hash, only_lms=True)
 
     async def put(self, package_container: 'HashContainer') -> Package:
         """
