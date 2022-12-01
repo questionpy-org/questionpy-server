@@ -101,7 +101,7 @@ class LMSCollector(CachedCollector):
     def __init__(self, cache: FileLimitLRU, worker_pool: WorkerPool):
         super().__init__(cache=cache, worker_pool=worker_pool)
 
-    def get_path(self, package: Package) -> Path:
+    async def get_path(self, package: Package) -> Path:
         return self._cache.get(package.hash)
 
     async def put(self, package_container: 'HashContainer') -> Package:

@@ -25,7 +25,7 @@ async def test_put(tmp_path_factory: TempPathFactory) -> None:
 
     # Check if package is stored in cache.
     cache_path = cache.get(PACKAGES[0].hash)
-    lms_path = lms_collector.get_path(package)
+    lms_path = await lms_collector.get_path(package)
     assert cache_path == lms_path
 
 
@@ -42,4 +42,4 @@ async def test_get_non_existing_file(tmp_path_factory: TempPathFactory) -> None:
     await cache.remove(PACKAGES[0].hash)
 
     with pytest.raises(FileNotFoundError):
-        lms_collector.get_path(package)
+        await lms_collector.get_path(package)
