@@ -81,6 +81,7 @@ class Indexer:
         :param from_lms: Whether the package originates from an LMS.
         """
 
+        # TODO: perform check by looking at Package._collector
         if from_lms:
             self._index_lms[package.hash] = package
         else:
