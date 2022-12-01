@@ -1,10 +1,16 @@
+import json
+from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from zipfile import ZipFile
 
 import pytest
 from _pytest.tmpdir import TempPathFactory
 from aiohttp.pytest_plugin import AiohttpClient
 from aiohttp.test_utils import TestClient
+
+from questionpy_common.manifest import Manifest
 
 from questionpy_server.app import QPyServer
 from questionpy_server.settings import Settings, WebserviceSettings, PackageCacheSettings, CollectorSettings, \
@@ -17,6 +23,23 @@ def get_file_hash(path: Path) -> str:
         while chunk := file.read(4096):
             hash_value.update(chunk)
     return hash_value.hexdigest()
+
+
+@dataclass
+class TestPackage:
+    path: Path
+
+    def __post_init__(self) -> None:
+        self.hash = get_file_hash(self.path)
+
+        package = ZipFile(self.path)
+        with TemporaryDirectory() as tmp_dir:
+            package.extractall(tmp_dir)
+            manifest_path = Path(tmp_dir) / 'qpy_manifest.json'
+            self.manifest = Manifest(**json.loads(manifest_path.read_bytes()))
+
+
+PACKAGES: list[TestPackage] = [TestPackage(path) for path in Path('tests/test_data/package').iterdir()]
 
 
 @pytest.fixture
