@@ -197,7 +197,7 @@ async def get_or_save_package(collector: PackageCollector, hash_value: str, cont
 
     try:
         if not container:
-            package = await collector.get(hash_value)
+            package = collector.get(hash_value)
         else:
             package = await collector.put(container)
     except SizeError as error:
@@ -218,7 +218,7 @@ async def get_data_package(collector: PackageCollector, hash_value: str) -> Opti
     """
 
     try:
-        return await collector.get(hash_value)
+        return collector.get(hash_value)
     except FileNotFoundError:
         return None
 

@@ -1,11 +1,13 @@
-from asyncio import Lock
-from time import time
-from typing import Optional, Iterable, TYPE_CHECKING
+from pathlib import Path
+from typing import Optional, overload, Union
 
+from questionpy_common.manifest import Manifest
+
+from questionpy_server import WorkerPool
+from questionpy_server.collector.abc import BaseCollector
+from questionpy_server.collector.local_collector import LocalCollector
+from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.package import Package
-
-if TYPE_CHECKING:
-    from questionpy_server.collector.abc import FixedCollector
 
 
 class Indexer:
@@ -16,19 +18,13 @@ class Indexer:
     indexed by its hash.
     """
 
-    def __init__(self, collectors: Iterable['FixedCollector'], update_interval: int = 30):
-        self._collectors = collectors
+    def __init__(self, worker_pool: WorkerPool):
+        self._worker_pool = worker_pool
 
         self._index_by_hash: dict[str, Package] = {}
         self._index_by_name: dict[str, dict[str, Package]] = {}
-        self._index_lms: dict[str, Package] = {}
 
-        self._update_interval = update_interval
-        self._last_update: float = 0.0
-
-        self._lock = Lock()
-
-    async def get_by_hash(self, package_hash: str) -> Optional[Package]:
+    def get_by_hash(self, package_hash: str) -> Optional[Package]:
         """
         Returns the package with the given hash or None if it does not exist.
 
@@ -36,10 +32,9 @@ class Indexer:
         :return: The package or None.
         """
 
-        await self.update()
-        return self._index_by_hash.get(package_hash, None) or self._index_lms.get(package_hash, None)
+        return self._index_by_hash.get(package_hash, None)
 
-    async def get_by_name(self, short_name: str) -> dict[str, Package]:
+    def get_by_name(self, short_name: str) -> dict[str, Package]:
         """
         Returns a dict of packages with the given short name and available versions.
 
@@ -47,10 +42,9 @@ class Indexer:
         :return: dict of packages and versions
         """
 
-        await self.update()
         return self._index_by_name.get(short_name, {}).copy()
 
-    async def get_by_name_and_version(self, short_name: str, version: str) -> Optional[Package]:
+    def get_by_name_and_version(self, short_name: str, version: str) -> Optional[Package]:
         """
         Returns the package with the given short name and version or None if it does not exist.
 
@@ -59,73 +53,87 @@ class Indexer:
         :return: The package or None.
         """
 
-        await self.update()
         return self._index_by_name.get(short_name, {}).get(version, None)
 
-    async def get_packages(self) -> set[Package]:
+    def get_packages(self) -> set[Package]:
         """
         Returns all packages in the index (excluding packages from LMSs).
 
         :return: set of packages
         """
 
-        await self.update()
-        # TODO: change return value to self._index_by_name (-> let lms handle same packages with different versions)?
         return set(package for packages in self._index_by_name.values() for package in packages.values())
 
-    def register_package(self, package: Package, from_lms: bool = False) -> None:
+    @overload
+    async def register_package(self, package_hash: str, path_or_manifest: Manifest, source: BaseCollector) -> Package:
         """
         Registers a package in the index.
 
-        :param package: The package to register.
-        :param from_lms: Whether the package originates from an LMS.
+        :param package_hash: The hash of the package.
+        :param path_or_manifest: The manifest of the package.
+        :param source: The source of the package.
         """
 
-        # TODO: perform check by looking at Package._collector
-        if from_lms:
-            self._index_lms[package.hash] = package
+    @overload
+    async def register_package(self, package_hash: str, path_or_manifest: Path, source: BaseCollector) -> Package:
+        """
+        Registers a package in the index.
+
+        :param package_hash: The hash of the package.
+        :param path_or_manifest: The path to the package.
+        :param source: The source of the package.
+        """
+
+    async def register_package(self, package_hash: str, path_or_manifest: Union[Path, Manifest],
+                               source: BaseCollector) -> Package:
+
+        if package := self._index_by_hash.get(package_hash, None):
+            # Package was already indexed; add source to package.
+            package.sources.add(source)
         else:
+            # Create new package...
+            if isinstance(path_or_manifest, Path):
+                # ...from path.
+                async with self._worker_pool.get_worker(path_or_manifest, 0, None) as worker:
+                    manifest = await worker.get_manifest()
+                package = Package(package_hash, manifest, source, path_or_manifest)
+            else:
+                # ...from manifest.
+                package = Package(package_hash, path_or_manifest, source)
             self._index_by_hash[package.hash] = package
+
+        # Check if package should be accessible by name and version.
+        if isinstance(source, (LocalCollector, RepoCollector)):
             self._index_by_name.setdefault(package.manifest.short_name, {})[package.manifest.version] = package
 
-    def register_packages(self, packages: Iterable[Package], from_lms: bool = False) -> None:
-        """
-        Registers multiple packages in the index.
+        return package
 
-        :param packages: The packages to register.
-        :param from_lms: Whether the packages originate from an LMS.
+    def unregister_package(self, package_hash: str, source: BaseCollector) -> None:
         """
-
-        for package in packages:
-            self.register_package(package, from_lms)
-
-    def unregister_package(self, package_hash: str, only_lms: bool = False) -> None:
-        """
-        Unregisters a package from the index.
+        Removes the given source from the package. If the only left source of the package is an LMS, it will only be
+        accessible by its hash. If the package has no more sources, it is removed from the index.
 
         :param package_hash: The hash of the package to unregister.
-        :param only_lms: Whether to only unregister the package if it originates from an LMS.
+        :param source: The source of the package.
         """
 
-        self._index_lms.pop(package_hash, None)
+        package = self._index_by_hash.get(package_hash, None)
+        if not package:
+            return
 
-        if not only_lms:
-            package = self._index_by_hash.pop(package_hash, None)
-            if package:
-                self._index_by_name.get(package.manifest.short_name, {}).pop(package.manifest.version, None)
+        # Remove source from package.
+        package.sources.remove(source)
 
-    async def update(self, force: bool = False) -> None:
-        """
-        Updates the index.
+        if isinstance(source, (LocalCollector, RepoCollector)) and not package.sources.contains_searchable():
+            # Package should not be accessible by name and version (anymore).
+            package_versions = self._index_by_name.get(package.manifest.short_name, None)
+            if package_versions:
+                # Remove package from index.
+                package_versions.pop(package.manifest.version, None)
+                # If there are no more packages with the same name, remove the name from the index.
+                if not package_versions:
+                    self._index_by_name.pop(package.manifest.short_name, None)
 
-        :param force: Whether to force an update.
-        """
-
-        if force or time() - self._last_update > self._update_interval:
-            async with self._lock:
-                self._last_update = time()
-                self._index_by_hash = {}
-                self._index_by_name = {}
-                for collector in self._collectors:
-                    collector_packages = await collector.get_packages()
-                    self.register_packages(collector_packages)
+        if len(package.sources) == 0:
+            # Package has no more sources; remove it from the index.
+            self._index_by_hash.pop(package_hash, None)

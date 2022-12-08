@@ -1,70 +1,89 @@
+from pathlib import Path
 from shutil import copy
 
 import pytest
 from _pytest.tmpdir import TempPathFactory
 
-from tests.conftest import PACKAGES, get_file_hash
+from questionpy_server.worker.controller import WorkerPool
+from questionpy_server.collector.indexer import Indexer
+from questionpy_server.collector.local_collector import LocalCollector
+from tests.conftest import PACKAGES, get_file_hash, TestPackage
 
-from questionpy_server import WorkerPool
-from questionpy_server.collector.collector import LocalCollector
+
+def create_local_collector(tmp_path_factory: TempPathFactory) -> tuple[LocalCollector, Path]:
+    """
+    Create a local collector and return it and the directory it is using.
+
+    :param tmp_path_factory: Factory for temporary directories.
+    :return: Local collector and directory.
+    """
+
+    path = tmp_path_factory.mktemp('qpy')
+    indexer = Indexer(WorkerPool(0, 0))
+    return LocalCollector(path, indexer), path
+
+
+def create_local_collector_with_package(tmp_path_factory: TempPathFactory) \
+        -> tuple[LocalCollector, Path, TestPackage, Path]:
+    """
+    Create a local collector with preexisting package.
+
+    :param tmp_path_factory: Factory for temporary directories.
+    :return: Local collector, directory, package, and package path.
+    """
+
+    path = tmp_path_factory.mktemp('qpy')
+    indexer = Indexer(WorkerPool(0, 0))
+    local_collector = LocalCollector(path, indexer)
+
+    package_path = copy(PACKAGES[0].path, path)
+
+    return local_collector, path, PACKAGES[0], package_path
 
 
 async def test_ignore_files_with_wrong_extension(tmp_path_factory: TempPathFactory) -> None:
+    # File exists before initializing.
     directory = tmp_path_factory.mktemp('qpy')
-    (directory / 'wrong.extension').touch()
-    local_collector = LocalCollector(directory, WorkerPool(0, 0))
-    packages = await local_collector.get_packages()
-    assert len(packages) == 0
+    ignore_file = directory / 'wrong.extension'
+    ignore_file.touch()
+    indexer = Indexer(WorkerPool(0, 0))
+    package_hash = LocalCollector(directory, indexer).map.get(ignore_file)
+    assert package_hash is None
+
+    # File gets created after initialization.
+    local_collector, directory = create_local_collector(tmp_path_factory)
+    ignore_file = directory / 'wrong.extension'
+    ignore_file.touch()
+    package_hash = local_collector.map.get(ignore_file)
+    assert package_hash is None
 
 
+@pytest.mark.skip(reason='Not implemented yet.')
 async def test_package_exists_before_init(tmp_path_factory: TempPathFactory) -> None:
-    # Initialize local collector on directory with existing package.
-    directory = tmp_path_factory.mktemp('qpy')
-    package_path = directory / PACKAGES[0].path.name
-
-    copy(PACKAGES[0].path, package_path)
-    local_collector = LocalCollector(directory, WorkerPool(0, 0))
+    local_collector, _, package, package_path = create_local_collector_with_package(tmp_path_factory)
 
     # Check if the package exists.
-    actual_package_path = local_collector.get_path_by_hash(PACKAGES[0].hash)
+    actual_package_path = local_collector.get_path_by_hash(package.hash)
     assert actual_package_path.is_file()
     assert actual_package_path == package_path
-    assert get_file_hash(package_path) == PACKAGES[0].hash
-
-    # Check if the package is in the list of packages.
-    packages = await local_collector.get_packages()
-    assert len(packages) == 1
-    package = packages.pop()
-    assert package.hash == PACKAGES[0].hash
-
-    # Check if path can be found.
-    assert await package.get_path() == package_path
-    assert await local_collector.get_path(package) == package_path
-
-    # Delete file.
-    actual_package_path.unlink()
-    with pytest.raises(FileNotFoundError):
-        local_collector.get_path_by_hash(package.hash)
-
-    packages = await local_collector.get_packages()
-    assert len(packages) == 0
+    assert get_file_hash(actual_package_path) == package.hash
 
 
-async def test_package_exists_after_init(tmp_path_factory: TempPathFactory) -> None:
-    # Create local collector and then copy/add package into directory.
-    directory = tmp_path_factory.mktemp('qpy')
-    package_path = directory / PACKAGES[0].path.name
+@pytest.mark.skip(reason='Not implemented yet.')
+async def test_package_gets_created(tmp_path_factory: TempPathFactory) -> None:
+    pass
 
-    local_collector = LocalCollector(directory, WorkerPool(0, 0))
-    copy(PACKAGES[0].path, package_path)
 
-    with pytest.raises(FileNotFoundError):
-        # TODO: This should not raise an error.
-        local_collector.get_path_by_hash(PACKAGES[0].hash)
+@pytest.mark.skip(reason='Not implemented yet.')
+async def test_package_gets_modified(tmp_path_factory: TempPathFactory) -> None:
+    pass
 
-    packages = await local_collector.get_packages()
-    assert len(packages) == 1
-    package = packages.pop()
-    assert package.hash == PACKAGES[0].hash
 
-    assert local_collector.get_path_by_hash(PACKAGES[0].hash) == package_path
+@pytest.mark.skip(reason='Not implemented yet.')
+async def test_package_gets_deleted(tmp_path_factory: TempPathFactory) -> None:
+    pass
+
+
+@pytest.mark.skip(reason='Not implemented yet.')
+async def test_package_gets_moved(tmp_path_factory: TempPathFactory) -> None:
+    pass

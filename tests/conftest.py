@@ -27,13 +27,13 @@ def get_file_hash(path: Path) -> str:
 
 @dataclass
 class TestPackage:
+    __test__ = False
     path: Path
 
     def __post_init__(self) -> None:
         self.hash = get_file_hash(self.path)
 
-        package = ZipFile(self.path)
-        with TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir, ZipFile(self.path) as package:
             package.extractall(tmp_dir)
             manifest_path = Path(tmp_dir) / 'qpy_manifest.json'
             self.manifest = Manifest(**json.loads(manifest_path.read_bytes()))
