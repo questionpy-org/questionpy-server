@@ -19,9 +19,15 @@ class RepoCollector(CachedCollector):
     url: str
 
     def __init__(self, cache: FileLimitLRU, url: str, indexer: 'Indexer'):
-        super().__init__(cache=cache)
+        super().__init__(cache=cache, indexer=indexer)
+
         self.url = url
-        self._indexer = indexer
+
+    async def start(self) -> None:
+        pass
+
+    async def stop(self) -> None:
+        pass
 
     async def get_path(self, package: 'Package') -> Path:
         raise FileNotFoundError

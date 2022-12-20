@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,8 +21,21 @@ class LMSCollector(CachedCollector):
     """
 
     def __init__(self, cache: FileLimitLRU, indexer: 'Indexer'):
-        super().__init__(cache=cache)
-        self._indexer = indexer
+        super().__init__(cache=cache, indexer=indexer)
+
+    async def start(self) -> None:
+        count = 0
+        # We assume that existing packages in the cache are from an LMS as it has the most strict visibility i.e. the
+        # package can only be accessed by the hash.
+        for file in self._cache.directory.iterdir():
+            if file.suffix != '.qpy':
+                continue
+            # The cache stores packages with their hash as the filename.
+            await self.indexer.register_package(file.stem, file, self)
+            count += 1
+
+        log = logging.getLogger("questionpy_server")
+        log.info("LMSCollector started with %s packages.", count)
 
     async def get_path(self, package: 'Package') -> Path:
         return self._cache.get(package.hash)
@@ -32,4 +46,4 @@ class LMSCollector(CachedCollector):
             package_path = self._cache.get(package_container.hash)
         except FileNotFoundError:
             package_path = await self._cache.put(package_container.hash, package_container.data)
-        return await self._indexer.register_package(package_container.hash, package_path, self)
+        return await self.indexer.register_package(package_container.hash, package_path, self)

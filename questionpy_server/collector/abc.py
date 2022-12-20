@@ -6,12 +6,31 @@ from questionpy_server.cache import FileLimitLRU
 
 if TYPE_CHECKING:
     from questionpy_server.package import Package
+    from questionpy_server.collector.indexer import Indexer
 
 
 class BaseCollector(ABC):
     """
     A collector responsible for getting packages from a source.
     """
+
+    indexer: 'Indexer'
+
+    def __init__(self, indexer: 'Indexer'):
+        self.indexer = indexer
+
+    @abstractmethod
+    async def start(self) -> None:
+        """
+        Starts the collector.
+        """
+        raise NotImplementedError
+
+    async def stop(self) -> None:
+        """
+        Stops the collector.
+        """
+        return
 
     @abstractmethod
     async def get_path(self, package: 'Package') -> Path:
@@ -32,5 +51,6 @@ class CachedCollector(BaseCollector, ABC):
 
     _cache: FileLimitLRU
 
-    def __init__(self, cache: FileLimitLRU):
+    def __init__(self, cache: FileLimitLRU, indexer: 'Indexer'):
+        super().__init__(indexer=indexer)
         self._cache = cache

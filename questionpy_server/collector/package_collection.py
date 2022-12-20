@@ -1,14 +1,14 @@
-from asyncio import run
+from asyncio import gather
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
 from questionpy_server import WorkerPool
 from questionpy_server.cache import FileLimitLRU
+from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
-from questionpy_server.misc import calculate_hash
 
 if TYPE_CHECKING:
     from questionpy_server.web import HashContainer
@@ -22,28 +22,36 @@ class PackageCollection:
 
     def __init__(self, local_dir: Optional[Path], repo_urls: list[str], cache: FileLimitLRU, worker_pool: WorkerPool):
         self._indexer = Indexer(worker_pool)
+        self._collectors: list[BaseCollector] = []
 
         if local_dir:
             local_collector = LocalCollector(local_dir, self._indexer)
-            self._local_collector = local_collector
+            self._collectors.append(local_collector)
 
-        self._repo_collectors: list[RepoCollector] = []
         for repo_url in repo_urls:
             repo_collector = RepoCollector(cache, repo_url, self._indexer)
-            self._repo_collectors.append(repo_collector)
+            self._collectors.append(repo_collector)
 
         self._lms_collector = LMSCollector(cache, self._indexer)
-
-        # Register packages which are already in the cache.
-        for file in cache.directory.iterdir():
-            if file.suffix != '.qpy':
-                continue
-            # We assume that existing packages from the cache are from an LMS.
-            coroutine = self._indexer.register_package(calculate_hash(file), file, self._lms_collector)
-            run(coroutine)
+        self._collectors.append(self._lms_collector)
 
         # Update indexer if package in cache gets removed.
         cache.on_remove = self._unregister_package_from_index
+
+    async def start(self) -> None:
+        """
+        Starts the package collection.
+        """
+
+        # Get every start()-coroutine of the collectors and start them.
+        await gather(*[collector.start() for collector in self._collectors])
+
+    async def stop(self) -> None:
+        """
+        Stops the package collection.
+        """
+        # Get every stop()-coroutine of the collectors and start them.
+        await gather(*[collector.stop() for collector in self._collectors])
 
     def _unregister_package_from_index(self, package_hash: str) -> None:
         """

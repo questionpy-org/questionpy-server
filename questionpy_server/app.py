@@ -1,3 +1,4 @@
+from asyncio import create_task
 from typing import Any
 
 from aiohttp import web
@@ -24,6 +25,17 @@ class QPyServer:
                                                     self.worker_pool)
         self.question_state_cache = FileLimitLRU(settings.cache_question_state.directory,
                                                  settings.cache_question_state.size, name='QuestionStateCache')
+
+        self.web_app.on_startup.append(self._start_package_collection)
+        self.web_app.on_shutdown.append(self._stop_package_collection)
+
+    async def _start_package_collection(self, _app: web.Application) -> None:
+        # The server will not wait until all package collectors are started. This is done in the background.
+        create_task(self.package_collection.start())
+
+    async def _stop_package_collection(self, _app: web.Application) -> None:
+        # Wait until all package collectors are stopped appropriately.
+        await self.package_collection.stop()
 
     def start_server(self) -> None:
         port = self.settings.webservice.listen_port

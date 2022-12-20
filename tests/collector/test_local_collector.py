@@ -4,6 +4,7 @@ from shutil import copy
 import pytest
 from _pytest.tmpdir import TempPathFactory
 
+from questionpy_server.package import Package
 from questionpy_server.worker.controller import WorkerPool
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.local_collector import LocalCollector
@@ -63,15 +64,23 @@ async def test_package_exists_before_init(tmp_path_factory: TempPathFactory) -> 
     local_collector, _, package, package_path = create_local_collector_with_package(tmp_path_factory)
 
     # Check if the package exists.
-    actual_package_path = local_collector.get_path_by_hash(package.hash)
+    actual_package_path = await local_collector.get_path(Package(package.hash, package.manifest))
     assert actual_package_path.is_file()
     assert actual_package_path == package_path
     assert get_file_hash(actual_package_path) == package.hash
 
 
-@pytest.mark.skip(reason='Not implemented yet.')
+@pytest.mark.skip(reason='Observer is not working under test conditions.')
 async def test_package_gets_created(tmp_path_factory: TempPathFactory) -> None:
-    pass
+    local_collector, directory = create_local_collector(tmp_path_factory)
+    await local_collector.start()
+
+    package_path = copy(PACKAGES[0].path, directory)
+    package = Package(PACKAGES[0].hash, PACKAGES[0].manifest)
+    print(package.hash, package_path, directory, local_collector.map.paths, local_collector.map.hashes)
+
+    path = await local_collector.get_path(package)
+    assert path == Path(package_path)
 
 
 @pytest.mark.skip(reason='Not implemented yet.')
