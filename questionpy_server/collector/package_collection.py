@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from questionpy_server.package import Package
 
 
-class PackageCollector:
+class PackageCollection:
     """
     Handles packages from a local directory, remote repositories, and packages received by an LMS.
     """

@@ -2,11 +2,6 @@ import pytest
 
 
 @pytest.mark.skip(reason='Not implemented yet.')
-async def test_register_packages_from_cache() -> None:
-    pass
-
-
-@pytest.mark.skip(reason='Not implemented yet.')
 async def test_register_package() -> None:
     pass
 
