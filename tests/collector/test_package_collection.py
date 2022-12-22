@@ -8,12 +8,14 @@ from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector import PackageCollection
 from questionpy_server.web import HashContainer
 
+from questionpy_server.collector.local_collector import LocalCollector
+from questionpy_server.collector.lms_collector import LMSCollector
+
 
 async def test_start() -> None:
     package_collection = PackageCollection(Path("test_dir/"), [], Mock(), Mock())
 
-    with patch('questionpy_server.collector.lms_collector.LMSCollector.start') as lms_start, \
-            patch('questionpy_server.collector.local_collector.LocalCollector.start') as local_start:
+    with patch.object(LMSCollector, 'start') as lms_start, patch.object(LocalCollector, 'start') as local_start:
         await package_collection.start()
         lms_start.assert_called_once()
         local_start.assert_called_once()
@@ -22,8 +24,7 @@ async def test_start() -> None:
 async def test_stop() -> None:
     package_collection = PackageCollection(Path("test_dir/"), [], Mock(), Mock())
 
-    with patch('questionpy_server.collector.lms_collector.LMSCollector.stop') as lms_stop, \
-            patch('questionpy_server.collector.local_collector.LocalCollector.stop') as local_stop:
+    with patch.object(LMSCollector, 'stop') as lms_stop, patch.object(LocalCollector, 'stop') as local_stop:
         await package_collection.stop()
         lms_stop.assert_called_once()
         local_stop.assert_called_once()
@@ -32,7 +33,7 @@ async def test_stop() -> None:
 async def test_put_package() -> None:
     package_collection = PackageCollection(None, [], Mock(), Mock())
 
-    with patch('questionpy_server.collector.lms_collector.LMSCollector.put') as put:
+    with patch.object(LMSCollector, 'put') as put:
         await package_collection.put(HashContainer(b'', 'hash'))
         put.assert_called_once_with(HashContainer(b'', 'hash'))
 
