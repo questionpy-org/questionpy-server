@@ -10,6 +10,6 @@ on:
 jobs:
   ci:
     # https://github.com/questionpy-org/.github
-    uses: questionpy-org/.github/.github/workflows/python-ci.yml@feature/upload-artifact
+    uses: questionpy-org/.github/.github/workflows/python-ci.yml@v4
     with:
       packages: questionpy_server
