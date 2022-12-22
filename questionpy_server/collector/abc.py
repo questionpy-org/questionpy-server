@@ -32,6 +32,13 @@ class BaseCollector(ABC):
         """
         return
 
+    async def __aenter__(self) -> 'BaseCollector':
+        await self.start()
+        return self
+
+    async def __aexit__(self, *args: object) -> None:
+        await self.stop()
+
     @abstractmethod
     async def get_path(self, package: 'Package') -> Path:
         """

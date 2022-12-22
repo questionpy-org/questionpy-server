@@ -1,3 +1,5 @@
+import logging
+from asyncio import Lock
 from pathlib import Path
 from typing import Optional, overload, Union
 
@@ -23,6 +25,8 @@ class Indexer:
 
         self._index_by_hash: dict[str, Package] = {}
         self._index_by_name: dict[str, dict[str, Package]] = {}
+
+        self._lock = Lock()
 
     def get_by_hash(self, package_hash: str) -> Optional[Package]:
         """
@@ -86,25 +90,33 @@ class Indexer:
 
     async def register_package(self, package_hash: str, path_or_manifest: Union[Path, Manifest],
                                source: BaseCollector) -> Package:
-
-        if package := self._index_by_hash.get(package_hash, None):
-            # Package was already indexed; add source to package.
-            package.sources.add(source)
-        else:
-            # Create new package...
-            if isinstance(path_or_manifest, Path):
-                # ...from path.
-                async with self._worker_pool.get_worker(path_or_manifest, 0, None) as worker:
-                    manifest = await worker.get_manifest()
-                package = Package(package_hash, manifest, source, path_or_manifest)
+        async with self._lock:
+            if package := self._index_by_hash.get(package_hash, None):
+                # Package was already indexed; add source to package.
+                package.sources.add(source)
             else:
-                # ...from manifest.
-                package = Package(package_hash, path_or_manifest, source)
-            self._index_by_hash[package.hash] = package
+                # Create new package...
+                if isinstance(path_or_manifest, Path):
+                    # ...from path.
+                    async with self._worker_pool.get_worker(path_or_manifest, 0, None) as worker:
+                        manifest = await worker.get_manifest()
+                    package = Package(package_hash, manifest, source, path_or_manifest)
+                else:
+                    # ...from manifest.
+                    package = Package(package_hash, path_or_manifest, source)
+                self._index_by_hash[package.hash] = package
 
-        # Check if package should be accessible by name and version.
-        if isinstance(source, (LocalCollector, RepoCollector)):
-            self._index_by_name.setdefault(package.manifest.short_name, {})[package.manifest.version] = package
+            # Check if package should be accessible by name and version.
+            if isinstance(source, (LocalCollector, RepoCollector)):
+                package_versions = self._index_by_name.setdefault(package.manifest.short_name, {})
+                existing_package = package_versions.get(package.manifest.version, None)
+                if existing_package and existing_package != package:
+                    # Package with the same short_name and version already exists; log a warning.
+                    log = logging.getLogger('questionpy-server')
+                    log.warning("The package %s (%s) already exists with a different hash.",
+                                package.manifest.short_name, package.manifest.version)
+                else:
+                    package_versions[package.manifest.version] = package
 
         return package
 

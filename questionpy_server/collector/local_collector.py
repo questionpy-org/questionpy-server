@@ -136,7 +136,7 @@ class LocalCollectorEventHandler(PatternMatchingEventHandler):
             self._loop
         ).result()
 
-    def _pop_package(self, path_str: str) -> None:
+    def _remove_package(self, path_str: str) -> None:
         path = Path(path_str).resolve()
         package_hash = self._local_collector.map.pop(path)
         if package_hash:
@@ -149,14 +149,14 @@ class LocalCollectorEventHandler(PatternMatchingEventHandler):
         self._log.info("Package %s was created.", event.src_path)
 
     def on_deleted(self, event: FileDeletedEvent) -> None:
-        self._pop_package(event.src_path)
+        self._remove_package(event.src_path)
         self._log.info("Package %s was deleted.", event.src_path)
 
     def on_moved(self, event: FileMovedEvent) -> None:
         dest_path = Path(event.dest_path)
         if dest_path.suffix != '.qpy':
             # Package was moved to a non-package file.
-            self._pop_package(event.src_path)
+            self._remove_package(event.src_path)
             self._log.info("Package %s was moved to %s and is therefore unregistered.", event.src_path, event.dest_path)
             return
 
@@ -172,7 +172,7 @@ class LocalCollectorEventHandler(PatternMatchingEventHandler):
             self._log.info("Package %s was moved to %s.", event.src_path, event.dest_path)
 
     def on_modified(self, event: FileModifiedEvent) -> None:
-        self._pop_package(event.src_path)
+        self._remove_package(event.src_path)
         self._push_package(event.src_path)
         self._log.info("Package %s was modified.", event.src_path)
 
@@ -187,6 +187,7 @@ class LocalCollector(BaseCollector):
     map: PathToHash
 
     _observer: Observer
+    _event_handler: LocalCollectorEventHandler
 
     def __init__(self, directory: Path, indexer: 'Indexer'):
         super().__init__(indexer)
@@ -204,9 +205,9 @@ class LocalCollector(BaseCollector):
                 await self.indexer.register_package(package_hash, file, self)
 
         # Start the directory observer.
-        event_handler = LocalCollectorEventHandler(self, get_event_loop())
+        self._event_handler = LocalCollectorEventHandler(self, get_event_loop())
         self._observer = Observer()
-        self._observer.schedule(event_handler, str(self.directory))
+        self._observer.schedule(self._event_handler, str(self.directory))
         self._observer.start()
 
         log = logging.getLogger('questionpy-server')

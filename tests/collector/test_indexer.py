@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Union
 from unittest.mock import patch
@@ -106,14 +107,21 @@ async def test_register_package_with_same_hash_as_existing_package() -> None:
     assert next(iter(packages)) is package
 
 
-@pytest.mark.skip(reason='Not implemented yet.')
-async def test_register_package_with_same_name_and_version_as_existing_package() -> None:
-    pass
+async def test_register_two_packages_with_same_manifest_but_different_hashes(caplog: pytest.LogCaptureFixture) -> None:
+    # Create mock.
+    collector = patch(LocalCollector.__module__, spec=LocalCollector).start()
 
+    # Register a package.
+    indexer = Indexer(WorkerPool(0, 0))
+    await indexer.register_package(PACKAGES[0].hash, PACKAGES[0].manifest, collector)
 
-@pytest.mark.skip(reason='Not implemented yet.')
-async def test_register_package_with_same_name_and_version_as_existing_package_but_different_hash() -> None:
-    pass
+    with caplog.at_level(logging.WARNING):
+        # Register same package with different hash and same manifest.
+        await indexer.register_package("different_hash", PACKAGES[0].manifest, collector)
+
+    message = f'The package {PACKAGES[0].manifest.short_name} ({PACKAGES[0].manifest.version}) already exists with a ' \
+              f'different hash.'
+    assert caplog.record_tuples == [('questionpy-server', logging.WARNING, message)]
 
 
 async def test_unregister_package_with_lms_source() -> None:
