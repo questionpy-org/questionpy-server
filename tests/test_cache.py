@@ -230,3 +230,10 @@ async def test_put(cache: FileLimitLRU, settings: Settings) -> None:
         assert get_file_count(settings.cache.directory) == filecount
         assert (Path(settings.cache.directory) / new_file).is_file()
         assert not (Path(settings.cache.directory) / files[i]).is_file()
+
+
+def test_get_files(cache: FileLimitLRU, settings: Settings) -> None:
+    # Check if cache.file is only a copy of the original dict.
+    assert cache.files == cache._files
+    assert cache.files is not cache._files
+    assert len(cache.files) == settings.items.num_of_items

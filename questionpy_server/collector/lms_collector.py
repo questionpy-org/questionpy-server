@@ -27,11 +27,8 @@ class LMSCollector(CachedCollector):
         count = 0
         # We assume that existing packages in the cache are from an LMS as it has the most strict visibility i.e. the
         # package can only be accessed by the hash.
-        for file in self._cache.directory.iterdir():
-            if file.suffix != '.qpy':
-                continue
-            # The cache stores packages with their hash as the filename.
-            await self.indexer.register_package(file.stem, file, self)
+        for package_hash, file in self._cache.files.items():
+            await self.indexer.register_package(package_hash, file.path, self)
             count += 1
 
         log = logging.getLogger("questionpy_server")
