@@ -1,7 +1,7 @@
 import logging
 from collections import OrderedDict
 from pathlib import Path
-from typing import NamedTuple, Callable
+from typing import NamedTuple, Callable, Awaitable
 from asyncio import to_thread, Lock
 
 
@@ -29,7 +29,10 @@ class FileLimitLRU:
         A cache should be initialised while starting a server therefore it is not necessary for it to be async.
         """
 
-        self.on_remove: Callable[[str], None] = lambda _: None
+        async def on_remove(_key: str) -> None:
+            pass
+
+        self.on_remove: Callable[[str], Awaitable[None]] = on_remove
         """Callback which fires on every removal of a file."""
 
         self.directory: Path = directory
@@ -99,7 +102,7 @@ class FileLimitLRU:
         self._total_bytes -= file.size
         del self._files[key]
 
-        self.on_remove(key)
+        await self.on_remove(key)
 
     async def remove(self, key: str) -> None:
         """
@@ -163,3 +166,12 @@ class FileLimitLRU:
     @property
     def space_left(self) -> int:
         return self.max_bytes - self._total_bytes
+
+    @property
+    def files(self) -> OrderedDict[str, File]:
+        """
+        Dictionary of all files in the cache where the key is the hash of the file.
+
+        :return: A copy of the internal dictionary.
+        """
+        return self._files.copy()

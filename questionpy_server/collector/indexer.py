@@ -124,7 +124,7 @@ class Indexer:
 
         return package
 
-    def unregister_package(self, package_hash: str, source: BaseCollector) -> None:
+    async def unregister_package(self, package_hash: str, source: BaseCollector) -> None:
         """
         Removes the given source from the package. If the only left source of the package is an LMS, it will only be
         accessible by its hash. If the package has no more sources, it is removed from the index.

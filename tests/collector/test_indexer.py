@@ -130,7 +130,7 @@ async def test_unregister_package_with_lms_source() -> None:
     collector = patch(LMSCollector.__module__, spec=LMSCollector).start()
     await indexer.register_package(PACKAGES[0].hash, PACKAGES[0].manifest, collector)
 
-    indexer.unregister_package(PACKAGES[0].hash, collector)
+    await indexer.unregister_package(PACKAGES[0].hash, collector)
 
     # Package is not accessible after unregistering.
     package = indexer.get_by_hash(PACKAGES[0].hash)
@@ -143,7 +143,7 @@ async def test_unregister_package_with_local_and_repo_source(collector: BaseColl
     collector = patch(collector.__module__, spec=collector).start()
     await indexer.register_package(PACKAGES[0].hash, PACKAGES[0].manifest, collector)
 
-    indexer.unregister_package(PACKAGES[0].hash, collector)
+    await indexer.unregister_package(PACKAGES[0].hash, collector)
 
     # Package is not accessible after unregistering.
     package = indexer.get_by_hash(PACKAGES[0].hash)
@@ -172,7 +172,7 @@ async def test_unregister_package_with_multiple_sources() -> None:
     await indexer.register_package(PACKAGES[0].hash, PACKAGES[0].manifest, repo_collector)
 
     # Unregister package from local collector.
-    indexer.unregister_package(PACKAGES[0].hash, local_collector)
+    await indexer.unregister_package(PACKAGES[0].hash, local_collector)
 
     # Package is still accessible by hash.
     package = indexer.get_by_hash(PACKAGES[0].hash)
@@ -187,7 +187,7 @@ async def test_unregister_package_with_multiple_sources() -> None:
     assert len(packages) == 1
 
     # Unregister package from repo collector.
-    indexer.unregister_package(PACKAGES[0].hash, repo_collector)
+    await indexer.unregister_package(PACKAGES[0].hash, repo_collector)
 
     # Package is still accessible by hash.
     package = indexer.get_by_hash(PACKAGES[0].hash)
@@ -202,7 +202,7 @@ async def test_unregister_package_with_multiple_sources() -> None:
     assert len(packages) == 0
 
     # Unregister package from LMS collector.
-    indexer.unregister_package(PACKAGES[0].hash, lms_collector)
+    await indexer.unregister_package(PACKAGES[0].hash, lms_collector)
 
     # Package is not accessible by hash.
     package = indexer.get_by_hash(PACKAGES[0].hash)

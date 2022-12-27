@@ -142,7 +142,10 @@ class LocalCollectorEventHandler(PatternMatchingEventHandler):
         if package_hash:
             packages = self._local_collector.map.get(package_hash)
             if packages is None or len(packages) == 0:
-                self._local_collector.indexer.unregister_package(package_hash, self._local_collector)
+                run_coroutine_threadsafe(
+                    self._local_collector.indexer.unregister_package(package_hash, self._local_collector),
+                    self._loop
+                ).result()
 
     def on_created(self, event: FileCreatedEvent) -> None:
         self._push_package(event.src_path)
