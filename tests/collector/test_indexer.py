@@ -120,9 +120,9 @@ async def test_register_two_packages_with_same_manifest_but_different_hashes(cap
         # Register same package with different hash and same manifest.
         await indexer.register_package("different_hash", PACKAGES[0].manifest, collector)
 
-    message = f'The package {PACKAGES[0].manifest.short_name} ({PACKAGES[0].manifest.version}) already exists with a ' \
-              f'different hash.'
-    assert caplog.record_tuples == [('questionpy-server', logging.WARNING, message)]
+    message = f'The package {PACKAGES[0].manifest.short_name} ({PACKAGES[0].manifest.version}) with hash: ' \
+              f'different_hash already exists with a different hash: {PACKAGES[0].hash}.'
+    assert caplog.record_tuples == [('questionpy-server:indexer', logging.WARNING, message)]
 
 
 async def test_unregister_package_with_lms_source() -> None:

@@ -116,9 +116,10 @@ class Indexer:
                 existing_package = package_versions.get(package.manifest.version, None)
                 if existing_package and existing_package != package:
                     # Package with the same short_name and version already exists; log a warning.
-                    log = logging.getLogger('questionpy-server')
-                    log.warning("The package %s (%s) already exists with a different hash.",
-                                package.manifest.short_name, package.manifest.version)
+                    log = logging.getLogger('questionpy-server:indexer')
+                    log.warning("The package %s (%s) with hash: %s already exists with a different hash: %s.",
+                                package.manifest.short_name, package.manifest.version, package.hash,
+                                existing_package.hash)
                 else:
                     package_versions[package.manifest.version] = package
 

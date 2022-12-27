@@ -120,7 +120,7 @@ class LocalCollectorEventHandler(PatternMatchingEventHandler):
 
         self._local_collector = local_collector
         self._loop = loop
-        self._log = logging.getLogger('questionpy-server')
+        self._log = logging.getLogger('questionpy-server:local-collector')
 
     def _push_package(self, path_str: str) -> None:
         path = Path(path_str).resolve()
@@ -213,8 +213,8 @@ class LocalCollector(BaseCollector):
         self._observer.schedule(self._event_handler, str(self.directory))
         self._observer.start()
 
-        log = logging.getLogger('questionpy-server')
-        log.info("LocalCollector started for directory %s with %s unique package(s).", self.directory,
+        log = logging.getLogger('questionpy-server:local-collector')
+        log.info("Started for directory %s with %s unique package(s).", self.directory,
                  len(self.map.hashes))
 
     async def stop(self) -> None:

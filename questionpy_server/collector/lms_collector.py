@@ -31,8 +31,8 @@ class LMSCollector(CachedCollector):
             await self.indexer.register_package(package_hash, file.path, self)
             count += 1
 
-        log = logging.getLogger("questionpy_server")
-        log.info("LMSCollector started with %s packages.", count)
+        log = logging.getLogger('questionpy-server:lms-collector')
+        log.info("Started with %s package(s).", count)
 
     async def get_path(self, package: 'Package') -> Path:
         return self._cache.get(package.hash)
