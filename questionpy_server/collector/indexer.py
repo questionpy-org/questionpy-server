@@ -26,7 +26,8 @@ class Indexer:
         self._index_by_hash: dict[str, Package] = {}
         self._index_by_name: dict[str, dict[str, Package]] = {}
 
-        self._lock = Lock()
+        # TODO: initialize Lock here if the minimum supported Python version is 3.10 or above
+        self._lock: Optional[Lock] = None
 
     def get_by_hash(self, package_hash: str) -> Optional[Package]:
         """
@@ -90,6 +91,9 @@ class Indexer:
 
     async def register_package(self, package_hash: str, path_or_manifest: Union[Path, Manifest],
                                source: BaseCollector) -> Package:
+        if not self._lock:
+            self._lock = Lock()
+
         async with self._lock:
             if package := self._index_by_hash.get(package_hash, None):
                 # Package was already indexed; add source to package.
