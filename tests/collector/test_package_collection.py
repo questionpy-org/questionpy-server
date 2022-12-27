@@ -6,6 +6,7 @@ from _pytest.tmpdir import TempPathFactory
 
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector import PackageCollection
+from questionpy_server.collector.indexer import Indexer
 from questionpy_server.web import HashContainer
 
 from questionpy_server.collector.local_collector import LocalCollector
@@ -42,12 +43,12 @@ def test_get_package() -> None:
     package_collection = PackageCollection(None, [], Mock(), Mock())
 
     # Package does exist.
-    with patch('questionpy_server.collector.indexer.Indexer.get_by_hash') as get_by_hash:
+    with patch.object(Indexer, 'get_by_hash') as get_by_hash:
         package_collection.get('hash')
         get_by_hash.assert_called_once_with('hash')
 
     # Package does not exist.
-    with patch('questionpy_server.collector.indexer.Indexer.get_by_hash', return_value=None) as get_by_hash:
+    with patch.object(Indexer, 'get_by_hash', return_value=None) as get_by_hash:
         with pytest.raises(FileNotFoundError):
             package_collection.get('hash')
         get_by_hash.assert_called_once_with('hash')
@@ -56,7 +57,7 @@ def test_get_package() -> None:
 def test_get_package_by_name() -> None:
     package_collection = PackageCollection(None, [], Mock(), Mock())
 
-    with patch('questionpy_server.collector.indexer.Indexer.get_by_name') as get_by_name:
+    with patch.object(Indexer, 'get_by_name') as get_by_name:
         package_collection.get_by_name('hash')
         get_by_name.assert_called_once_with('hash')
 
@@ -65,13 +66,12 @@ def test_get_package_by_name_and_version() -> None:
     package_collection = PackageCollection(None, [], Mock(), Mock())
 
     # Package does exist.
-    with patch('questionpy_server.collector.indexer.Indexer.get_by_name_and_version') as get_by_name_and_version:
+    with patch.object(Indexer, 'get_by_name_and_version') as get_by_name_and_version:
         package_collection.get_by_name_and_version('hash', '0.1.0')
         get_by_name_and_version.assert_called_once_with('hash', '0.1.0')
 
     # Package does not exist.
-    with patch('questionpy_server.collector.indexer.Indexer.get_by_name_and_version', return_value=None) as \
-            get_by_name_and_version:
+    with patch.object(Indexer, 'get_by_name_and_version', return_value=None) as get_by_name_and_version:
         with pytest.raises(FileNotFoundError):
             package_collection.get_by_name_and_version('hash', '0.1.0')
         get_by_name_and_version.assert_called_once_with('hash', '0.1.0')
@@ -81,7 +81,7 @@ def test_get_packages() -> None:
     package_collection = PackageCollection(None, [], Mock(), Mock())
 
     # Package does exist.
-    with patch('questionpy_server.collector.indexer.Indexer.get_packages') as get_packages:
+    with patch.object(Indexer, 'get_packages') as get_packages:
         package_collection.get_packages()
         get_packages.assert_called_once()
 
@@ -91,6 +91,6 @@ async def test_notify_indexer_on_cache_deletion(tmp_path_factory: TempPathFactor
     PackageCollection(None, [], cache, Mock())
 
     # The callback should unregister the package from the indexer.
-    with patch('questionpy_server.collector.indexer.Indexer.unregister_package') as unregister_package:
-        cache.on_remove('hash')
+    with patch.object(Indexer, 'unregister_package') as unregister_package:
+        await cache.on_remove('hash')
         unregister_package.assert_called_once()

@@ -12,6 +12,7 @@ from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
+from questionpy_server.package import PackageSources
 from tests.conftest import PACKAGES
 
 
@@ -89,7 +90,7 @@ async def test_register_package_with_same_hash_as_existing_package() -> None:
     assert package is package_2
 
     # Register package from LMS collector.
-    with patch('questionpy_server.package.PackageSources.add') as add:
+    with patch.object(PackageSources, 'add') as add:
         lms_collector = patch(LMSCollector.__module__, spec=LMSCollector).start()
         package_3 = await indexer.register_package(PACKAGES[0].hash, PACKAGES[0].path, lms_collector)
         assert package is package_3
