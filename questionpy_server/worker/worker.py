@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import resource
 import sys
 from asyncio.subprocess import Process
 from collections.abc import AsyncIterator
@@ -8,15 +9,19 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Optional, Type, TypeVar
+
+from questionpy_common.misc import Bytes, ByteSize
+
+from .exception import WorkerNotRunningError, WorkerStartError
 from .runtime.lib import WorkerResourceLimits, send_message
 from .runtime.messages import MessageIds, messages_header_struct, MessageToServer, MessageToWorker, \
-    InvalidMessageIdError, InitWorker, Exit, LoadQPyPackage
+    InvalidMessageIdError, InitWorker, Exit, LoadQPyPackage, WorkerError
 
 
 @dataclass
 class WorkerResources:
     """Current resource usage."""
-    memory_bytes: int
+    memory_bytes: Bytes
     cpu_time_since_last_call: float
     total_cpu_time: float
 
@@ -81,7 +86,7 @@ class WorkerProcess(WorkerProcessBase):
         self._expected_incoming_messages: list[tuple[MessageIds, asyncio.Future]] = []
 
         self.stderr_data: bytearray = bytearray()
-        self._stderr_data_max_size: int = 5 * 1024
+        self._stderr_data_max_size: Bytes = Bytes(5, ByteSize.KiB)
         self.stderr_skipped_data: int = 0
         self.ignore_errors: bool = False  # do not log errors in worker when reading from stdin
 
@@ -115,6 +120,31 @@ class WorkerProcess(WorkerProcessBase):
             self.reset_stderr_data()
             raise
 
+    def get_resource_usage(self) -> WorkerResources:
+        if self._connection is None or self.proc is None:
+            return WorkerResources(
+                memory_bytes=Bytes(0),
+                cpu_time_since_last_call=0,
+                total_cpu_time=0,
+            )
+
+        try:
+            with open(f'/proc/{self.proc.pid}/statm', 'r', encoding='utf-8') as statm_file:
+                # format: size, resident, shared, text, lib, data, dt
+                statm = statm_file.read().split()
+                rss = Bytes(statm[1], ByteSize.KiB)
+                pagesize = Bytes(resource.getpagesize()).convert_to(ByteSize.KiB)
+                memory_bytes = Bytes(rss * pagesize)
+        except FileNotFoundError:
+            # Process does not exist anymore.
+            memory_bytes = Bytes(0)
+
+        return WorkerResources(
+            memory_bytes=memory_bytes,
+            cpu_time_since_last_call=0,
+            total_cpu_time=0,
+        )
+
     def send(self, message: MessageToWorker) -> None:
         """Send a message to the worker."""
         if self._connection is None:
@@ -141,10 +171,17 @@ class WorkerProcess(WorkerProcessBase):
             raise WorkerNotRunningError()
 
         async for message in self._connection:
-            cur_id = message.message_id
-            for future in [fut for expected_id, fut in self._expected_incoming_messages if expected_id == cur_id]:
-                future.set_result(message)
-                self._expected_incoming_messages.remove((cur_id, future))
+            if isinstance(message, WorkerError):
+                cause_id = message.expected_response_id
+                exception = message.to_exception()
+                for future in [fut for expected_id, fut in self._expected_incoming_messages if expected_id == cause_id]:
+                    future.set_exception(exception)
+                    self._expected_incoming_messages.remove((cause_id, future))
+            else:
+                cur_id = message.message_id
+                for future in [fut for expected_id, fut in self._expected_incoming_messages if expected_id == cur_id]:
+                    future.set_result(message)
+                    self._expected_incoming_messages.remove((cur_id, future))
 
     async def read_stderr(self) -> None:
         """
@@ -165,7 +202,7 @@ class WorkerProcess(WorkerProcessBase):
 
         # Skip all the remaining data in stderr.
         while True:
-            data = await self.proc.stderr.read(512 * 1024)
+            data = await self.proc.stderr.read(Bytes(512, ByteSize.KiB))
             if not data:
                 return
             self.stderr_skipped_data += len(data)
@@ -176,8 +213,8 @@ class WorkerProcess(WorkerProcessBase):
             msg = "Worker wrote following data to stdout/stderr.\n"
             msg_after = ""
             if self.stderr_skipped_data:
-                msg_after += f" (additional {self.stderr_skipped_data} bytes were skipped)."
-            log.warning("%s%s%s ", msg, self.stderr_data, msg_after)
+                msg_after += f" (additional {Bytes(self.stderr_skipped_data)} were skipped)."
+            log.warning("%s%s%s ", msg, self.stderr_data.decode('utf-8'), msg_after)
         self.stderr_data = bytearray()
         self.stderr_skipped_data = 0
 
@@ -196,11 +233,11 @@ class WorkerProcess(WorkerProcessBase):
             process_wait_task = asyncio.create_task(self.proc.wait(), name="wait for worker process")
             await asyncio.wait((receive_message_task, read_stderr_task, process_wait_task),
                                return_when=asyncio.FIRST_COMPLETED)
-
         finally:
             self.state = WorkerState.NOT_RUNNING
             for _, future in self._expected_incoming_messages:
-                future.set_exception(WorkerNotRunningError())
+                if not future.done():
+                    future.set_exception(WorkerNotRunningError())
             self._expected_incoming_messages = []
             if self.proc.returncode is None and process_wait_task and not process_wait_task.done():
                 try:
@@ -289,11 +326,3 @@ class ServerToWorkerConnection(AsyncIterator[MessageToServer]):
 
     async def __anext__(self) -> MessageToServer:
         return await self.receive_message()
-
-
-class WorkerNotRunningError(Exception):
-    pass
-
-
-class WorkerStartError(Exception):
-    pass

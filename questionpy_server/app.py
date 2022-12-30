@@ -17,7 +17,7 @@ class QPyServer:
         self.web_app = web.Application(client_max_size=settings.webservice.max_bytes_main)
         self.web_app.add_routes(routes)
         self.web_app['qpy_server_app'] = self
-        self.worker_pool = WorkerPool(0, 0)
+        self.worker_pool = WorkerPool(settings.webservice.max_workers, settings.webservice.max_bytes_workers)
 
         self.package_cache = FileLimitLRU(settings.cache_package.directory, settings.cache_package.size,
                                           extension='.qpy', name='PackageCache')

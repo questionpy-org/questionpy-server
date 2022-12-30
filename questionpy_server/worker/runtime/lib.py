@@ -1,4 +1,5 @@
 import json
+import resource
 import sys
 from dataclasses import dataclass
 from io import BufferedReader, RawIOBase
@@ -6,7 +7,7 @@ from pathlib import Path
 from typing import Any, Optional, Union, Callable, TypeVar, TYPE_CHECKING
 from .messages import InitWorker, Exit, get_message_bytes, messages_header_struct, Message, MessageIds, \
     MessageToWorker, MessageToServer, InvalidMessageIdError, GetQPyPackageManifest, LoadQPyPackage, \
-    GetOptionsFormDefinition
+    GetOptionsFormDefinition, WorkerError
 from .package import QPyPackage, QPyMainPackage
 
 if TYPE_CHECKING:
@@ -93,6 +94,8 @@ class WorkerManager:
 
         self.limits = WorkerResourceLimits(max_memory_bytes=init_msg.max_memory,
                                            max_cpu_time_seconds_per_call=init_msg.max_cpu_time)
+        # Limit memory usage.
+        resource.setrlimit(resource.RLIMIT_AS, (self.limits.max_memory_bytes, self.limits.max_memory_bytes))
 
         self.server_connection.send_message(InitWorker.Response())
 
@@ -103,7 +106,10 @@ class WorkerManager:
             if isinstance(msg, Exit):
                 sys.exit(0)
             else:
-                response = self.message_dispatch[msg.message_id](msg)
+                try:
+                    response = self.message_dispatch[msg.message_id](msg)
+                except Exception as error:  # pylint: disable=broad-except
+                    response = WorkerError.from_exception(error, cause=msg)
                 self.server_connection.send_message(response)
 
     def on_msg_load_qpy_package(self, msg: LoadQPyPackage) -> MessageToServer:
