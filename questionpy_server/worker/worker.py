@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import resource
 import sys
 from asyncio.subprocess import Process
 from collections.abc import AsyncIterator
@@ -108,7 +107,7 @@ class WorkerProcess(WorkerProcessBase):
         self.observe_task = asyncio.create_task(self.observe(), name='observe worker task')
 
         try:
-            init_msg = InitWorker(max_memory=self.limits.max_memory_bytes,
+            init_msg = InitWorker(max_memory=self.limits.max_memory,
                                   max_cpu_time=self.limits.max_cpu_time_seconds_per_call)
             await self.send_and_wait_response(init_msg, InitWorker.Response)
 
@@ -121,26 +120,8 @@ class WorkerProcess(WorkerProcessBase):
             raise
 
     def get_resource_usage(self) -> WorkerResources:
-        if self._connection is None or self.proc is None:
-            return WorkerResources(
-                memory_bytes=Bytes(0),
-                cpu_time_since_last_call=0,
-                total_cpu_time=0,
-            )
-
-        try:
-            with open(f'/proc/{self.proc.pid}/statm', 'r', encoding='utf-8') as statm_file:
-                # format: size, resident, shared, text, lib, data, dt
-                statm = statm_file.read().split()
-                rss = Bytes(statm[1], ByteSize.KiB)
-                pagesize = Bytes(resource.getpagesize()).convert_to(ByteSize.KiB)
-                memory_bytes = Bytes(rss * pagesize)
-        except FileNotFoundError:
-            # Process does not exist anymore.
-            memory_bytes = Bytes(0)
-
         return WorkerResources(
-            memory_bytes=memory_bytes,
+            memory_bytes=Bytes(self.limits.max_memory),
             cpu_time_since_last_call=0,
             total_cpu_time=0,
         )

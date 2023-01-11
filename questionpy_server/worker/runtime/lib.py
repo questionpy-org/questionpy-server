@@ -5,6 +5,9 @@ from dataclasses import dataclass
 from io import BufferedReader, RawIOBase
 from pathlib import Path
 from typing import Any, Optional, Union, Callable, TypeVar, TYPE_CHECKING
+
+from questionpy_common.misc import Bytes
+
 from .messages import InitWorker, Exit, get_message_bytes, messages_header_struct, Message, MessageIds, \
     MessageToWorker, MessageToServer, InvalidMessageIdError, GetQPyPackageManifest, LoadQPyPackage, \
     GetOptionsFormDefinition, WorkerError
@@ -17,7 +20,7 @@ if TYPE_CHECKING:
 @dataclass
 class WorkerResourceLimits:
     """Maximum resources that a worker process is allowed to consume."""
-    max_memory_bytes: int
+    max_memory: Bytes
     max_cpu_time_seconds_per_call: float
 
 
@@ -92,10 +95,10 @@ class WorkerManager:
         if not isinstance(init_msg, InitWorker):
             raise BootstrapError()
 
-        self.limits = WorkerResourceLimits(max_memory_bytes=init_msg.max_memory,
+        self.limits = WorkerResourceLimits(max_memory=Bytes(init_msg.max_memory),
                                            max_cpu_time_seconds_per_call=init_msg.max_cpu_time)
         # Limit memory usage.
-        resource.setrlimit(resource.RLIMIT_AS, (self.limits.max_memory_bytes, self.limits.max_memory_bytes))
+        resource.setrlimit(resource.RLIMIT_AS, (self.limits.max_memory, self.limits.max_memory))
 
         self.server_connection.send_message(InitWorker.Response())
 

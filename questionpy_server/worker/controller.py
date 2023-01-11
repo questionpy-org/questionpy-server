@@ -1,4 +1,4 @@
-from asyncio import Semaphore, to_thread, Lock
+from asyncio import Semaphore, Condition
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -40,19 +40,12 @@ class WorkerPool:
         self._processes: list[WorkerProcess] = []
 
         self._semaphore: Optional[Semaphore] = None
-        self._lock: Optional[Lock] = None
+        self._condition: Optional[Condition] = None
 
-    def get_current_memory_usage(self) -> Bytes:
-        total = 0
-        for process in self._processes:
-            total += process.get_resource_usage().memory_bytes
-        return Bytes(total)
+        self._total_memory = 0
 
-    async def _wait_for_memory(self) -> None:
-        while True:
-            memory = await to_thread(self.get_current_memory_usage)
-            if memory < self.max_memory:
-                break
+    def memory_available(self, size: int) -> bool:
+        return self._total_memory + size <= self.max_memory
 
     @asynccontextmanager
     async def get_worker(self, package: Path, lms: int, context: Optional[int]) -> AsyncIterator[Worker]:
@@ -68,8 +61,8 @@ class WorkerPool:
         if not self._semaphore:
             self._semaphore = Semaphore(self.max_workers)
 
-        if not self._lock:
-            self._lock = Lock()
+        if not self._condition:
+            self._condition = Condition()
 
         # Limit the amount of running workers.
         async with self._semaphore:
@@ -78,16 +71,16 @@ class WorkerPool:
             if context is None:
                 context = 0
             try:
-                example_limits = WorkerResourceLimits(max_memory_bytes=Bytes(300, ByteSize.MiB),
-                                                      max_cpu_time_seconds_per_call=10)  # TODO
-                process = WorkerProcess(package, lms, context, example_limits)
+                limits = WorkerResourceLimits(max_memory=Bytes(200, ByteSize.MiB),
+                                              max_cpu_time_seconds_per_call=10)  # TODO
 
-                # Ensure FIFO.
-                async with self._lock:
-                    # Wait for RAM to be available.
-                    await self._wait_for_memory()
+                # Wait until there is enough memory available.
+                async with self._condition:
+                    await self._condition.wait_for(lambda: self.memory_available(limits.max_memory))
+                    # Reserve memory for the new worker.
+                    self._total_memory += limits.max_memory
 
-                self._processes.append(process)
+                process = WorkerProcess(package, lms, context, limits)
                 await process.start()
 
                 worker = Worker(process)
@@ -96,4 +89,8 @@ class WorkerPool:
             finally:
                 if process:
                     await process.stop(10)
-                    self._processes.remove(process)
+
+                # Free reserved memory and notify waiters.
+                self._total_memory -= limits.max_memory
+                async with self._condition:
+                    self._condition.notify_all()
