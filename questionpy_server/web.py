@@ -16,7 +16,7 @@ from questionpy_common import constants
 
 from questionpy_server.api.models import PackageQuestionStateNotFound, QuestionStateHash
 from questionpy_server.cache import SizeError, FileLimitLRU
-from questionpy_server.collector import PackageCollector
+from questionpy_server.collector import PackageCollection
 from questionpy_server.misc import get_route_model_param
 from questionpy_server.package import Package
 from questionpy_server.types import RouteHandler, M
@@ -184,12 +184,12 @@ def get_from_cache(cache: FileLimitLRU, hash_value: str) -> Optional[Path]:
     return path
 
 
-async def get_or_save_package(collector: PackageCollector, hash_value: str, container: Optional[HashContainer]) \
+async def get_or_save_package(collection: PackageCollection, hash_value: str, container: Optional[HashContainer]) \
         -> Optional[Package]:
     """
-    Gets a package from or saves it in the collector.
+    Gets a package from or saves it in the package collection.
 
-    :param collector: package collector
+    :param collection: package collection
     :param hash_value: hash of the package
     :param container: container with the package data and its hash
     :return: package
@@ -197,9 +197,9 @@ async def get_or_save_package(collector: PackageCollector, hash_value: str, cont
 
     try:
         if not container:
-            package = await collector.get(hash_value)
+            package = collection.get(hash_value)
         else:
-            package = await collector.put(container)
+            package = await collection.put(container)
     except SizeError as error:
         raise HTTPRequestEntityTooLarge(max_size=error.max_size, actual_size=error.actual_size,
                                         text=str(error)) from error
@@ -208,17 +208,17 @@ async def get_or_save_package(collector: PackageCollector, hash_value: str, cont
     return package
 
 
-async def get_data_package(collector: PackageCollector, hash_value: str) -> Optional[Package]:
+async def get_data_package(collection: PackageCollection, hash_value: str) -> Optional[Package]:
     """
-    Gets a package from the collector.
+    Gets a package from the collection.
 
-    :param collector: package collector
+    :param collection: package collection
     :param hash_value: hash of the package
     :return: package
     """
 
     try:
-        return await collector.get(hash_value)
+        return collection.get(hash_value)
     except FileNotFoundError:
         return None
 
@@ -267,7 +267,7 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
                     raise HTTPBadRequest(text=msg)
 
                 # Get or save package and question_state.
-                package = await get_or_save_package(server.collector, package_hash, package_container)
+                package = await get_or_save_package(server.package_collection, package_hash, package_container)
                 question_state_path = await get_or_save_with_cache(server.question_state_cache,
                                                                    model.question_state_hash,
                                                                    question_state_container)
@@ -280,7 +280,7 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
                     web_logger.info('Invalid JSON in request')
                     raise HTTPBadRequest from error
 
-                package = await get_data_package(server.collector, package_hash)
+                package = await get_data_package(server.package_collection, package_hash)
                 question_state_path = get_from_cache(server.question_state_cache, model.question_state_hash)
 
             else:
@@ -355,7 +355,7 @@ def ensure_package_exists(_func: Optional[RouteHandler] = None, required_hash: b
                     web_logger.warning(msg)
                     raise HTTPBadRequest(text=msg)
 
-            package = await get_or_save_package(server.collector, package_hash, package_container)
+            package = await get_or_save_package(server.package_collection, package_hash, package_container)
             kwargs['package'] = package
 
             return await function(request, *args, **kwargs)

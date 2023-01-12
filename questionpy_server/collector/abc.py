@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from questionpy_common.manifest import Manifest
-
-from questionpy_server import WorkerPool
 from questionpy_server.cache import FileLimitLRU
-from questionpy_server.package import Package
+
+if TYPE_CHECKING:
+    from questionpy_server.package import Package
+    from questionpy_server.collector.indexer import Indexer
 
 
 class BaseCollector(ABC):
@@ -13,42 +14,39 @@ class BaseCollector(ABC):
     A collector responsible for getting packages from a source.
     """
 
-    _worker_pool: WorkerPool
+    indexer: 'Indexer'
 
-    def __init__(self, worker_pool: WorkerPool):
-        self._worker_pool = worker_pool
-
-    async def _get_manifest(self, path: Path) -> Manifest:
-        async with self._worker_pool.get_worker(path, 0, None) as worker:
-            return await worker.get_manifest()
-
-    async def _create_package(self, package_hash: str, path: Path) -> Package:
-        manifest = await self._get_manifest(path)
-        return Package(package_hash, manifest, self, path)
+    def __init__(self, indexer: 'Indexer'):
+        self.indexer = indexer
 
     @abstractmethod
-    async def get_path(self, package: Package) -> Path:
+    async def start(self) -> None:
+        """
+        Starts the collector.
+        """
+        raise NotImplementedError
+
+    async def stop(self) -> None:
+        """
+        Stops the collector.
+        """
+        return
+
+    async def __aenter__(self) -> 'BaseCollector':
+        await self.start()
+        return self
+
+    async def __aexit__(self, *args: object) -> None:
+        await self.stop()
+
+    @abstractmethod
+    async def get_path(self, package: 'Package') -> Path:
         """
         Get the path of a package.
 
         :param package: The package to get the path of.
         :raises FileNotFoundError: If the collector does not contain the package.
         :return: The path of the package.
-        """
-        raise NotImplementedError
-
-
-class FixedCollector(BaseCollector, ABC):
-    """
-    A collector that gets packages from a fixed source, e.g. a local directory or a remote repository.
-    """
-
-    @abstractmethod
-    async def get_packages(self) -> set[Package]:
-        """
-        Get all available packages from the source.
-
-        :return: A set of packages.
         """
         raise NotImplementedError
 
@@ -60,6 +58,6 @@ class CachedCollector(BaseCollector, ABC):
 
     _cache: FileLimitLRU
 
-    def __init__(self, cache: FileLimitLRU, worker_pool: WorkerPool):
-        super().__init__(worker_pool)
+    def __init__(self, cache: FileLimitLRU, indexer: 'Indexer'):
+        super().__init__(indexer=indexer)
         self._cache = cache

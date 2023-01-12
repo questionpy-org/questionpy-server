@@ -13,14 +13,14 @@ version = "0.1.1"
 python = "^3.9"
 aiohttp = "^3.8.1"
 pydantic = "^1.9.1"
-questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "a217e38" }
+questionpy-common = {git = "https://github.com/questionpy-org/questionpy-common.git", rev = "cbf62cccefcb66364f330b4d055ababf7dd00aab"}
+watchdog = "^2.2.0"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.14.5"
 pytest = "^7.1.2"
 pytest-aiohttp = "^1.0.4"
 pytest-md = "^0.2.0"
-pylint-pytest = "^1.1.2"
 mypy = "^0.971"
 flake8 = "^5.0.4"
 pydantic-factories = "^1.5.4"
@@ -42,8 +42,6 @@ source = ["questionpy_server"]
 
 [tool.pylint.MAIN]
 extension-pkg-allow-list = "pydantic"
-# pylint_pytest removes some false positives when checking tests
-load-plugins = "pylint_pytest"
 fail-on = ["E", "F"]
 fail-under = 8
 

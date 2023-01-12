@@ -27,7 +27,7 @@ async def post_package(_request: web.Request, package: Package) -> web.Response:
 async def get_packages(request: web.Request) -> web.Response:
     qpyserver: 'QPyServer' = request.app['qpy_server_app']
 
-    packages = await qpyserver.collector.get_packages()
+    packages = qpyserver.package_collection.get_packages()
     data = [package.get_info() for package in packages]
 
     return json_response(data=data)
@@ -38,7 +38,7 @@ async def get_package(request: web.Request) -> web.Response:
     qpyserver: 'QPyServer' = request.app['qpy_server_app']
 
     try:
-        package = await qpyserver.collector.get(request.match_info['package_hash'])
+        package = qpyserver.package_collection.get(request.match_info['package_hash'])
         return json_response(data=package.get_info())
     except FileNotFoundError:
         raise HTTPNotFound
