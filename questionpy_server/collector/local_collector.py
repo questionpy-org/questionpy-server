@@ -1,5 +1,5 @@
 import logging
-from asyncio import run_coroutine_threadsafe, AbstractEventLoop, get_event_loop, to_thread
+from asyncio import run_coroutine_threadsafe, AbstractEventLoop, get_running_loop, to_thread
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, overload, Union
 
@@ -185,18 +185,12 @@ class LocalCollector(BaseCollector):
     Handles packages located in a local directory.
     """
 
-    directory: Path
-
-    map: PathToHash
-
-    _observer: Observer
-    _event_handler: LocalCollectorEventHandler
-
     def __init__(self, directory: Path, indexer: 'Indexer'):
         super().__init__(indexer)
 
-        self.directory = directory
-        self.map = PathToHash()
+        self.directory: Path = directory
+        self.map: PathToHash = PathToHash()
+        self._observer: Optional[Observer] = None
 
     async def start(self) -> None:
         # Populate the map.
@@ -208,9 +202,9 @@ class LocalCollector(BaseCollector):
                 await self.indexer.register_package(package_hash, file, self)
 
         # Start the directory observer.
-        self._event_handler = LocalCollectorEventHandler(self, get_event_loop())
+        event_handler = LocalCollectorEventHandler(self, get_running_loop())
         self._observer = Observer()
-        self._observer.schedule(self._event_handler, str(self.directory))
+        self._observer.schedule(event_handler, str(self.directory))
         self._observer.start()
 
         log = logging.getLogger('questionpy-server:local-collector')
@@ -218,8 +212,10 @@ class LocalCollector(BaseCollector):
                  len(self.map.hashes))
 
     async def stop(self) -> None:
-        self._observer.stop()
-        self._observer.join()
+        if self._observer:
+            self._observer.stop()
+            self._observer.join()
+            self._observer = None
 
     async def get_path(self, package: 'Package') -> Path:
         files = self.map.get(package.hash)
