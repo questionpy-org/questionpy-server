@@ -13,7 +13,7 @@ version = "0.1.1"
 python = "^3.9"
 aiohttp = "^3.8.1"
 pydantic = "^1.9.1"
-questionpy-common = {git = "https://github.com/questionpy-org/questionpy-common.git", rev = "cbf62cccefcb66364f330b4d055ababf7dd00aab"}
+questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "ff24942" }
 watchdog = "^2.2.0"
 
 [tool.poetry.dev-dependencies]
@@ -25,6 +25,8 @@ mypy = "^0.971"
 flake8 = "^5.0.4"
 pydantic-factories = "^1.5.4"
 coverage = { extras = ["toml"], version = "^6.5.0" }
+tox = "^4.2.6"
+tox-gh-actions = "^3.0.0"
 
 [tool.pytest.ini_options]
 # https://github.com/pytest-dev/pytest-asyncio#auto-mode
@@ -82,3 +84,43 @@ plugins = "pydantic.mypy"
 disallow_untyped_defs = true
 strict_optional = true
 show_error_codes = true
+
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+env_list =
+    py{39,310,311}-pytest
+    pylint
+    flake8
+    mypy
+
+minversion = 4.2.6
+
+[gh-actions]
+# Associates python versions installed in GitHub Actions (left) with one or more factors (right)
+python =
+    3.9: py39
+    3.10: py310
+    3.11: py311
+
+[testenv]
+allowlist_externals = poetry
+# tox already installs the package (und thus its main dependencies) for us, so we only install dev dependencies here.
+commands_pre =
+    poetry install --no-root --without main
+commands =
+    coverage run -m pytest {tty:--color=yes} tests {posargs}
+
+[testenv:pylint]
+commands =
+    pylint questionpy_server tests
+
+[testenv:flake8]
+commands =
+    flake8 questionpy_server tests
+
+[testenv:mypy]
+commands =
+    mypy questionpy_server tests
+"""
