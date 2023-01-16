@@ -122,13 +122,13 @@ class LocalCollectorEventHandler(PatternMatchingEventHandler):
         self._loop = loop
         self._log = logging.getLogger('questionpy-server:local-collector')
 
-    def _push_package(self, path_str: str) -> None:
+    def _push_package(self, path_str: str, package_hash: str = None) -> None:
         path = Path(path_str).resolve()
 
         if path.suffix != '.qpy':
             return
 
-        package_hash = calculate_hash(path)
+        package_hash = package_hash or calculate_hash(path)
         self._local_collector.map.insert(package_hash, path)
 
         run_coroutine_threadsafe(
@@ -175,9 +175,20 @@ class LocalCollectorEventHandler(PatternMatchingEventHandler):
             self._log.info("Package %s was moved to %s.", event.src_path, event.dest_path)
 
     def on_modified(self, event: FileModifiedEvent) -> None:
+        package_path = Path(event.src_path)
+        package_hash = calculate_hash(package_path)
+
+        # Watchdog registers multiple FileModifiedEvent in short succession when a file is modified.
+        # This is a workaround to prevent the package from being registered multiple times.
+        # Check if the package is already registered with the same hash.
+        if package_hash == self._local_collector.map.get(package_path):
+            return
+
         self._remove_package(event.src_path)
-        self._push_package(event.src_path)
-        self._log.info("Package %s was modified.", event.src_path)
+        self._push_package(event.src_path, package_hash)
+
+        self._log.warning("Package %s was modified. This will cause unexpected behavior if the package is currently "
+                          "read by a worker.", event.src_path)
 
 
 class LocalCollector(BaseCollector):
