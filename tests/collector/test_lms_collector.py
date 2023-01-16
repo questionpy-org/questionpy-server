@@ -9,7 +9,7 @@ from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.package import Package
 from questionpy_server.web import HashContainer
-from tests.conftest import PACKAGES
+from tests.conftest import PACKAGE
 
 
 def create_lms_collector(tmp_path_factory: TempPathFactory) -> tuple[LMSCollector, FileLimitLRU]:
@@ -30,7 +30,7 @@ async def test_package_in_cache_before_init(tmp_path_factory: TempPathFactory) -
     cache = FileLimitLRU(tmp_path_factory.mktemp('qpy'), 20 * 1024 * 1024, extension='.qpy')
 
     # Put package into cache.
-    await cache.put(PACKAGES[0].hash, PACKAGES[0].path.read_bytes())
+    await cache.put(PACKAGE.hash, PACKAGE.path.read_bytes())
 
     # Create and start collector.
     with patch(Indexer.__module__, spec=Indexer) as indexer:
@@ -41,7 +41,7 @@ async def test_package_in_cache_before_init(tmp_path_factory: TempPathFactory) -
         indexer.register_package.assert_called_once()
 
     # Check if package is registered.
-    package = Package(PACKAGES[0].hash, PACKAGES[0].manifest)
+    package = Package(PACKAGE.hash, PACKAGE.manifest)
     path = await lms_collector.get_path(package)
 
     assert path is not None
@@ -50,14 +50,14 @@ async def test_package_in_cache_before_init(tmp_path_factory: TempPathFactory) -
 async def test_put(tmp_path_factory: TempPathFactory) -> None:
     lms_collector, cache = create_lms_collector(tmp_path_factory)
 
-    package_bytes = PACKAGES[0].path.read_bytes()
-    hash_container = HashContainer(package_bytes, PACKAGES[0].hash)
+    package_bytes = PACKAGE.path.read_bytes()
+    hash_container = HashContainer(package_bytes, PACKAGE.hash)
 
     # Put package into collector.
     package = await lms_collector.put(hash_container)
 
     # Check if package is stored in cache.
-    cache_path = cache.get(PACKAGES[0].hash)
+    cache_path = cache.get(PACKAGE.hash)
     lms_path = await lms_collector.get_path(package)
     assert cache_path == lms_path
 
@@ -69,14 +69,14 @@ async def test_put(tmp_path_factory: TempPathFactory) -> None:
 async def test_get_non_existing_file(tmp_path_factory: TempPathFactory) -> None:
     lms_collector, cache = create_lms_collector(tmp_path_factory)
 
-    package_bytes = PACKAGES[0].path.read_bytes()
-    hash_container = HashContainer(package_bytes, PACKAGES[0].hash)
+    package_bytes = PACKAGE.path.read_bytes()
+    hash_container = HashContainer(package_bytes, PACKAGE.hash)
 
     # Put package into collector.
     package = await lms_collector.put(hash_container)
 
     # Remove package from cache.
-    await cache.remove(PACKAGES[0].hash)
+    await cache.remove(PACKAGE.hash)
 
     with pytest.raises(FileNotFoundError):
         await lms_collector.get_path(package)

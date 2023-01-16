@@ -39,7 +39,9 @@ class TestPackage:
             self.manifest = Manifest(**json.loads(manifest_path.read_bytes()))
 
 
-PACKAGES: list[TestPackage] = [TestPackage(path) for path in Path('tests/test_data/package').iterdir()]
+package_dir = Path('tests/test_data/package/')
+PACKAGE = TestPackage(package_dir / 'package_1.qpy')
+PACKAGE_2 = TestPackage(package_dir / 'package_2.qpy')
 
 
 @pytest.fixture

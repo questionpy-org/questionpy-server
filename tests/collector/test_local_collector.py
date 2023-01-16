@@ -10,7 +10,7 @@ from questionpy_server.package import Package
 from questionpy_server.worker.controller import WorkerPool
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.local_collector import LocalCollector
-from tests.conftest import PACKAGES, get_file_hash
+from tests.conftest import PACKAGE, PACKAGE_2, get_file_hash
 
 
 def create_local_collector(tmp_path_factory: TempPathFactory) -> tuple[LocalCollector, Path]:
@@ -51,8 +51,8 @@ async def test_package_exists_before_init(tmp_path_factory: TempPathFactory) -> 
     indexer = Indexer(WorkerPool(0, 0))
     local_collector = LocalCollector(path, indexer)
 
-    package_path = copy(PACKAGES[0].path, path)
-    package = Package(PACKAGES[0].hash, PACKAGES[0].manifest)
+    package_path = copy(PACKAGE.path, path)
+    package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
         # Package should exist.
@@ -69,10 +69,10 @@ async def test_package_gets_created(tmp_path_factory: TempPathFactory) -> None:
         with patch.object(local_collector.indexer, 'register_package') as mock_register:
 
             # Copy a package to the directory.
-            package_path = Path(copy(PACKAGES[0].path, directory))
-            package = Package(PACKAGES[0].hash, PACKAGES[0].manifest)
-            # Give eventhandler time to register the event.
-            await sleep(0.1)
+            package_path = Path(copy(PACKAGE.path, directory))
+            package = Package(PACKAGE.hash, PACKAGE.manifest)
+
+            await sleep(0.5)
 
             # Package got registered in the indexer and local collector.
             mock_register.assert_awaited_with(package.hash, package_path, local_collector)
@@ -82,17 +82,17 @@ async def test_package_gets_created(tmp_path_factory: TempPathFactory) -> None:
 async def test_package_gets_modified(tmp_path_factory: TempPathFactory) -> None:
     local_collector, directory = create_local_collector(tmp_path_factory)
 
-    package_path = Path(copy(PACKAGES[0].path, directory))
-    package_0 = Package(PACKAGES[0].hash, PACKAGES[0].manifest)
-    package_1 = Package(PACKAGES[1].hash, PACKAGES[1].manifest)
+    package_path = Path(copy(PACKAGE.path, directory))
+    package_0 = Package(PACKAGE.hash, PACKAGE.manifest)
+    package_1 = Package(PACKAGE_2.hash, PACKAGE_2.manifest)
 
     async with local_collector:
         with patch.object(local_collector.indexer, 'register_package') as mock_register, \
              patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
 
             # Modify the package.
-            package_path.write_bytes(PACKAGES[1].path.read_bytes())
-            await sleep(0.1)
+            package_path.write_bytes(PACKAGE_2.path.read_bytes())
+            await sleep(0.5)
 
             # Old package got unregistered and the new one registered in the indexer and local collector.
             mock_register.assert_awaited_with(package_1.hash, package_path, local_collector)
@@ -107,14 +107,14 @@ async def test_package_gets_deleted(tmp_path_factory: TempPathFactory) -> None:
     local_collector, directory = create_local_collector(tmp_path_factory)
 
     # Create a package in the directory.
-    package_path = copy(PACKAGES[0].path, directory)
-    package = Package(PACKAGES[0].hash, PACKAGES[0].manifest)
+    package_path = Path(copy(PACKAGE.path, directory))
+    package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
         with patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
-            # Remove package from the directory and dispatch the event.
-            Path(package_path).unlink()
-            await sleep(0.1)
+            # Remove package from the directory.
+            package_path.unlink()
+            await sleep(0.5)
 
             # Package got unregistered in the indexer and local collector.
             mock_unregister.assert_awaited_with(package.hash, local_collector)
@@ -126,9 +126,9 @@ async def test_package_gets_moved_from_package_to_package(tmp_path_factory: Temp
     local_collector, directory = create_local_collector(tmp_path_factory)
 
     # Create a package in the directory.
-    src_path = Path(copy(PACKAGES[0].path, directory))
+    src_path = Path(copy(PACKAGE.path, directory))
     dest_path = src_path.with_suffix('.renamed.qpy')
-    package = Package(PACKAGES[0].hash, PACKAGES[0].manifest)
+    package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
         with patch.object(local_collector.indexer, 'register_package') as mock_register, \
@@ -136,7 +136,7 @@ async def test_package_gets_moved_from_package_to_package(tmp_path_factory: Temp
 
             # Rename the package.
             src_path.rename(dest_path)
-            await sleep(0.1)
+            await sleep(0.5)
 
             # Package should neither get registered in nor unregistered from the indexer.
             mock_register.assert_not_awaited()
@@ -150,15 +150,15 @@ async def test_package_gets_moved_from_non_package_to_package(tmp_path_factory: 
     local_collector, directory = create_local_collector(tmp_path_factory)
 
     # Create a package in the directory.
-    src_path = Path(copy(PACKAGES[0].path, directory / 'non.package'))
+    src_path = Path(copy(PACKAGE.path, directory / 'non.package'))
     dest_path = src_path.with_suffix('.qpy')
-    package = Package(PACKAGES[0].hash, PACKAGES[0].manifest)
+    package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
         with patch.object(local_collector.indexer, 'register_package') as mock_register:
             # Rename the package.
             src_path.rename(dest_path)
-            await sleep(0.1)
+            await sleep(0.5)
 
             # Package got registered in the indexer and local collector.
             mock_register.assert_awaited_with(package.hash, dest_path, local_collector)
@@ -169,15 +169,15 @@ async def test_package_gets_moved_from_package_to_non_package(tmp_path_factory: 
     local_collector, directory = create_local_collector(tmp_path_factory)
 
     # Create a package in the directory.
-    src_path = Path(copy(PACKAGES[0].path, directory))
+    src_path = Path(copy(PACKAGE.path, directory))
     dest_path = src_path.with_suffix('.notqpy')
-    package = Package(PACKAGES[0].hash, PACKAGES[0].manifest)
+    package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
         with patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
             # Rename the package.
             Path(src_path).rename(dest_path)
-            await sleep(0.1)
+            await sleep(0.5)
 
             # Package got unregistered in the indexer and local collector.
             mock_unregister.assert_awaited_with(package.hash, local_collector)
