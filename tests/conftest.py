@@ -1,3 +1,5 @@
+# pylint: disable=redefined-outer-name
+
 import json
 from dataclasses import dataclass
 from hashlib import sha256

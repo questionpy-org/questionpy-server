@@ -1,3 +1,5 @@
+# pylint: disable=redefined-outer-name, protected-access
+
 from dataclasses import dataclass
 from pathlib import Path
 from string import ascii_lowercase
