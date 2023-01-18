@@ -13,7 +13,7 @@ version = "0.1.1"
 python = "^3.9"
 aiohttp = "^3.8.1"
 pydantic = "^1.9.1"
-questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "ff24942" }
+questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "07ca576" }
 watchdog = "^2.2.0"
 
 [tool.poetry.dev-dependencies]

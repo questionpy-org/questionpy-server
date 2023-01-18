@@ -9,7 +9,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional, Type, TypeVar
 
-from questionpy_common.misc import Bytes, ByteSize
+from questionpy_common.misc import Size, SizeUnit
 
 from .exception import WorkerNotRunningError, WorkerStartError
 from .runtime.lib import WorkerResourceLimits, send_message
@@ -20,7 +20,7 @@ from .runtime.messages import MessageIds, messages_header_struct, MessageToServe
 @dataclass
 class WorkerResources:
     """Current resource usage."""
-    memory_bytes: Bytes
+    memory_bytes: Size
     cpu_time_since_last_call: float
     total_cpu_time: float
 
@@ -85,7 +85,7 @@ class WorkerProcess(WorkerProcessBase):
         self._expected_incoming_messages: list[tuple[MessageIds, asyncio.Future]] = []
 
         self.stderr_data: bytearray = bytearray()
-        self._stderr_data_max_size: Bytes = Bytes(5, ByteSize.KiB)
+        self._stderr_data_max_size: Size = Size(5, SizeUnit.KiB)
         self.stderr_skipped_data: int = 0
         self.ignore_errors: bool = False  # do not log errors in worker when reading from stdin
 
@@ -121,7 +121,7 @@ class WorkerProcess(WorkerProcessBase):
 
     def get_resource_usage(self) -> WorkerResources:
         return WorkerResources(
-            memory_bytes=Bytes(self.limits.max_memory),
+            memory_bytes=Size(self.limits.max_memory),
             cpu_time_since_last_call=0,
             total_cpu_time=0,
         )
@@ -183,7 +183,7 @@ class WorkerProcess(WorkerProcessBase):
 
         # Skip all the remaining data in stderr.
         while True:
-            data = await self.proc.stderr.read(Bytes(512, ByteSize.KiB))
+            data = await self.proc.stderr.read(Size(512, SizeUnit.KiB))
             if not data:
                 return
             self.stderr_skipped_data += len(data)
@@ -194,7 +194,7 @@ class WorkerProcess(WorkerProcessBase):
             msg = "Worker wrote following data to stdout/stderr.\n"
             msg_after = ""
             if self.stderr_skipped_data:
-                msg_after += f" (additional {Bytes(self.stderr_skipped_data)} were skipped)."
+                msg_after += f" (additional {Size(self.stderr_skipped_data)} were skipped)."
             log.warning("%s%s%s ", msg, self.stderr_data.decode('utf-8'), msg_after)
         self.stderr_data = bytearray()
         self.stderr_skipped_data = 0

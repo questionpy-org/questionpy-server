@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 from questionpy_common.manifest import Manifest
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.misc import Bytes, ByteSize
+from questionpy_common.misc import Size, SizeUnit
 from .worker import WorkerProcessBase, WorkerProcess, WorkerResourceLimits
 from .runtime.messages import GetQPyPackageManifest, GetOptionsFormDefinition
 
@@ -71,7 +71,7 @@ class WorkerPool:
             if context is None:
                 context = 0
             try:
-                limits = WorkerResourceLimits(max_memory=Bytes(200, ByteSize.MiB),
+                limits = WorkerResourceLimits(max_memory=Size(200, SizeUnit.MiB),
                                               max_cpu_time_seconds_per_call=10)  # TODO
 
                 # Wait until there is enough memory available.
