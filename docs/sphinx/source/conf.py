@@ -33,16 +33,19 @@ todo_include_todos = False
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'sphinx_material'
-html_theme_options = {
-    'nav_title': 'QuestionPy',
-    'globaltoc_depth': 2,
-    'color_primary': 'indigo',
-    'color_accent': 'amber'
-}
-html_sidebars = {
-    "**": ["globaltoc.html", "localtoc.html", "searchbox.html"]
-}
+
+html_theme = 'alabaster'
+# sphinx_material theme
+# html_theme = 'sphinx_material'
+# html_theme_options = {
+#     'nav_title': 'QuestionPy',
+#     'globaltoc_depth': 2,
+#     'color_primary': 'indigo',
+#     'color_accent': 'amber'
+# }
+# html_sidebars = {
+#     "**": ["globaltoc.html", "localtoc.html", "searchbox.html"]
+# }
 
 html_static_path = ['_static']
 
