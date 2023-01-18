@@ -183,3 +183,36 @@ async def test_package_gets_moved_from_package_to_non_package(tmp_path_factory: 
             mock_unregister.assert_awaited_with(package.hash, local_collector)
             with pytest.raises(FileNotFoundError):
                 await local_collector.get_path(package)
+
+
+@pytest.mark.parametrize('inside', [
+    True,
+    False
+])
+async def test_package_gets_moved_to_different_folder(tmp_path_factory: TempPathFactory, inside: bool) -> None:
+    # Create directories.
+    directory = tmp_path_factory.mktemp('qpy')
+    new_directory = directory / 'new'
+    new_directory.mkdir()
+
+    if not inside:
+        # Use new_directory as the directory to be watched and directory to be the new directory of the package.
+        directory, new_directory = new_directory, directory
+
+    indexer = Indexer(WorkerPool(0, 0))
+    local_collector = LocalCollector(directory, indexer)
+
+    # Create a package in the directory.
+    src_path = Path(copy(PACKAGE.path, directory))
+    package = Package(PACKAGE.hash, PACKAGE.manifest)
+
+    async with local_collector:
+        with patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
+            # Move the package.
+            src_path.rename(new_directory / src_path.name)
+            await sleep(1)
+
+            # Package got unregistered in the indexer and local collector.
+            mock_unregister.assert_awaited_with(package.hash, local_collector)
+            with pytest.raises(FileNotFoundError):
+                await local_collector.get_path(package)
