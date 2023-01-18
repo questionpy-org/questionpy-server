@@ -62,7 +62,9 @@ class PathToHash:
             return self.paths.get(key)
 
         if isinstance(key, str):
-            return self.hashes.get(key)
+            if paths := self.hashes.get(key):
+                return paths.copy()
+            return None
 
         raise TypeError(f'Expected Path or str, got {type(key)}')
 
