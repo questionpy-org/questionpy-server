@@ -1,0 +1,56 @@
+site_name: QuestionPy
+site_url: https://example.com
+
+#theme:
+#  name: mkdocs
+#  navigation_depth: 3
+#  nav_style: dark
+
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  logo: img/favicon.ico
+  favicon: img/favicon.ico
+  features:
+    - navigation.indexes
+    - toc.follow
+    - navigation.top
+
+
+plugins:
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths:
+            ../../questionpy_server
+          options:
+            show_source: false
+            show_root_heading: true
+            docstring_style: google
+
+nav:
+  - Home: index.md
+  - Tutorials: tutorial.md
+  - Reference:
+      - Index: reference/index.md
+      - Server: reference/server.md
+      - API: reference/api.md
+      - Collector: reference/collector.md
+      - Factories: reference/factories.md
+      - Worker: reference/worker.md
+  - About: about.md

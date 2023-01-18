@@ -13,3 +13,6 @@ __pycache__
 /coverage.xml
 
 /cache/*
+
+## mkdocs
+/docs/mkdocs/site/
