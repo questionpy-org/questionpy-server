@@ -16,3 +16,6 @@ __pycache__
 
 ## mkdocs
 /docs/mkdocs/site/
+
+## sphinx
+/docs/sphinx/build/
