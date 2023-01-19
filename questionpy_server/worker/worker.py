@@ -195,7 +195,7 @@ class WorkerProcess(WorkerProcessBase):
             msg_after = ""
             if self.stderr_skipped_data:
                 msg_after += f" (additional {Size(self.stderr_skipped_data)} were skipped)."
-            log.warning("%s%s%s ", msg, self.stderr_data.decode('utf-8'), msg_after)
+            log.warning("%s%s%s ", msg, self.stderr_data.decode('utf-8', errors='replace'), msg_after)
         self.stderr_data = bytearray()
         self.stderr_skipped_data = 0
 
