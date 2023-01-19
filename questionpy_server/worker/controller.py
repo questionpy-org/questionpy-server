@@ -6,6 +6,8 @@ from typing import Optional
 from questionpy_common.manifest import Manifest
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.misc import Size, SizeUnit
+
+from .exception import WorkerStartError
 from .worker import WorkerProcessBase, WorkerProcess, WorkerResourceLimits
 from .runtime.messages import GetQPyPackageManifest, GetOptionsFormDefinition
 
@@ -68,17 +70,21 @@ class WorkerPool:
         async with self._semaphore:
 
             process = None
+            reserved_memory = False
             if context is None:
                 context = 0
             try:
                 limits = WorkerResourceLimits(max_memory=Size(200, SizeUnit.MiB),
                                               max_cpu_time_seconds_per_call=10)  # TODO
+                if self.max_memory < limits.max_memory:
+                    raise WorkerStartError("The worker needs more memory than available.")
 
                 # Wait until there is enough memory available.
                 async with self._condition:
                     await self._condition.wait_for(lambda: self.memory_available(limits.max_memory))
                     # Reserve memory for the new worker.
                     self._total_memory += limits.max_memory
+                    reserved_memory = True
 
                 process = WorkerProcess(package, lms, context, limits)
                 await process.start()
@@ -90,7 +96,8 @@ class WorkerPool:
                 if process:
                     await process.stop(10)
 
-                # Free reserved memory and notify waiters.
-                self._total_memory -= limits.max_memory
-                async with self._condition:
-                    self._condition.notify_all()
+                if reserved_memory:
+                    # Free reserved memory and notify waiters.
+                    self._total_memory -= limits.max_memory
+                    async with self._condition:
+                        self._condition.notify_all()

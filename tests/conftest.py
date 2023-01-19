@@ -54,7 +54,7 @@ def qpy_server(tmp_path_factory: TempPathFactory) -> QPyServer:
     server = QPyServer(Settings(
         config_files=(),
         webservice=WebserviceSettings(listen_address="127.0.0.1", listen_port=0),
-        worker=WorkerSettings(max_workers=4, max_memory=104_857_600),
+        worker=WorkerSettings(max_workers=8, max_memory=524_288_000),
         cache_package=PackageCacheSettings(directory=package_cache_directory),
         cache_question_state=QuestionStateCacheSettings(directory=question_state_cache_directory),
         collector=CollectorSettings()
