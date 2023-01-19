@@ -33,8 +33,6 @@ class WebserviceSettings(BaseModel):
     listen_port: int = 9020
     max_bytes_main: int = Field(5_242_880, const=True)
     max_bytes_package: int = constants.MAX_BYTES_PACKAGE
-    max_workers: int = 10
-    max_bytes_workers: int = 524_288_000
 
     @validator('max_bytes_package')
     # pylint: disable=no-self-argument
@@ -42,6 +40,11 @@ class WebserviceSettings(BaseModel):
         if value < constants.MAX_BYTES_PACKAGE:
             raise ValueError(f'max_bytes_package must be bigger than {constants.MAX_BYTES_PACKAGE}')
         return value
+
+
+class WorkerSettings(BaseModel):
+    max_workers: int = 8
+    max_memory: int = 524_288_000
 
 
 class PackageCacheSettings(BaseModel):
@@ -77,6 +80,7 @@ class CollectorSettings(BaseModel):
 
 class Settings(BaseSettings):
     webservice: WebserviceSettings
+    worker: WorkerSettings
     cache_package: PackageCacheSettings
     cache_question_state: QuestionStateCacheSettings
     collector: CollectorSettings
