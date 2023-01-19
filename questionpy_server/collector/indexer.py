@@ -26,7 +26,6 @@ class Indexer:
         self._index_by_hash: dict[str, Package] = {}
         self._index_by_name: dict[str, dict[str, Package]] = {}
 
-        # TODO: initialize Lock here if the minimum supported Python version is 3.10 or above
         self._lock: Optional[Lock] = None
 
     def get_by_hash(self, package_hash: str) -> Optional[Package]:

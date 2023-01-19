@@ -6,6 +6,7 @@ from typing import Any, Callable, Dict, Tuple, Optional
 from pydantic import BaseModel, BaseSettings, validator, Field, DirectoryPath
 from pydantic.env_settings import InitSettingsSource, SettingsSourceCallable
 from questionpy_common import constants
+from questionpy_common.misc import Size, SizeUnit
 
 
 class IniFileSettingsSource:
@@ -31,25 +32,40 @@ class IniFileSettingsSource:
 class WebserviceSettings(BaseModel):
     listen_address: str = '127.0.0.1'
     listen_port: int = 9020
-    max_bytes_main: int = Field(5_242_880, const=True)
-    max_bytes_package: int = constants.MAX_BYTES_PACKAGE
+    max_main_size: Size = Field(Size(5, SizeUnit.MiB), const=True)
+    max_package_size: Size = constants.MAX_BYTES_PACKAGE
 
-    @validator('max_bytes_package')
+    @validator('max_package_size', pre=True)
     # pylint: disable=no-self-argument
-    def max_bytes_package_bigger_then_predefined_value(cls, value: int) -> int:
+    def transform_to_size(cls, value: str) -> Size:
+        return Size.from_string(value)
+
+    @validator('max_package_size')
+    # pylint: disable=no-self-argument
+    def max_package_size_bigger_then_predefined_value(cls, value: Size) -> Size:
         if value < constants.MAX_BYTES_PACKAGE:
-            raise ValueError(f'max_bytes_package must be bigger than {constants.MAX_BYTES_PACKAGE}')
+            raise ValueError(f'max_package_size must be bigger than {constants.MAX_BYTES_PACKAGE}')
         return value
 
 
 class WorkerSettings(BaseModel):
     max_workers: int = 8
-    max_memory: int = 524_288_000
+    max_memory: Size = Size(500, SizeUnit.MiB)
+
+    @validator('max_memory', pre=True)
+    # pylint: disable=no-self-argument
+    def transform_to_size(cls, value: str) -> Size:
+        return Size.from_string(value)
 
 
 class PackageCacheSettings(BaseModel):
-    size: int = 104_857_600
+    size: Size = Size(5, SizeUnit.MiB)
     directory: DirectoryPath = Path('cache/packages').resolve()
+
+    @validator('size', pre=True)
+    # pylint: disable=no-self-argument
+    def transform_to_size(cls, value: str) -> Size:
+        return Size.from_string(value)
 
     @validator('directory')
     # pylint: disable=no-self-argument
@@ -58,8 +74,13 @@ class PackageCacheSettings(BaseModel):
 
 
 class QuestionStateCacheSettings(BaseModel):
-    size: int = 20_971_520
+    size: Size = Size(20, SizeUnit.MiB)
     directory: DirectoryPath = Path('cache/question_state').resolve()
+
+    @validator('size', pre=True)
+    # pylint: disable=no-self-argument
+    def transform_to_size(cls, value: str) -> Size:
+        return Size.from_string(value)
 
     @validator('directory')
     # pylint: disable=no-self-argument

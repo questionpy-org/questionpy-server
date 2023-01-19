@@ -3,6 +3,7 @@ from unittest.mock import patch, Mock
 
 import pytest
 from _pytest.tmpdir import TempPathFactory
+from questionpy_common.misc import Size
 
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector import PackageCollection
@@ -87,7 +88,7 @@ def test_get_packages() -> None:
 
 
 async def test_notify_indexer_on_cache_deletion(tmp_path_factory: TempPathFactory) -> None:
-    cache = FileLimitLRU(tmp_path_factory.mktemp('qpy'), 100)
+    cache = FileLimitLRU(tmp_path_factory.mktemp('qpy'), Size(100))
     PackageCollection(None, [], cache, Mock())
 
     # The callback should unregister the package from the indexer.

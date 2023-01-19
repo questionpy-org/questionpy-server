@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from _pytest.tmpdir import TempPathFactory
+from questionpy_common.misc import Size, SizeUnit
 
 from questionpy_server import WorkerPool
 from questionpy_server.cache import FileLimitLRU
@@ -21,13 +22,13 @@ def create_lms_collector(tmp_path_factory: TempPathFactory) -> tuple[LMSCollecto
     """
 
     path = tmp_path_factory.mktemp('qpy')
-    cache = FileLimitLRU(path, 20 * 1024 * 1024, extension='.qpy')
-    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
+    cache = FileLimitLRU(path, Size(20, SizeUnit.KiB), extension='.qpy')
+    indexer = Indexer(WorkerPool(1, Size(200, SizeUnit.MiB)))
     return LMSCollector(cache, indexer), cache
 
 
 async def test_package_in_cache_before_init(tmp_path_factory: TempPathFactory) -> None:
-    cache = FileLimitLRU(tmp_path_factory.mktemp('qpy'), 20 * 1024 * 1024, extension='.qpy')
+    cache = FileLimitLRU(tmp_path_factory.mktemp('qpy'), Size(20, SizeUnit.KiB), extension='.qpy')
 
     # Put package into cache.
     await cache.put(PACKAGE.hash, PACKAGE.path.read_bytes())
