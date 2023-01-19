@@ -85,7 +85,7 @@ FormElement: TypeAlias = Union[
 GroupElement.update_forward_refs()
 
 
-class FormSection(BaseModel):
+class FormSection(_Named):
     header: str
     elements: List[FormElement] = []
 
