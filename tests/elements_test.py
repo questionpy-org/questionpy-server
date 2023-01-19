@@ -67,7 +67,7 @@ def test_is_form_element_should_return_true(factory: ModelFactory) -> None:
     object(),
     CanHaveConditions(),
     Option(label="", value=""),
-    FormSection(header="", elements=[]),
+    FormSection(name="", header="", elements=[]),
     OptionsFormDefinition()
 ))
 def test_is_form_element_should_return_false(instance: object) -> None:
