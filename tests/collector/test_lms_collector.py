@@ -22,7 +22,7 @@ def create_lms_collector(tmp_path_factory: TempPathFactory) -> tuple[LMSCollecto
 
     path = tmp_path_factory.mktemp('qpy')
     cache = FileLimitLRU(path, 20 * 1024 * 1024, extension='.qpy')
-    indexer = Indexer(WorkerPool(0, 0))
+    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
     return LMSCollector(cache, indexer), cache
 
 

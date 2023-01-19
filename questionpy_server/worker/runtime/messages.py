@@ -7,6 +7,8 @@ from pydantic import BaseModel
 from questionpy_common.manifest import Manifest
 from questionpy_common.qtype import OptionsFormDefinition
 
+from questionpy_server.worker.exception import WorkerMemoryLimitExceededError, WorkerUnknownError
+
 messages_header_struct: Struct = Struct('=LL')
 """4 bytes unsigned long int message id and 4 bytes unsigned long int payload length"""
 
@@ -30,6 +32,7 @@ class MessageIds(IntEnum):
     LOADED_QPY_PACKAGE = 1010
     RETURN_QPY_PACKAGE_MANIFEST = 1020
     RETURN_OPTIONS_FORM_DEFINITION = 1030
+    ERROR = 1100
 
 
 class Message(BaseModel):
@@ -102,6 +105,34 @@ class GetOptionsFormDefinition(MessageToWorker):
         """Execute a QuestionPy package."""
         message_id = MessageIds.RETURN_OPTIONS_FORM_DEFINITION
         definition: OptionsFormDefinition
+
+
+class WorkerError(MessageToServer):
+    """Error message."""
+    class ErrorType(IntEnum):
+        """Error types."""
+        UNKNOWN = 0
+        MEMORY_EXCEEDED = 1
+
+    message_id = MessageIds.ERROR
+    expected_response_id: MessageIds
+    type: ErrorType
+    message: Optional[str]
+
+    @classmethod
+    def from_exception(cls, error: Exception, cause: MessageToWorker) -> "WorkerError":
+        """Get a WorkerError message from an exception."""
+        if isinstance(error, MemoryError):
+            error_type = WorkerError.ErrorType.MEMORY_EXCEEDED
+        else:
+            error_type = WorkerError.ErrorType.UNKNOWN
+        return WorkerError(type=error_type, message=str(error), expected_response_id=cause.Response.message_id)
+
+    def to_exception(self) -> Exception:
+        """Get an exception from a WorkerError message."""
+        if self.type == WorkerError.ErrorType.MEMORY_EXCEEDED:
+            return WorkerMemoryLimitExceededError(self.message)
+        return WorkerUnknownError(self.message)
 
 
 def get_message_bytes(message: Message) -> tuple[bytes, Optional[bytes]]:

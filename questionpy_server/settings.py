@@ -42,6 +42,11 @@ class WebserviceSettings(BaseModel):
         return value
 
 
+class WorkerSettings(BaseModel):
+    max_workers: int = 8
+    max_memory: int = 524_288_000
+
+
 class PackageCacheSettings(BaseModel):
     size: int = 104_857_600
     directory: DirectoryPath = Path('cache/packages').resolve()
@@ -75,6 +80,7 @@ class CollectorSettings(BaseModel):
 
 class Settings(BaseSettings):
     webservice: WebserviceSettings
+    worker: WorkerSettings
     cache_package: PackageCacheSettings
     cache_question_state: QuestionStateCacheSettings
     collector: CollectorSettings

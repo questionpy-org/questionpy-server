@@ -1,9 +1,13 @@
+from asyncio import Semaphore, Condition
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 from questionpy_common.manifest import Manifest
 from questionpy_common.elements import OptionsFormDefinition
+from questionpy_common.misc import Size, SizeUnit
+
+from .exception import WorkerStartError
 from .worker import WorkerProcessBase, WorkerProcess, WorkerResourceLimits
 from .runtime.messages import GetQPyPackageManifest, GetOptionsFormDefinition
 
@@ -33,7 +37,17 @@ class WorkerPool:
         :param max_workers: maximum number of workers being executed in parallel
         :param max_memory: maximum memory (in bytes) that all workers in the pool are allowed to consume
         """
-        #  TODO handle arguments
+        self.max_workers = max_workers
+        self.max_memory = max_memory
+        self._processes: list[WorkerProcess] = []
+
+        self._semaphore: Optional[Semaphore] = None
+        self._condition: Optional[Condition] = None
+
+        self._total_memory = 0
+
+    def memory_available(self, size: int) -> bool:
+        return self._total_memory + size <= self.max_memory
 
     @asynccontextmanager
     async def get_worker(self, package: Path, lms: int, context: Optional[int]) -> AsyncIterator[Worker]:
@@ -46,16 +60,44 @@ class WorkerPool:
         :param context: context id within the lms
         :return: a worker
         """
-        process = None
-        if context is None:
-            context = 0
-        try:
-            example_limits = WorkerResourceLimits(max_memory_bytes=1024, max_cpu_time_seconds_per_call=10)  # TODO
-            process = WorkerProcess(package, lms, context, example_limits)
-            await process.start()
+        if not self._semaphore:
+            self._semaphore = Semaphore(self.max_workers)
 
-            worker = Worker(process)
-            yield worker
-        finally:
-            if process:
-                await process.stop(10)
+        if not self._condition:
+            self._condition = Condition()
+
+        # Limit the amount of running workers.
+        async with self._semaphore:
+
+            process = None
+            reserved_memory = False
+            if context is None:
+                context = 0
+            try:
+                limits = WorkerResourceLimits(max_memory=Size(200, SizeUnit.MiB),
+                                              max_cpu_time_seconds_per_call=10)  # TODO
+                if self.max_memory < limits.max_memory:
+                    raise WorkerStartError("The worker needs more memory than available.")
+
+                # Wait until there is enough memory available.
+                async with self._condition:
+                    await self._condition.wait_for(lambda: self.memory_available(limits.max_memory))
+                    # Reserve memory for the new worker.
+                    self._total_memory += limits.max_memory
+                    reserved_memory = True
+
+                process = WorkerProcess(package, lms, context, limits)
+                await process.start()
+
+                worker = Worker(process)
+
+                yield worker
+            finally:
+                if process:
+                    await process.stop(10)
+
+                if reserved_memory:
+                    # Free reserved memory and notify waiters.
+                    self._total_memory -= limits.max_memory
+                    async with self._condition:
+                        self._condition.notify_all()
