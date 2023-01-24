@@ -38,11 +38,14 @@ class WaitForAsyncFunctionCall:
         self.func = func
         self.fut = get_running_loop().create_future()
 
-    async def wrap(self, *args, **kwargs):  # type: ignore
+    async def wrap(self, *args: Any, **kwargs: Any) -> Any:
         """Method to pass as side_effect to patch(.object)."""
-        ret = await self.func(*args, **kwargs)
-        self.fut.set_result(True)
-        return ret
+        try:
+            ret = await self.func(*args, **kwargs)
+            self.fut.set_result(True)
+            return ret
+        except Exception as e:  # pylint: disable=broad-except
+            self.fut.set_exception(e)
 
     async def wait_for_fn_call(self, timeout: float) -> None:
         """
