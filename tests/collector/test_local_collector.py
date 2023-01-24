@@ -1,7 +1,7 @@
 from asyncio import get_running_loop, sleep, wait_for
 from pathlib import Path
 from shutil import copy
-from typing import Callable
+from typing import Any, Callable
 from unittest.mock import patch
 
 import asyncio
