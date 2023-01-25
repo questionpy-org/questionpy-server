@@ -3,11 +3,9 @@ from pathlib import Path
 
 from aiohttp import FormData
 from aiohttp.test_utils import TestClient
-
 from questionpy_common.elements import OptionsFormDefinition
 
 from tests.conftest import get_file_hash
-
 
 PACKAGE = Path('./tests/test_data/package/package_1.qpy')
 PACKAGE_HASH = get_file_hash(PACKAGE)
@@ -23,18 +21,18 @@ QUESTION_STATE_REQUEST = (path / 'main.json').read_text()
 async def test_optional_question_state(client: TestClient) -> None:
     # Even though the question state is optional, it
     # ...is still required to be valid JSON.
-    res = await client.request(METHOD, URL, json="{not_valid!}")
+    res = await client.request(METHOD, URL, data=b"{not_valid!}", headers={"Content-Type": "application/json"})
     assert res.status == 400
 
     # ...should return the status code 404 with 'question_state_not_found: True'.
-    res = await client.request(METHOD, URL, json=QUESTION_STATE_REQUEST)
+    res = await client.request(METHOD, URL, data=QUESTION_STATE_REQUEST, headers={"Content-Type": "application/json"})
     res_data = await res.json()
     assert res_data == {"package_not_found": True, "question_state_not_found": True}
 
     # ...should return the status code 200 if a package is provided and question_state_hash is empty.
     with PACKAGE.open('rb') as file:
         payload = FormData()
-        payload.add_field('main', '{"question_state_hash": "", "context": null}')
+        payload.add_field('main', '{"question_state_hash": null, "context": null}', content_type="application/json")
         payload.add_field('package', file, filename=PACKAGE.name)
 
         res = await client.request(METHOD, URL, data=payload)
@@ -83,7 +81,7 @@ async def test_data_gets_cached(client: TestClient) -> None:
     OptionsFormDefinition(**reference)
 
     # Package and question state should be stored in cache.
-    res = await client.request(METHOD, URL, json=QUESTION_STATE_REQUEST)
+    res = await client.request(METHOD, URL, data=QUESTION_STATE_REQUEST, headers={"Content-Type": "application/json"})
     assert res.status == 200
     res_data = await res.json()
     assert res_data == reference

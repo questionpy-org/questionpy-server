@@ -32,13 +32,17 @@ class PackageInfo(BaseModel):
     tags: Optional[List[str]]
 
 
-class QuestionStateHash(BaseModel):
-    question_state_hash: str
+class OptionalQuestionStateHash(BaseModel):
+    question_state_hash: Optional[str]
     context: Optional[int]
 
 
-class QuestionCreateArguments(BaseModel):
-    form_data: Optional[Dict[str, Any]]
+class QuestionStateHash(OptionalQuestionStateHash):
+    question_state_hash: str
+
+
+class QuestionCreateArguments(OptionalQuestionStateHash):
+    form_data: Dict[str, Any]
 
 
 class GradingMethod(Enum):
@@ -62,7 +66,7 @@ class Question(BaseModel):
     class Config:
         use_enum_values = True
 
-    question_state: Optional[Json]
+    question_state: str
     question_state_hash: Optional[str]
     num_variants: Annotated[int, Field(ge=1, strict=True)] = 1
     num_subquestions: Annotated[int, Field(ge=1, strict=True)] = 1

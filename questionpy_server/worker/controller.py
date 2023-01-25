@@ -2,15 +2,15 @@ from asyncio import Semaphore, Condition
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 from questionpy_common.constants import MiB
-from questionpy_common.manifest import Manifest
 from questionpy_common.elements import OptionsFormDefinition
+from questionpy_common.manifest import Manifest
 
 from .exception import WorkerStartError
+from .runtime.messages import GetQPyPackageManifest, GetOptionsFormDefinition, CreateQuestionFromOptions
 from .worker import WorkerProcessBase, WorkerProcess, WorkerResourceLimits
-from .runtime.messages import GetQPyPackageManifest, GetOptionsFormDefinition
 
 
 class Worker:
@@ -28,6 +28,11 @@ class Worker:
         msg = GetOptionsFormDefinition()
         ret = await self.process.send_and_wait_response(msg, GetOptionsFormDefinition.Response)
         return ret.definition
+
+    async def create_question_from_options(self, state: Optional[bytes], form_data: dict[str, Any]) -> str:
+        msg = CreateQuestionFromOptions(state=state, form_data=form_data)
+        ret = await self.process.send_and_wait_response(msg, CreateQuestionFromOptions.Response)
+        return ret.state
 
 
 class WorkerPool:

@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import sys
+from asyncio import IncompleteReadError
 from asyncio.subprocess import Process
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -192,12 +193,12 @@ class WorkerProcess(WorkerProcessBase):
 
     def reset_stderr_data(self, log_data: bool = True) -> None:
         """Reset the stderr buffer and optionally log the current data."""
-        if log_data and self.stderr_data:
-            msg = "Worker wrote following data to stdout/stderr.\n"
-            msg_after = ""
+        if log_data and self.stderr_data and log.isEnabledFor(logging.DEBUG):
+            msg = "Worker wrote following data to stdout/stderr."
             if self.stderr_skipped_data:
-                msg_after += f" (additional {ByteSize(self.stderr_skipped_data).human_readable()} were skipped)."
-            log.warning("%s%s%s ", msg, self.stderr_data.decode('utf-8', errors='replace'), msg_after)
+                msg += f" (Additional {ByteSize(self.stderr_skipped_data).human_readable()} were skipped.)"
+            indented_data = "\n".join("\t" + line for line in self.stderr_data.decode(errors='replace').split("\n"))
+            log.debug("%s\n%s", msg, indented_data)
         self.stderr_data = bytearray()
         self.stderr_skipped_data = 0
 
@@ -323,4 +324,8 @@ class ServerToWorkerConnection(AsyncIterator[MessageToServer]):
         return self
 
     async def __anext__(self) -> MessageToServer:
-        return await self.receive_message()
+        try:
+            return await self.receive_message()
+        except IncompleteReadError as e:
+            # Didn't read a complete header before EOF. The worker probably exited, stop iterating.
+            raise StopAsyncIteration from e
