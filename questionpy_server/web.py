@@ -8,14 +8,13 @@ from typing import Optional, Union, Callable, Any, cast, Type, TYPE_CHECKING, ov
 from aiohttp import BodyPartReader
 from aiohttp.abc import Request
 from aiohttp.log import web_logger
-from aiohttp.web_exceptions import HTTPBadRequest, HTTPRequestEntityTooLarge, HTTPNotFound
+from aiohttp.web_exceptions import HTTPBadRequest, HTTPRequestEntityTooLarge, HTTPNotFound, HTTPUnsupportedMediaType
 from aiohttp.web_response import Response
 from pydantic import BaseModel, ValidationError
-
 from questionpy_common import constants
 from questionpy_common.constants import KiB
 
-from questionpy_server.api.models import PackageQuestionStateNotFound, QuestionStateHash
+from questionpy_server.api.models import PackageQuestionStateNotFound, QuestionStateHash, OptionalQuestionStateHash
 from questionpy_server.cache import SizeError, FileLimitLRU
 from questionpy_server.collector import PackageCollection
 from questionpy_server.misc import get_route_model_param
@@ -145,7 +144,7 @@ async def parse_form_data(request: Request) \
     return main, package, question_state
 
 
-async def get_or_save_with_cache(cache: FileLimitLRU, hash_value: str, container: Optional[HashContainer])\
+async def get_or_save_with_cache(cache: FileLimitLRU, hash_value: str, container: Optional[HashContainer]) \
         -> Optional[Path]:
     """
     Gets a file from the cache or saves it if it is not in the cache.
@@ -224,8 +223,13 @@ async def get_data_package(collection: PackageCollection, hash_value: str) -> Op
         return None
 
 
-def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = None,
-                                             optional_question_state: bool = False) \
+class BodyContents(NamedTuple):
+    main: bytes
+    package: HashContainer
+    question_state: Optional[HashContainer]
+
+
+def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = None) \
         -> Union[RouteHandler, Callable[[RouteHandler], RouteHandler]]:
     """
     Decorator function used to ensure that the package and question type exists and that the json
@@ -233,12 +237,12 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
 
     :param _func: Control parameter; allows using the decorator with or without arguments.
             If this decorator is used with any arguments, this will always be the decorated function itself.
-    :param optional_question_state: if True, the question state is optional
     """
 
     def decorator(function: RouteHandler) -> RouteHandler:
         """internal decorator function"""
-        param_name, param_class = get_route_model_param(function, QuestionStateHash)
+        param_name, param_class = get_route_model_param(function, OptionalQuestionStateHash)
+        require_question_state = issubclass(param_class, QuestionStateHash)
 
         @functools.wraps(function)
         async def wrapper(request: Request, *args: Any, **kwargs: Any) -> Any:
@@ -248,55 +252,41 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
             package_hash: str = request.match_info['package_hash']
 
             if request.content_type == 'multipart/form-data':
-                # Parse form-data.
-                main, package_container, question_state_container = await parse_form_data(request)
-
-                # Check if package hash matches.
-                if package_container and package_hash != package_container.hash:
-                    msg = f'Package hash does not match: {package_hash} != {package_container.hash}'
-                    web_logger.warning(msg)
-                    raise HTTPBadRequest(text=msg)
-
-                # Create model from data.
-                model = create_model_from_json(main.decode(), param_class)
-
-                # Check if question state hash matches.
-                if question_state_container and model.question_state_hash != question_state_container.hash:
-                    msg = f'Question state hash does not match: ' \
-                          f'{model.question_state_hash} != {question_state_container.hash}'
-                    web_logger.warning(msg)
-                    raise HTTPBadRequest(text=msg)
-
-                # Get or save package and question_state.
-                package = await get_or_save_package(server.package_collection, package_hash, package_container)
-                question_state_path = await get_or_save_with_cache(server.question_state_cache,
-                                                                   model.question_state_hash,
-                                                                   question_state_container)
-
+                main, sent_package, sent_question_state = await parse_form_data(request)
             elif request.content_type == 'application/json':
-                try:
-                    data = await request.json()
-                    model = create_model_from_json(data, param_class)
-                except JSONDecodeError as error:
-                    web_logger.info('Invalid JSON in request')
-                    raise HTTPBadRequest from error
-
-                package = await get_data_package(server.package_collection, package_hash)
-                question_state_path = get_from_cache(server.question_state_cache, model.question_state_hash)
-
+                main, sent_package, sent_question_state = await request.read(), None, None
             else:
                 web_logger.info('Wrong content type, json or multipart/form-data expected, got %s',
                                 request.content_type)
-                raise HTTPBadRequest
+                raise HTTPUnsupportedMediaType
 
-            # Check if package and question_state exist.
+            model = create_model_from_json(main.decode(), param_class)
+
+            # Check if package hash matches.
+            if sent_package and package_hash != sent_package.hash:
+                msg = f'Package hash does not match: {package_hash} != {sent_package.hash}'
+                web_logger.warning(msg)
+                raise HTTPBadRequest(text=msg)
+
+            # Check if required question state was not provided
+            if require_question_state and not model.question_state_hash:
+                raise HTTPBadRequest(text="Question state is required")
+
+            # Check if question state hash matches.
+            if sent_question_state and model.question_state_hash != sent_question_state.hash:
+                msg = f'Question state hash does not match: {model.question_state_hash} != {sent_question_state.hash}'
+                web_logger.warning(msg)
+                raise HTTPBadRequest(text=msg)
+
+            package = await get_or_save_package(server.package_collection, package_hash, sent_package)
+            question_state_path = None
+            if model.question_state_hash:
+                question_state_path = await get_or_save_with_cache(server.question_state_cache,
+                                                                   model.question_state_hash, sent_question_state)
+
             package_not_found = package is None
-            question_state_not_found = question_state_path is None
-
-            if (
-                    package_not_found or
-                    (question_state_not_found and (model.question_state_hash != '' or not optional_question_state))
-            ):
+            question_state_not_found = question_state_path is None and model.question_state_hash is not None
+            if package_not_found or question_state_not_found:
                 raise HTTPNotFound(
                     text=PackageQuestionStateNotFound(package_not_found=package_not_found,
                                                       question_state_not_found=question_state_not_found).json(),
@@ -318,7 +308,6 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
 
 def ensure_package_exists(_func: Optional[RouteHandler] = None, required_hash: bool = True) \
         -> Union[RouteHandler, Callable[[RouteHandler], RouteHandler]]:
-
     def decorator(function: RouteHandler) -> RouteHandler:
         """internal decorator function"""
 

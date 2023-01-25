@@ -1,6 +1,5 @@
 import json
 import sys
-
 from functools import cached_property
 from importlib import import_module
 from pathlib import Path
@@ -8,7 +7,7 @@ from types import ModuleType
 from zipfile import ZipFile
 
 from questionpy_common.manifest import Manifest
-from questionpy_common.qtype import OptionsFormDefinition
+from questionpy_common.qtype import OptionsFormDefinition, BaseQuestionType
 
 
 class QPyPackage(ZipFile):
@@ -35,7 +34,7 @@ class QPyMainPackage(QPyPackage):
         self.main_module: ModuleType = import_module(self.manifest.entrypoint)
         if self.main_module.QuestionType.implementation is None:
             raise QuestionTypeImplementationNotFoundError(self.manifest.short_name)
-        self.qtype_instance = self.main_module.QuestionType.implementation(manifest=self.manifest)
+        self.qtype_instance: BaseQuestionType = self.main_module.QuestionType.implementation(manifest=self.manifest)
 
     def get_options_form_definition(self) -> OptionsFormDefinition:
         return self.qtype_instance.get_options_form_definition()

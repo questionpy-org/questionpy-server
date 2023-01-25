@@ -8,7 +8,8 @@ from typing import Any, Optional, Union, Callable, TypeVar, TYPE_CHECKING
 
 from .messages import InitWorker, Exit, get_message_bytes, messages_header_struct, Message, MessageIds, \
     MessageToWorker, MessageToServer, InvalidMessageIdError, GetQPyPackageManifest, LoadQPyPackage, \
-    GetOptionsFormDefinition, WorkerError
+    GetOptionsFormDefinition, CreateQuestionFromOptions
+from .messages import WorkerError
 from .package import QPyPackage, QPyMainPackage
 
 if TYPE_CHECKING:
@@ -86,6 +87,7 @@ class WorkerManager:
             LoadQPyPackage.message_id: self.on_msg_load_qpy_package,
             GetQPyPackageManifest.message_id: self.on_msg_get_qpy_package_manifest,
             GetOptionsFormDefinition.message_id: self.on_msg_get_options_form_definition,
+            CreateQuestionFromOptions.message_id: self.on_msg_create_question_from_options
         }
 
     def bootstrap(self) -> None:
@@ -131,8 +133,16 @@ class WorkerManager:
     def on_msg_get_options_form_definition(self, _msg: GetOptionsFormDefinition) -> MessageToServer:
         if self.main_package is None:
             raise MainPackageNotLoadedError()
+
         definition = self.main_package.get_options_form_definition()
         return GetOptionsFormDefinition.Response(definition=definition)
+
+    def on_msg_create_question_from_options(self, msg: CreateQuestionFromOptions) -> CreateQuestionFromOptions.Response:
+        if self.main_package is None:
+            raise MainPackageNotLoadedError()
+
+        question = self.main_package.qtype_instance.create_question_from_options(msg.form_data)
+        return CreateQuestionFromOptions.Response(state=question.question_state)
 
 
 class BootstrapError(Exception):

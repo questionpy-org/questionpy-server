@@ -3,7 +3,6 @@ from struct import Struct
 from typing import ClassVar, Type, Optional, Any
 
 from pydantic import BaseModel
-
 from questionpy_common.manifest import Manifest
 from questionpy_common.qtype import OptionsFormDefinition
 
@@ -24,6 +23,7 @@ class MessageIds(IntEnum):
     LOAD_QPY_PACKAGE = 10
     GET_QPY_PACKAGE_MANIFEST = 20
     GET_OPTIONS_FORM_DEFINITION = 30
+    CREATE_QUESTION = 40
 
     # Worker to server.
     WORKER_STARTED = 1000
@@ -32,6 +32,8 @@ class MessageIds(IntEnum):
     LOADED_QPY_PACKAGE = 1010
     RETURN_QPY_PACKAGE_MANIFEST = 1020
     RETURN_OPTIONS_FORM_DEFINITION = 1030
+    RETURN_CREATE_QUESTION = 1040
+
     ERROR = 1100
 
 
@@ -107,8 +109,21 @@ class GetOptionsFormDefinition(MessageToWorker):
         definition: OptionsFormDefinition
 
 
+class CreateQuestionFromOptions(MessageToWorker):
+    message_id = MessageIds.CREATE_QUESTION
+    # Old question state (NOT base64) or None if the question is new.
+    state: Optional[str]
+    form_data: dict[str, Any]
+
+    class Response(MessageToServer):
+        message_id = MessageIds.RETURN_CREATE_QUESTION
+        # New question state (NOT base64).
+        state: str
+
+
 class WorkerError(MessageToServer):
     """Error message."""
+
     class ErrorType(IntEnum):
         """Error types."""
         UNKNOWN = 0

@@ -1,13 +1,14 @@
+from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPMethodNotAllowed, HTTPNotFound
 
-from questionpy_server.web import ensure_package_and_question_state_exists, json_response, ensure_package_exists
 from questionpy_server.factories import AttemptFactory, AttemptGradedFactory, AttemptStartedFactory
-
-from .models import QuestionStateHash, AttemptStartArguments, AttemptGradeArguments, AttemptViewArguments
+from questionpy_server.web import ensure_package_and_question_state_exists, json_response, ensure_package_exists
+from .models import AttemptStartArguments, AttemptGradeArguments, AttemptViewArguments, \
+    QuestionCreateArguments, Question, GradingMethod, OptionalQuestionStateHash
 from ..package import Package
 
 if TYPE_CHECKING:
@@ -45,10 +46,10 @@ async def get_package(request: web.Request) -> web.Response:
 
 
 @routes.post(r'/packages/{package_hash:\w+}/options')  # type: ignore[arg-type]
-@ensure_package_and_question_state_exists(optional_question_state=True)
+@ensure_package_and_question_state_exists
 # pylint: disable=unused-argument
 async def post_options(request: web.Request, package: Package, question_state: Optional[Path],
-                       data: QuestionStateHash) -> web.Response:
+                       data: OptionalQuestionStateHash) -> web.Response:
     """
     Get the options form definition that allow a question creator to customize a question.
     """
@@ -85,8 +86,23 @@ async def post_attempt_grade(_request: web.Request, package: Package, question_s
 
 
 @routes.post(r'/packages/{package_hash:\w+}/question')
-async def post_question(_request: web.Request) -> web.Response:
-    raise HTTPMethodNotAllowed("", "")
+@ensure_package_and_question_state_exists
+async def post_question(request: web.Request, data: QuestionCreateArguments,
+                        package: Package, question_state: Optional[Path] = None) -> web.Response:
+    qpyserver: 'QPyServer' = request.app['qpy_server_app']
+
+    package_path = await package.get_path()
+    async with qpyserver.worker_pool.get_worker(package_path, 0, None) as worker:
+        new_state = await worker.create_question_from_options(question_state, data.form_data)
+
+    new_state_hash = sha256(new_state.encode()).hexdigest()
+
+    return json_response(data=Question(
+        question_state=new_state,
+        question_state_hash=new_state_hash,
+        grading_method=GradingMethod.ALWAYS_MANUAL_GRADING_REQUIRED,
+        response_analysis_by_variant=False
+    ))
 
 
 @routes.post(r'/packages/{package_hash:\w+}/question/migrate')
