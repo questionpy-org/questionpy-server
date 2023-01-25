@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 from pathlib import Path
 
 from . import __version__
@@ -13,8 +14,8 @@ _DEFAULT_CONFIG_FILES = (
 
 
 def main() -> None:
-    # Log level
-    logging.basicConfig(level=logging.INFO)
+    # Initialize logging here because we also log things while reading the settings
+    logging.basicConfig(level=os.getenv("QPY_LOGLEVEL", "INFO"))
 
     # Arguments
     parser = argparse.ArgumentParser(description=f"QuestionPy Application Server {__version__}")
