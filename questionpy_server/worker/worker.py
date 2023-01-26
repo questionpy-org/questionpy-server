@@ -270,6 +270,21 @@ class SandboxProcess(WorkerProcess):
 class SameProcess(WorkerProcessBase):
     """Do not spawn a new process for this worker (might be used by questionpy-sdk)."""
 
+    def send(self, message: MessageToWorker) -> None:
+        raise NotImplementedError()
+
+    async def send_and_wait_response(self, message: MessageToWorker, expected_response_message: Type[_T]) -> _T:
+        raise NotImplementedError()
+
+    async def kill(self) -> None:
+        raise NotImplementedError()
+
+    def get_resource_usage(self) -> WorkerResources:
+        raise NotImplementedError()
+
+    async def start(self) -> None:
+        raise NotImplementedError()
+
 
 class ServerToWorkerConnection(AsyncIterator[MessageToServer]):
     """Controls the connection (stdin/stdout pipes) from the server to a worker."""
