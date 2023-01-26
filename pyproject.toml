@@ -14,7 +14,7 @@ python = "^3.9"
 aiohttp = "^3.8.1"
 pydantic = "^1.9.1"
 questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "07ca576" }
-watchdog = "^2.2.0"
+watchdog = "^2.2.1"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.14.5"
