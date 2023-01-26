@@ -226,7 +226,7 @@ class LocalCollector(BaseCollector):
                               "currently read by a worker.", package_path)
 
         # Replace paths for moved packages.
-        paths = list(map(lambda files: (Path(files[0]), Path(files[1])), difference.files_moved))
+        paths = [(Path(old_path), Path(new_path)) for old_path, new_path in difference.files_moved]
         self.map.replace(paths)
 
         # Update the snapshot.
