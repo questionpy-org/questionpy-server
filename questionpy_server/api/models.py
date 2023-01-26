@@ -178,12 +178,12 @@ class PackageQuestionStateNotFound(BaseModel):
 
 
 class Code(Enum):
-    not_implemented = 'NOT_IMPLEMENTED'
-    downgrade_not_possible = 'DOWNGRADE_NOT_POSSIBLE'
-    package_mismatch = 'PACKAGE_MISMATCH'
-    current_question_state_invalid = 'CURRENT_QUESTION_STATE_INVALID'
-    major_version_mismatch = 'MAJOR_VERSION_MISMATCH'
-    other_error = 'OTHER_ERROR'
+    NOT_IMPLEMENTED = 'NOT_IMPLEMENTED'
+    DOWNGRADE_NOT_POSSIBLE = 'DOWNGRADE_NOT_POSSIBLE'
+    PACKAGE_MISMATCH = 'PACKAGE_MISMATCH'
+    CURRENT_QUESTION_STATE_INVALID = 'CURRENT_QUESTION_STATE_INVALID'
+    MAJOR_VERSION_MISMATCH = 'MAJOR_VERSION_MISMATCH'
+    OTHER_ERROR = 'OTHER_ERROR'
 
 
 class QuestionStateMigrationError(BaseModel):
