@@ -40,8 +40,8 @@ async def get_package(request: web.Request) -> web.Response:
     try:
         package = qpyserver.package_collection.get(request.match_info['package_hash'])
         return json_response(data=package.get_info())
-    except FileNotFoundError:
-        raise HTTPNotFound
+    except FileNotFoundError as error:
+        raise HTTPNotFound from error
 
 
 @routes.post(r'/packages/{package_hash:\w+}/options')  # type: ignore[arg-type]
