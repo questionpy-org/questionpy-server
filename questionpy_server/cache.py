@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import NamedTuple, Callable, Awaitable
 from asyncio import to_thread, Lock
 
+from pydantic import ByteSize
+
 
 class File(NamedTuple):
     path: Path
@@ -11,7 +13,7 @@ class File(NamedTuple):
 
 
 class SizeError(Exception):
-    def __init__(self, message: str = '', max_size: float = 0, actual_size: float = 0):
+    def __init__(self, message: str = '', max_size: int = 0, actual_size: int = 0):
         super().__init__(message)
 
         self.max_size = max_size
@@ -24,7 +26,7 @@ class FileLimitLRU:
     Only `bytes` type values are accepted. Their size is calculated by passing them into the builtin `len()` function.
     """
 
-    def __init__(self, directory: Path, max_bytes: int, extension: str = None, name: str = None) -> None:
+    def __init__(self, directory: Path, max_size: int, extension: str = None, name: str = None) -> None:
         """
         A cache should be initialised while starting a server therefore it is not necessary for it to be async.
         """
@@ -37,8 +39,8 @@ class FileLimitLRU:
 
         self.directory: Path = directory
 
-        self.max_bytes = max_bytes
-        self._total_bytes = 0
+        self.max_size = max_size
+        self._total_size: int = 0
 
         self._extension: str = '' if extension is None else '.' + extension.lstrip('.')
         self._tmp_extension: str = '.tmp'
@@ -58,19 +60,19 @@ class FileLimitLRU:
                 continue
 
             size = path.stat().st_size
-            total = self._total_bytes + size
+            total = self._total_size + size
 
             # Remove files if cache is full.
-            if total > self.max_bytes:
+            if total > self.max_size:
                 path.unlink()
                 continue
 
-            self._total_bytes = total
+            self._total_size = total
             self._files[path.stem] = File(path, size)
 
         log = logging.getLogger('questionpy-server')
-        log.info('%s initialised at %s with %d file(s) and %d/%d byte(s)', self._name, self.directory,
-                 len(self._files), self._total_bytes, self.max_bytes)
+        log.info('%s initialised at %s with %d file(s) and %s/%s.', self._name, self.directory, len(self._files),
+                 ByteSize(self._total_size).human_readable(), ByteSize(self.max_size).human_readable())
 
     def contains(self, key: str) -> bool:
         """
@@ -99,7 +101,7 @@ class FileLimitLRU:
     async def _remove(self, key: str) -> None:
         file = self._get_file(key)
         await to_thread(file.path.unlink, missing_ok=True)
-        self._total_bytes -= file.size
+        self._total_size -= file.size
         del self._files[key]
 
         await self.on_remove(key)
@@ -127,11 +129,11 @@ class FileLimitLRU:
             raise TypeError("Not a bytes object:", repr(value))
 
         size = len(value)
-        if size > self.max_bytes:
+        if size > self.max_size:
             # If we allowed this, the loop at the end would remove all items from the dictionary,
             # so we raise an error to allow exceptions for this case.
-            raise SizeError(f"Item itself exceeds maximum allowed size of {self.max_bytes} bytes",
-                            max_size=self.max_bytes, actual_size=size)
+            raise SizeError(f"Item itself exceeds maximum allowed size of {ByteSize(self.max_size).human_readable()}",
+                            max_size=self.max_size, actual_size=size)
 
         async with self._lock:
             # Save the bytes on filesystem.
@@ -145,14 +147,14 @@ class FileLimitLRU:
 
             # Update `_total_bytes` depending on whether the key existed already or not.
             if key in self._files:
-                self._total_bytes -= self._files[key].size
-            self._total_bytes += size
+                self._total_size -= self._files[key].size
+            self._total_size += size
 
             # Update internal file dictionary.
             self._files[key] = File(path, size)
 
             # If size is too large now, remove items until it is less than or equal to the defined maximum.
-            while self._total_bytes > self.max_bytes:
+            while self._total_size > self.max_size:
                 # Delete the current oldest item, by instantiating an iterator over all keys (in order)
                 # and passing its next item (i.e. the first one in order) to self.remove().
                 await self._remove(next(iter(self._files)))
@@ -160,12 +162,12 @@ class FileLimitLRU:
             return path
 
     @property
-    def total_bytes(self) -> int:
-        return self._total_bytes
+    def total_size(self) -> int:
+        return self._total_size
 
     @property
     def space_left(self) -> int:
-        return self.max_bytes - self._total_bytes
+        return self.max_size - self._total_size
 
     @property
     def files(self) -> OrderedDict[str, File]:

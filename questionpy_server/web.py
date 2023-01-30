@@ -13,6 +13,7 @@ from aiohttp.web_response import Response
 from pydantic import BaseModel, ValidationError
 
 from questionpy_common import constants
+from questionpy_common.constants import KiB
 
 from questionpy_server.api.models import PackageQuestionStateNotFound, QuestionStateHash
 from questionpy_server.cache import SizeError, FileLimitLRU
@@ -92,11 +93,11 @@ async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = 
 
     size = 0
 
-    while chunk := await part.read_chunk(size=262_144):
+    while chunk := await part.read_chunk(size=256 * KiB):
         # Check if size limit is exceeded.
         size += len(chunk)
         if size > max_size:
-            msg = f"Size limit of {max_size} bytes exceeded for field '{part.name}'"
+            msg = f"Size limit of {max_size} exceeded for field '{part.name}'"
             web_logger.warning(msg)
             raise HTTPRequestEntityTooLarge(text=msg, max_size=max_size, actual_size=size)
 
@@ -130,11 +131,11 @@ async def parse_form_data(request: Request) \
             continue
 
         if part.name == 'main':
-            main = await read_part(part, server.settings.webservice.max_bytes_main, calculate_hash=False)
+            main = await read_part(part, server.settings.webservice.max_main_size, calculate_hash=False)
         elif part.name == 'package':
-            package = await read_part(part, server.settings.webservice.max_bytes_package, calculate_hash=True)
+            package = await read_part(part, server.settings.webservice.max_package_size, calculate_hash=True)
         elif part.name == 'question_state':
-            question_state = await read_part(part, constants.MAX_BYTES_QUESTION_STATE, calculate_hash=True)
+            question_state = await read_part(part, constants.MAX_QUESTION_STATE_SIZE, calculate_hash=True)
 
     if main is None:
         msg = "Multipart/form field 'main' is not set"
@@ -338,7 +339,7 @@ def ensure_package_exists(_func: Optional[RouteHandler] = None, required_hash: b
                 if not isinstance(part, BodyPartReader):
                     continue
                 if part.name == 'package':
-                    package_container = await read_part(part, server.settings.webservice.max_bytes_package,
+                    package_container = await read_part(part, server.settings.webservice.max_package_size,
                                                         calculate_hash=True)
                     break
 

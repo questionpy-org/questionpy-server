@@ -3,6 +3,8 @@ from inspect import Parameter, signature, isclass
 from pathlib import Path
 from typing import Callable, List, Type, Tuple
 
+from questionpy_common.constants import MiB
+
 from questionpy_server.types import RouteHandler, M
 
 
@@ -26,7 +28,7 @@ def get_route_model_param(route_handler: RouteHandler, model: Type[M]) -> Tuple[
     return params[0].name, params[0].annotation
 
 
-def calculate_hash(path: Path, chunk_size: int = 5_242_880) -> str:
+def calculate_hash(path: Path, chunk_size: int = 5 * MiB) -> str:
     """Calculate SHA256 hash of a file."""
     package_hash = sha256()
 

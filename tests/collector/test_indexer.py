@@ -4,6 +4,8 @@ from typing import Union
 from unittest.mock import patch
 
 import pytest
+
+from questionpy_common.constants import MiB
 from questionpy_common.manifest import Manifest
 
 from questionpy_server import WorkerPool
@@ -19,7 +21,7 @@ from tests.conftest import PACKAGE
 @pytest.mark.parametrize('kind', [PACKAGE.path, PACKAGE.manifest])
 @patch('questionpy_server.collector.lms_collector.LMSCollector', spec=LMSCollector)
 async def test_register_package_with_path_and_manifest(collector: LMSCollector, kind: Union[Path, Manifest]) -> None:
-    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
+    indexer = Indexer(WorkerPool(1, 200 * MiB))
     await indexer.register_package(PACKAGE.hash, kind, collector)
 
     # Package is accessible by hash.
@@ -31,7 +33,7 @@ async def test_register_package_with_path_and_manifest(collector: LMSCollector, 
 
 @patch('questionpy_server.collector.lms_collector.LMSCollector', spec=LMSCollector)
 async def test_register_package_from_lms(collector: LMSCollector) -> None:
-    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
+    indexer = Indexer(WorkerPool(1, 200 * MiB))
     await indexer.register_package(PACKAGE.hash, PACKAGE.manifest, collector)
 
     # Package is not accessible by name and version.
@@ -52,7 +54,7 @@ async def test_register_package_from_local_and_repo_collector(collector: BaseCol
     # Create mock.
     collector = patch(collector.__module__, spec=collector).start()
 
-    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
+    indexer = Indexer(WorkerPool(1, 200 * MiB))
     await indexer.register_package(PACKAGE.hash, PACKAGE.manifest, collector)
 
     # Package is accessible by hash.
@@ -78,7 +80,7 @@ async def test_register_package_from_local_and_repo_collector(collector: BaseCol
 
 
 async def test_register_package_with_same_hash_as_existing_package() -> None:
-    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
+    indexer = Indexer(WorkerPool(1, 200 * MiB))
 
     # Register package from local collector.
     local_collector = patch(LocalCollector.__module__, spec=LocalCollector).start()
@@ -113,7 +115,7 @@ async def test_register_two_packages_with_same_manifest_but_different_hashes(cap
     collector = patch(LocalCollector.__module__, spec=LocalCollector).start()
 
     # Register a package.
-    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
+    indexer = Indexer(WorkerPool(1, 200 * MiB))
     await indexer.register_package(PACKAGE.hash, PACKAGE.manifest, collector)
 
     with caplog.at_level(logging.WARNING):
@@ -126,7 +128,7 @@ async def test_register_two_packages_with_same_manifest_but_different_hashes(cap
 
 
 async def test_unregister_package_with_lms_source() -> None:
-    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
+    indexer = Indexer(WorkerPool(1, 200 * MiB))
     collector = patch(LMSCollector.__module__, spec=LMSCollector).start()
     await indexer.register_package(PACKAGE.hash, PACKAGE.manifest, collector)
 
@@ -139,7 +141,7 @@ async def test_unregister_package_with_lms_source() -> None:
 
 @pytest.mark.parametrize('collector', [LocalCollector, RepoCollector])
 async def test_unregister_package_with_local_and_repo_source(collector: BaseCollector) -> None:
-    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
+    indexer = Indexer(WorkerPool(1, 200 * MiB))
     collector = patch(collector.__module__, spec=collector).start()
     await indexer.register_package(PACKAGE.hash, PACKAGE.manifest, collector)
 
@@ -159,7 +161,7 @@ async def test_unregister_package_with_local_and_repo_source(collector: BaseColl
 
 
 async def test_unregister_package_with_multiple_sources() -> None:
-    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
+    indexer = Indexer(WorkerPool(1, 200 * MiB))
 
     # Register package from local, repo, and LMS collector.
     lms_collector = patch(LMSCollector.__module__, spec=LMSCollector).start()
