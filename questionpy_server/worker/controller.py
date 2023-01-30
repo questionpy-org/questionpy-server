@@ -3,9 +3,10 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
+
+from questionpy_common.constants import MiB
 from questionpy_common.manifest import Manifest
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.misc import Size, SizeUnit
 
 from .exception import WorkerStartError
 from .worker import WorkerProcessBase, WorkerProcess, WorkerResourceLimits
@@ -74,7 +75,7 @@ class WorkerPool:
             if context is None:
                 context = 0
             try:
-                limits = WorkerResourceLimits(max_memory=Size(200, SizeUnit.MiB),
+                limits = WorkerResourceLimits(max_memory=200 * MiB,
                                               max_cpu_time_seconds_per_call=10)  # TODO
                 if self.max_memory < limits.max_memory:
                     raise WorkerStartError("The worker needs more memory than available.")

@@ -12,6 +12,7 @@ from _pytest.tmpdir import TempPathFactory
 from aiohttp.pytest_plugin import AiohttpClient
 from aiohttp.test_utils import TestClient
 
+from questionpy_common.constants import KiB
 from questionpy_common.manifest import Manifest
 
 from questionpy_server.app import QPyServer
@@ -22,7 +23,7 @@ from questionpy_server.settings import Settings, WebserviceSettings, PackageCach
 def get_file_hash(path: Path) -> str:
     hash_value = sha256()
     with path.open('rb') as file:
-        while chunk := file.read(4096):
+        while chunk := file.read(4 * KiB):
             hash_value.update(chunk)
     return hash_value.hexdigest()
 
@@ -54,7 +55,7 @@ def qpy_server(tmp_path_factory: TempPathFactory) -> QPyServer:
     server = QPyServer(Settings(
         config_files=(),
         webservice=WebserviceSettings(listen_address="127.0.0.1", listen_port=0),
-        worker=WorkerSettings(max_workers=8, max_memory=524_288_000),
+        worker=WorkerSettings(),
         cache_package=PackageCacheSettings(directory=package_cache_directory),
         cache_question_state=QuestionStateCacheSettings(directory=question_state_cache_directory),
         collector=CollectorSettings()

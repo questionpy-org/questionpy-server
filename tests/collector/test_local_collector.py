@@ -10,6 +10,8 @@ import asyncio
 import pytest
 from _pytest.tmpdir import TempPathFactory
 
+from questionpy_common.constants import MiB
+
 from questionpy_server.package import Package
 from questionpy_server.worker.controller import WorkerPool
 from questionpy_server.collector.indexer import Indexer
@@ -26,7 +28,7 @@ def create_local_collector(tmp_path_factory: TempPathFactory) -> tuple[LocalColl
     """
 
     path = tmp_path_factory.mktemp('qpy')
-    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
+    indexer = Indexer(WorkerPool(1, 200 * MiB))
     return LocalCollector(path, indexer), path
 
 
@@ -81,7 +83,7 @@ async def test_ignore_files_with_wrong_extension(tmp_path_factory: TempPathFacto
     ignore_file = directory / 'wrong.extension'
     ignore_file.touch()
 
-    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
+    indexer = Indexer(WorkerPool(1, 200 * MiB))
     local_collector = LocalCollector(directory, indexer)
 
     async with local_collector:
@@ -97,7 +99,7 @@ async def test_ignore_files_with_wrong_extension(tmp_path_factory: TempPathFacto
 
 async def test_package_exists_before_init(tmp_path_factory: TempPathFactory) -> None:
     path = tmp_path_factory.mktemp('qpy')
-    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
+    indexer = Indexer(WorkerPool(1, 200 * MiB))
     local_collector = LocalCollector(path, indexer)
 
     package_path = copy(PACKAGE.path, path)
@@ -245,7 +247,7 @@ async def test_package_gets_moved_to_different_folder(tmp_path_factory: TempPath
         # Use new_directory as the directory to be watched and directory to be the new directory of the package.
         directory, new_directory = new_directory, directory
 
-    indexer = Indexer(WorkerPool(1, 200 * 1024 * 1024))
+    indexer = Indexer(WorkerPool(1, 200 * MiB))
     local_collector = LocalCollector(directory, indexer)
 
     # Create a package in the directory.
