@@ -40,12 +40,13 @@ async def get_package(request: web.Request) -> web.Response:
     try:
         package = qpyserver.package_collection.get(request.match_info['package_hash'])
         return json_response(data=package.get_info())
-    except FileNotFoundError:
-        raise HTTPNotFound
+    except FileNotFoundError as error:
+        raise HTTPNotFound from error
 
 
 @routes.post(r'/packages/{package_hash:\w+}/options')  # type: ignore[arg-type]
 @ensure_package_and_question_state_exists(optional_question_state=True)
+# pylint: disable=unused-argument
 async def post_options(request: web.Request, package: Package, question_state: Optional[Path],
                        data: QuestionStateHash) -> web.Response:
     """
@@ -61,6 +62,7 @@ async def post_options(request: web.Request, package: Package, question_state: O
 
 @routes.post(r'/packages/{package_hash:\w+}/attempt/start')  # type: ignore[arg-type]
 @ensure_package_and_question_state_exists
+# pylint: disable=unused-argument
 async def post_attempt_start(_request: web.Request, package: Package, question_state: Path,
                              _data: AttemptStartArguments) -> web.Response:
     return json_response(data=AttemptStartedFactory.build(), status=201)
@@ -68,6 +70,7 @@ async def post_attempt_start(_request: web.Request, package: Package, question_s
 
 @routes.post(r'/packages/{package_hash:\w+}/attempt/view')  # type: ignore[arg-type]
 @ensure_package_and_question_state_exists
+# pylint: disable=unused-argument
 async def post_attempt_view(_request: web.Request, package: Package, question_state: Path,
                             _data: AttemptViewArguments) -> web.Response:
     return json_response(data=AttemptFactory.build(), status=201)
@@ -75,6 +78,7 @@ async def post_attempt_view(_request: web.Request, package: Package, question_st
 
 @routes.post(r'/packages/{package_hash:\w+}/attempt/grade')  # type: ignore[arg-type]
 @ensure_package_and_question_state_exists
+# pylint: disable=unused-argument
 async def post_attempt_grade(_request: web.Request, package: Package, question_state: Path,
                              _data: AttemptGradeArguments) -> web.Response:
     return json_response(data=AttemptGradedFactory.build(), status=201)
