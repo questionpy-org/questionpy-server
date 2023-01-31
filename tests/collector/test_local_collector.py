@@ -1,4 +1,4 @@
-from asyncio import get_running_loop, wait_for, sleep
+from asyncio import get_running_loop, wait_for
 from os import kill, getpid
 from pathlib import Path
 from shutil import copy
@@ -62,17 +62,16 @@ class WaitForAsyncFunctionCall:
 
 
 async def test_run_update_on_signal(tmp_path_factory: TempPathFactory) -> None:
-    local_collector, directory = create_local_collector(tmp_path_factory)
+    local_collector, _ = create_local_collector(tmp_path_factory)
 
     async with local_collector:
         # Check that the update function is called on SIGUSR1.
-        with patch.object(local_collector, 'update') as mock_update:
-            # Wait for signal handler to be set up.
-            await sleep(0.5)
+        update = WaitForAsyncFunctionCall(local_collector.update)
+        with patch.object(local_collector, 'update', side_effect=update.wrap) as mock_update:
             # Send signal.
             kill(getpid(), SIGUSR1)
             # Wait for signal handler to be called.
-            await sleep(0.5)
+            await update.wait_for_fn_call(10)
             mock_update.assert_awaited_once()
 
 
