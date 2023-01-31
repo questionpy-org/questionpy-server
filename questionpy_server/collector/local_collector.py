@@ -178,12 +178,10 @@ class LocalCollector(BaseCollector):
             :param pkg_path: The path of the package.
             """
 
-            pkg_hash = self.map.pop(pkg_path)
-            if not pkg_hash:
+            if not (pkg_hash := self.map.pop(pkg_path)):
                 return
-            packages = self.map.get(pkg_hash)
-            if packages is None or len(packages) == 0:
-                # There is no other package with the same hash - unregister it.
+            if not (packages := self.map.get(pkg_hash)) or len(packages) == 0:
+                # There are no other packages with the same hash - unregister it.
                 await self.indexer.unregister_package(pkg_hash, self)
 
         if not self._lock:
@@ -218,13 +216,11 @@ class LocalCollector(BaseCollector):
             entries = []
             for old_path, new_path in difference.files_moved:
                 # Remove old path and save the package hash.
-                existing_hash = self.map.pop(Path(old_path))
-                if existing_hash:
+                if existing_hash := self.map.pop(Path(old_path)):
                     entries.append((existing_hash, Path(new_path)))
             for entry in entries:
                 # Insert package hash with new path.
-                existing_hash, new_path = entry
-                self.map.insert(existing_hash, new_path)
+                self.map.insert(*entry)
 
             # Update the snapshot.
             self._snapshot = new_snapshot
