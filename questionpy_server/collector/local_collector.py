@@ -1,7 +1,7 @@
 import logging
-from asyncio import to_thread, get_running_loop, create_task
+from asyncio import to_thread, get_running_loop, create_task, Lock
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, overload, Union, Generator, Any, cast
+from typing import TYPE_CHECKING, Optional, overload, Union, Generator, Any
 from signal import SIGUSR1
 
 from watchdog.utils.dirsnapshot import DirectorySnapshot, EmptyDirectorySnapshot, DirectorySnapshotDiff  # type: ignore
@@ -110,26 +110,6 @@ class PathToHash:
 
         raise TypeError(f'Expected Path or str, got {type(key)}')
 
-    def replace(self, paths: list[tuple[Path, Path]]) -> None:
-        """
-        Replaces the paths of packages.
-
-        :param paths: An iterator of tuples in the form of (old_path, new_path).
-        """
-
-        if not paths:
-            return
-
-        # Unpack the paths.
-        old_paths, new_paths = zip(*paths)
-        old_paths = cast(tuple[Path], old_paths)
-        new_paths = cast(tuple[Path], new_paths)
-
-        package_hashes = [self.pop(path) for path in old_paths]
-        for path, package_hash in zip(new_paths, package_hashes):
-            if package_hash:
-                self.insert(package_hash, path)
-
 
 class LocalCollector(BaseCollector):
     """
@@ -141,6 +121,8 @@ class LocalCollector(BaseCollector):
 
         self.directory: Path = directory
         self.map: PathToHash = PathToHash()
+
+        self._lock: Optional[Lock] = None
         self._snapshot: Optional[DirectorySnapshot] = None
         self._log = logging.getLogger('questionpy-server:local-collector')
 
@@ -204,36 +186,48 @@ class LocalCollector(BaseCollector):
                 # There is no other package with the same hash - unregister it.
                 await self.indexer.unregister_package(pkg_hash, self)
 
-        # If no snapshot exists, use EmptyDirectorySnapshot to get all files as created.
-        old_snapshot = self._snapshot or EmptyDirectorySnapshot()
-        new_snapshot = await to_thread(DirectorySnapshot, str(self.directory), recursive=False,
-                                       listdir=directory_iterator)
-        difference = DirectorySnapshotDiff(old_snapshot, new_snapshot)
+        if not self._lock:
+            self._lock = Lock()
 
-        for path in difference.files_created:
-            package_path = Path(path)
-            package_hash = await to_thread(calculate_hash, package_path)
-            await add_package(package_hash, package_path)
+        async with self._lock:
+            # If no snapshot exists, use EmptyDirectorySnapshot to get all files as created.
+            old_snapshot = self._snapshot or EmptyDirectorySnapshot()
+            new_snapshot = await to_thread(DirectorySnapshot, str(self.directory), recursive=False,
+                                           listdir=directory_iterator)
+            difference = DirectorySnapshotDiff(old_snapshot, new_snapshot)
 
-        for path in difference.files_deleted:
-            package_path = Path(path)
-            await remove_package(package_path)
+            for path in difference.files_created:
+                package_path = Path(path)
+                package_hash = await to_thread(calculate_hash, package_path)
+                await add_package(package_hash, package_path)
 
-        for path in difference.files_modified:
-            package_path = Path(path)
-            package_hash = await to_thread(calculate_hash, package_path)
-            await remove_package(package_path)
-            await add_package(package_hash, package_path)
+            for path in difference.files_deleted:
+                package_path = Path(path)
+                await remove_package(package_path)
 
-            self._log.warning("Package %s was modified. This will cause unexpected behavior if the package is "
-                              "currently read by a worker.", package_path)
+            for path in difference.files_modified:
+                package_path = Path(path)
+                package_hash = await to_thread(calculate_hash, package_path)
+                await remove_package(package_path)
+                await add_package(package_hash, package_path)
 
-        # Replace paths for moved packages.
-        paths = [(Path(old_path), Path(new_path)) for old_path, new_path in difference.files_moved]
-        self.map.replace(paths)
+                self._log.warning("Package %s was modified. This will cause unexpected behavior if the package is "
+                                  "currently read by a worker.", package_path)
 
-        # Update the snapshot.
-        self._snapshot = new_snapshot
+            # We need to remove every old path before inserting new ones to avoid conflicts when paths get swapped.
+            entries = []
+            for old_path, new_path in difference.files_moved:
+                # Remove old path and save the package hash.
+                existing_hash = self.map.pop(Path(old_path))
+                if existing_hash:
+                    entries.append((existing_hash, Path(new_path)))
+            for entry in entries:
+                # Insert package hash with new path.
+                existing_hash, new_path = entry
+                self.map.insert(existing_hash, new_path)
+
+            # Update the snapshot.
+            self._snapshot = new_snapshot
 
         if with_log:
             self._log.info("Updated packages: %d created, %d deleted, %d modified, %d moved.",
