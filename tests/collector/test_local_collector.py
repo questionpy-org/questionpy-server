@@ -277,7 +277,11 @@ async def test_package_filenames_get_swapped(tmp_path_factory: TempPathFactory) 
         with patch.object(local_collector.indexer, 'register_package') as mock_register, \
              patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
             # Swap the package filenames.
-            package_1_path, package_2_path = package_2_path, package_1_path
+            temporary_path = directory / 'temporary_path'
+            package_1_path.rename(temporary_path)
+            package_2_path.rename(package_1_path)
+            temporary_path.rename(package_2_path)
+
             await local_collector.update()
 
             # The packages should be swapped in the local collector.
