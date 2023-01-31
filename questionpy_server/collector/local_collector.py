@@ -206,7 +206,8 @@ class LocalCollector(BaseCollector):
 
         # If no snapshot exists, use EmptyDirectorySnapshot to get all files as created.
         old_snapshot = self._snapshot or EmptyDirectorySnapshot()
-        new_snapshot = DirectorySnapshot(str(self.directory), recursive=False, listdir=directory_iterator)
+        new_snapshot = await to_thread(DirectorySnapshot, str(self.directory), recursive=False,
+                                       listdir=directory_iterator)
         difference = DirectorySnapshotDiff(old_snapshot, new_snapshot)
 
         for path in difference.files_created:
