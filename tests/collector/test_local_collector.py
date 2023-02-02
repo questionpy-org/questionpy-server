@@ -1,6 +1,8 @@
-from asyncio import get_running_loop, sleep, wait_for
+from asyncio import get_running_loop, wait_for
+from os import kill, getpid
 from pathlib import Path
 from shutil import copy
+from signal import SIGUSR1
 from typing import Any, Callable
 from unittest.mock import patch
 
@@ -59,6 +61,20 @@ class WaitForAsyncFunctionCall:
             pytest.fail(f"Function {self.func} has not been called within {timeout} seconds.", False)
 
 
+async def test_run_update_on_signal(tmp_path_factory: TempPathFactory) -> None:
+    local_collector, _ = create_local_collector(tmp_path_factory)
+
+    async with local_collector:
+        # Check that the update function is called on SIGUSR1.
+        update = WaitForAsyncFunctionCall(local_collector.update)
+        with patch.object(local_collector, 'update', side_effect=update.wrap) as mock_update:
+            # Send signal.
+            kill(getpid(), SIGUSR1)
+            # Wait for signal handler to be called.
+            await update.wait_for_fn_call(10)
+            mock_update.assert_awaited_once()
+
+
 async def test_ignore_files_with_wrong_extension(tmp_path_factory: TempPathFactory) -> None:
     # File exists before initializing.
     directory = tmp_path_factory.mktemp('qpy')
@@ -98,18 +114,16 @@ async def test_package_exists_before_init(tmp_path_factory: TempPathFactory) -> 
 async def test_package_gets_created(tmp_path_factory: TempPathFactory) -> None:
     local_collector, directory = create_local_collector(tmp_path_factory)
 
-    async with local_collector:
-        register = WaitForAsyncFunctionCall(local_collector.indexer.register_package)
-        with patch.object(local_collector.indexer, 'register_package', side_effect=register.wrap) as mock_register:
+    package = Package(PACKAGE.hash, PACKAGE.manifest)
 
+    async with local_collector:
+        with patch.object(local_collector.indexer, 'register_package') as mock_register:
             # Copy a package to the directory.
             package_path = Path(copy(PACKAGE.path, directory))
-            package = Package(PACKAGE.hash, PACKAGE.manifest)
-
-            await register.wait_for_fn_call(10)
+            await local_collector.update()
 
             # Package got registered in the indexer and local collector.
-            mock_register.assert_awaited_with(package.hash, package_path, local_collector)
+            mock_register.assert_awaited_once_with(package.hash, package_path, local_collector)
             assert package_path == await local_collector.get_path(package)
 
 
@@ -117,28 +131,23 @@ async def test_package_gets_modified(tmp_path_factory: TempPathFactory) -> None:
     local_collector, directory = create_local_collector(tmp_path_factory)
 
     package_path = Path(copy(PACKAGE.path, directory))
-    package_0 = Package(PACKAGE.hash, PACKAGE.manifest)
-    package_1 = Package(PACKAGE_2.hash, PACKAGE_2.manifest)
+    package_1 = Package(PACKAGE.hash, PACKAGE.manifest)
+    package_2 = Package(PACKAGE_2.hash, PACKAGE_2.manifest)
 
     async with local_collector:
-        register = WaitForAsyncFunctionCall(local_collector.indexer.register_package)
-        unregister = WaitForAsyncFunctionCall(local_collector.indexer.unregister_package)
-        with patch.object(local_collector.indexer, 'register_package', side_effect=register.wrap) as mock_register, \
-             patch.object(local_collector.indexer, 'unregister_package',
-                          side_effect=unregister.wrap) as mock_unregister:
-
+        with patch.object(local_collector.indexer, 'register_package') as mock_register, \
+             patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
             # Modify the package.
             package_path.write_bytes(PACKAGE_2.path.read_bytes())
-            await register.wait_for_fn_call(10)
-            await unregister.wait_for_fn_call(10)
+            await local_collector.update()
 
             # Old package got unregistered and the new one registered in the indexer and local collector.
-            mock_register.assert_awaited_with(package_1.hash, package_path, local_collector)
-            mock_unregister.assert_awaited_with(package_0.hash, local_collector)
+            mock_register.assert_awaited_once_with(package_2.hash, package_path, local_collector)
+            mock_unregister.assert_awaited_once_with(package_1.hash, local_collector)
 
             with pytest.raises(FileNotFoundError):
-                await local_collector.get_path(package_0)
-            assert Path(package_path) == await local_collector.get_path(package_1)
+                await local_collector.get_path(package_1)
+            assert Path(package_path) == await local_collector.get_path(package_2)
 
 
 async def test_package_gets_deleted(tmp_path_factory: TempPathFactory) -> None:
@@ -149,15 +158,13 @@ async def test_package_gets_deleted(tmp_path_factory: TempPathFactory) -> None:
     package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
-        unregister = WaitForAsyncFunctionCall(local_collector.indexer.unregister_package)
-        with patch.object(local_collector.indexer, 'unregister_package',
-                          side_effect=unregister.wrap) as mock_unregister:
+        with patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
             # Remove package from the directory.
             package_path.unlink()
-            await unregister.wait_for_fn_call(10)
+            await local_collector.update()
 
             # Package got unregistered in the indexer and local collector.
-            mock_unregister.assert_awaited_with(package.hash, local_collector)
+            mock_unregister.assert_awaited_once_with(package.hash, local_collector)
             with pytest.raises(FileNotFoundError):
                 await local_collector.get_path(package)
 
@@ -173,10 +180,9 @@ async def test_package_gets_moved_from_package_to_package(tmp_path_factory: Temp
     async with local_collector:
         with patch.object(local_collector.indexer, 'register_package') as mock_register, \
              patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
-
             # Rename the package.
             src_path.rename(dest_path)
-            await sleep(0.5)
+            await local_collector.update()
 
             # Package should neither get registered in nor unregistered from the indexer.
             mock_register.assert_not_awaited()
@@ -195,14 +201,13 @@ async def test_package_gets_moved_from_non_package_to_package(tmp_path_factory: 
     package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
-        register = WaitForAsyncFunctionCall(local_collector.indexer.register_package)
-        with patch.object(local_collector.indexer, 'register_package', side_effect=register.wrap) as mock_register:
+        with patch.object(local_collector.indexer, 'register_package') as mock_register:
             # Rename the package.
             src_path.rename(dest_path)
-            await register.wait_for_fn_call(10)
+            await local_collector.update()
 
             # Package got registered in the indexer and local collector.
-            mock_register.assert_awaited_with(package.hash, dest_path, local_collector)
+            mock_register.assert_awaited_once_with(package.hash, dest_path, local_collector)
             assert dest_path == await local_collector.get_path(package)
 
 
@@ -215,15 +220,13 @@ async def test_package_gets_moved_from_package_to_non_package(tmp_path_factory: 
     package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
-        unregister = WaitForAsyncFunctionCall(local_collector.indexer.unregister_package)
-        with patch.object(local_collector.indexer, 'unregister_package',
-                          side_effect=unregister.wrap) as mock_unregister:
+        with patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
             # Rename the package.
             Path(src_path).rename(dest_path)
-            await unregister.wait_for_fn_call(10)
+            await local_collector.update()
 
             # Package got unregistered in the indexer and local collector.
-            mock_unregister.assert_awaited_with(package.hash, local_collector)
+            mock_unregister.assert_awaited_once_with(package.hash, local_collector)
             with pytest.raises(FileNotFoundError):
                 await local_collector.get_path(package)
 
@@ -250,14 +253,41 @@ async def test_package_gets_moved_to_different_folder(tmp_path_factory: TempPath
     package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
-        unregister = WaitForAsyncFunctionCall(local_collector.indexer.unregister_package)
-        with patch.object(local_collector.indexer, 'unregister_package',
-                          side_effect=unregister.wrap) as mock_unregister:
+        with patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
             # Move the package.
             src_path.rename(new_directory / src_path.name)
-            await unregister.wait_for_fn_call(10)
+            await local_collector.update()
 
             # Package got unregistered in the indexer and local collector.
-            mock_unregister.assert_awaited_with(package.hash, local_collector)
+            mock_unregister.assert_awaited_once_with(package.hash, local_collector)
             with pytest.raises(FileNotFoundError):
                 await local_collector.get_path(package)
+
+
+async def test_package_filenames_get_swapped(tmp_path_factory: TempPathFactory) -> None:
+    local_collector, directory = create_local_collector(tmp_path_factory)
+
+    package_1_path = Path(copy(PACKAGE.path, directory))
+    package_1 = Package(PACKAGE.hash, PACKAGE.manifest)
+
+    package_2_path = Path(copy(PACKAGE_2.path, directory))
+    package_2 = Package(PACKAGE_2.hash, PACKAGE_2.manifest)
+
+    async with local_collector:
+        with patch.object(local_collector.indexer, 'register_package') as mock_register, \
+             patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
+            # Swap the package filenames.
+            temporary_path = directory / 'temporary_path'
+            package_1_path.rename(temporary_path)
+            package_2_path.rename(package_1_path)
+            temporary_path.rename(package_2_path)
+
+            await local_collector.update()
+
+            # The packages should be swapped in the local collector.
+            assert package_2_path == await local_collector.get_path(package_1)
+            assert package_1_path == await local_collector.get_path(package_2)
+
+            # Packages should neither get registered in nor unregistered from the indexer.
+            mock_register.assert_not_awaited()
+            mock_unregister.assert_not_awaited()

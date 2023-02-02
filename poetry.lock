@@ -1003,8 +1003,8 @@ pydantic-factories = "^1.6.2"
 [package.source]
 type = "git"
 url = "https://github.com/questionpy-org/questionpy-common.git"
-reference = "ff24942"
-resolved_reference = "ff2494213ac6e130e93b3eb9bc99e7de2293b360"
+reference = "07ca576"
+resolved_reference = "07ca576b4497a9c50b3a2d9d9db5cef98af7b652"
 
 [[package]]
 name = "six"
@@ -1327,4 +1327,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "8fb4d06fe2340dc21222ee24c1663d69bda00acf5c5b77a712b9ffd885670692"
+content-hash = "66304f13404d5d6d4fda5de200a3defb81db4feeb3ad41246cf0266ecab3f0a6"
