@@ -8,8 +8,7 @@ from typing import Any, Optional, Union, Callable, TypeVar, TYPE_CHECKING
 
 from .messages import InitWorker, Exit, get_message_bytes, messages_header_struct, Message, MessageIds, \
     MessageToWorker, MessageToServer, InvalidMessageIdError, GetQPyPackageManifest, LoadQPyPackage, \
-    GetOptionsFormDefinition, CreateQuestionFromOptions
-from .messages import WorkerError
+    GetOptionsFormDefinition, CreateQuestionFromOptions, WorkerError
 from .package import QPyPackage, QPyMainPackage
 
 if TYPE_CHECKING:
