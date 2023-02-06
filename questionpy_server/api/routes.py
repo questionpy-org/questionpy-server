@@ -85,15 +85,21 @@ async def post_attempt_grade(_request: web.Request, package: Package, question_s
     return json_response(data=AttemptGradedFactory.build(), status=201)
 
 
-@routes.post(r'/packages/{package_hash:\w+}/question')
+@routes.post(r'/packages/{package_hash:\w+}/question')  # type: ignore[arg-type]
 @ensure_package_and_question_state_exists
 async def post_question(request: web.Request, data: QuestionCreateArguments,
                         package: Package, question_state: Optional[Path] = None) -> web.Response:
     qpyserver: 'QPyServer' = request.app['qpy_server_app']
 
+    # Read state
+    state_data: Optional[bytes] = None
+    if question_state:
+        with question_state.open("rb") as state_file:
+            state_data = state_file.read()
+
     package_path = await package.get_path()
-    async with qpyserver.worker_pool.get_worker(package_path, 0, None) as worker:
-        new_state = await worker.create_question_from_options(question_state, data.form_data)
+    async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
+        new_state = await worker.create_question_from_options(state_data, data.form_data)
 
     new_state_hash = sha256(new_state.encode()).hexdigest()
 
