@@ -102,7 +102,6 @@ paths:
                   description: question package
                 question_state:
                   type: string
-                  format: json
                   description: Question state that was previously returned by the question endpoint or empty
                     in order to show default option values.
       responses:
@@ -202,7 +201,6 @@ paths:
           application/json:
             schema:
               type: string
-              format: json
               description: Question state that was created by another package or another version.
           multipart/form-data:
             schema:
@@ -214,7 +212,6 @@ paths:
                   description: question package
                 old_options:
                   type: string
-                  format: json
                   description: Question state that was created by another package or another version.
               required: [ old_options ]
       responses:
@@ -274,7 +271,6 @@ paths:
                   description: question package
                 question_state:
                   type: string
-                  format: json
                   description: Question state that was previously returned by the question endpoint.
               required: [ main ]
       responses:
@@ -328,7 +324,6 @@ paths:
                   description: question package
                 question_state:
                   type: string
-                  format: json
                   description: Question state that was previously returned by the question endpoint.
               required: [ main ]
       responses:
@@ -376,7 +371,6 @@ paths:
                   description: question package
                 question_state:
                   type: string
-                  format: json
                   description: Question state that was previously returned by the question endpoint.
               required: [ main ]
       responses:
@@ -505,24 +499,37 @@ components:
         context:
           type: integer
           description: Some context information where the question is located (e.g. course or quiz/test id).
+          nullable: true
       required: [ question_state_hash ]
 
-    QuestionCreateArguments:
+    OptionalQuestionStateHash:
       type: object
-      description: Information that is needed to create a new question.
       properties:
-        form_data:
-          type: object
-          description: Options set by question creator according to OptionsFormDefinition
-          default: { }
-      additionalProperties: false
+        question_state_hash:
+          type: string
+          description: SHA256 hash of question state JSON data
+          nullable: true
+        context:
+          type: integer
+          description: Some context information where the question is located (e.g. course or quiz/test id).
+          nullable: true
+
+    QuestionCreateArguments:
+      description: Information that is needed to create a new question.
+      allOf:
+        - $ref: "#/components/schemas/OptionalQuestionStateHash"
+        - type: object
+          properties:
+            form_data:
+              type: object
+              description: Options set by question creator according to OptionsFormDefinition
+          required: [ form_data ]
 
     Question:
       type: object
       properties:
         question_state:
           type: string
-          format: json
           description: Arbitrary values set by the question package code (LMS must store this data unmodified)
         question_state_hash:
           type: string
@@ -715,7 +722,6 @@ components:
           properties:
             attempt_state:
               type: string
-              format: json
               description: Arbitrary values set by the question package code (LMS must store this data unmodified).
           required: [ attempt_state ]
           additionalProperties: false
@@ -728,11 +734,9 @@ components:
           properties:
             attempt_state:
               type: string
-              format: json
               description: Arbitrary values set by the question package code.
             grading_state:
               type: string
-              format: json
               nullable: true
               description: Arbitrary values set by the question package code (has to be passed
                 when the attempt was already graded).
@@ -772,7 +776,6 @@ components:
           properties:
             grading_state:
               type: string
-              format: json
               nullable: true
               description: Arbitrary values set by the question package code (LMS must store this data unmodified).
             grading_code:
