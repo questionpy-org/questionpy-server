@@ -10,6 +10,7 @@ from questionpy_server.web import ensure_package_and_question_state_exists, json
 from .models import AttemptStartArguments, AttemptGradeArguments, AttemptViewArguments, \
     QuestionCreateArguments, Question, GradingMethod, OptionalQuestionStateHash
 from ..package import Package
+from ..worker.runtime.messages import GetOptionsFormDefinition, CreateQuestionFromOptions
 
 if TYPE_CHECKING:
     from questionpy_server.app import QPyServer
@@ -57,8 +58,8 @@ async def post_options(request: web.Request, package: Package, question_state: O
 
     package_path = await package.get_path()
     async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
-        options = await worker.get_options_form_definition()
-    return json_response(data=options)
+        response = await worker.send_and_wait_response(GetOptionsFormDefinition(), GetOptionsFormDefinition.Response)
+    return json_response(data=response.definition)
 
 
 @routes.post(r'/packages/{package_hash:\w+}/attempt/start')  # type: ignore[arg-type]
@@ -99,12 +100,15 @@ async def post_question(request: web.Request, data: QuestionCreateArguments,
 
     package_path = await package.get_path()
     async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
-        new_state = await worker.create_question_from_options(state_data, data.form_data)
+        response = await worker.send_and_wait_response(
+            CreateQuestionFromOptions(state=state_data, form_data=data.form_data),
+            CreateQuestionFromOptions.Response
+        )
 
-    new_state_hash = sha256(new_state.encode()).hexdigest()
+    new_state_hash = sha256(response.state.encode()).hexdigest()
 
     return json_response(data=Question(
-        question_state=new_state,
+        question_state=response.state,
         question_state_hash=new_state_hash,
         grading_method=GradingMethod.ALWAYS_MANUAL_GRADING_REQUIRED,
         response_analysis_by_variant=False

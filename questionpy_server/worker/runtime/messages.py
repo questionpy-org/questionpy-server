@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from questionpy_common.manifest import Manifest
 from questionpy_common.qtype import OptionsFormDefinition
 
+from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.exception import WorkerMemoryLimitExceededError, WorkerUnknownError
 
 messages_header_struct: Struct = Struct('=LL')
@@ -64,8 +65,7 @@ class MessageToServer(Message):
 class InitWorker(MessageToWorker):
     """Give worker some basic information."""
     message_id = MessageIds.INIT_WORKER
-    max_memory: int
-    max_cpu_time: float
+    limits: Optional[WorkerResourceLimits] = None
 
     class Response(MessageToServer):
         """Success message in return to InitWorker."""

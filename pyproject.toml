@@ -13,8 +13,9 @@ version = "0.1.1"
 python = "^3.9"
 aiohttp = "^3.8.1"
 pydantic = "^1.9.1"
-watchdog = "^2.2.0"
 questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "081ab6e" }
+watchdog = "^2.2.1"
+psutil = "^5.9.4"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.14.5"
@@ -27,6 +28,9 @@ pydantic-factories = "^1.5.4"
 coverage = { extras = ["toml"], version = "^6.5.0" }
 tox = "^4.2.6"
 tox-gh-actions = "^3.0.0"
+
+[tool.poetry.group.dev.dependencies]
+types-psutil = "^5.9.5.6"
 
 [tool.pytest.ini_options]
 # https://github.com/pytest-dev/pytest-asyncio#auto-mode

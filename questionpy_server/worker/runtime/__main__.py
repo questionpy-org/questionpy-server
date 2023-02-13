@@ -1,6 +1,7 @@
 import sys
 from io import BufferedReader, FileIO, StringIO
-from .lib import WorkerManager, WorkerToServerConnection
+from questionpy_server.worker.runtime.connection import WorkerToServerConnection
+from questionpy_server.worker.runtime.manager import WorkerManager
 
 
 def setup_server_communication() -> WorkerToServerConnection:

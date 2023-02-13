@@ -8,7 +8,7 @@ from .api.routes import routes
 from .cache import FileLimitLRU
 from .collector import PackageCollection
 from .settings import Settings
-from .worker.controller import WorkerPool
+from .worker.pool import WorkerPool
 
 
 class QPyServer:

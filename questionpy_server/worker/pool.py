@@ -2,37 +2,14 @@ from asyncio import Semaphore, Condition
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Type
 
 from questionpy_common.constants import MiB
-from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.manifest import Manifest
 
+from . import WorkerResourceLimits
 from .exception import WorkerStartError
-from .runtime.messages import GetQPyPackageManifest, GetOptionsFormDefinition, CreateQuestionFromOptions
-from .worker import WorkerProcessBase, WorkerProcess, WorkerResourceLimits
-
-
-class Worker:
-    def __init__(self, process: WorkerProcessBase):
-        self.process: WorkerProcessBase = process
-
-    async def get_manifest(self) -> Manifest:
-        """Get manifest of the main package in the worker."""
-        msg = GetQPyPackageManifest(path=str(self.process.package))
-        ret = await self.process.send_and_wait_response(msg, GetQPyPackageManifest.Response)
-        return ret.manifest
-
-    async def get_options_form_definition(self) -> OptionsFormDefinition:
-        """Get the package options form definition."""
-        msg = GetOptionsFormDefinition()
-        ret = await self.process.send_and_wait_response(msg, GetOptionsFormDefinition.Response)
-        return ret.definition
-
-    async def create_question_from_options(self, state: Optional[bytes], form_data: dict[str, Any]) -> str:
-        msg = CreateQuestionFromOptions(state=state, form_data=form_data)
-        ret = await self.process.send_and_wait_response(msg, CreateQuestionFromOptions.Response)
-        return ret.state
+from .worker import Worker
+from .worker.subprocess import SubprocessWorker
 
 
 class WorkerPool:
@@ -42,10 +19,10 @@ class WorkerPool:
 
         :param max_workers: maximum number of workers being executed in parallel
         :param max_memory: maximum memory (in bytes) that all workers in the pool are allowed to consume
+        :param worker_type: worker implementation
         """
         self.max_workers = max_workers
         self.max_memory = max_memory
-        self._processes: list[WorkerProcess] = []
 
         self._semaphore: Optional[Semaphore] = None
         self._condition: Optional[Condition] = None
@@ -56,14 +33,15 @@ class WorkerPool:
         return self._total_memory + size <= self.max_memory
 
     @asynccontextmanager
-    async def get_worker(self, package: Path, lms: int, context: Optional[int]) -> AsyncIterator[Worker]:
+    async def get_worker(self, package: Path, _lms: int, _context: Optional[int],
+                         worker_type: Type[Worker] = SubprocessWorker) -> AsyncIterator[Worker]:
         """
         Get a (new) worker executing a QuestionPy package. A context manager is used to ensure
         that a worker is always given back to the pool.
 
         :param package: path to QuestionPy package
-        :param lms: id of the LMS
-        :param context: context id within the lms
+        :param _lms: id of the LMS
+        :param _context: context id within the lms
         :return: a worker
         """
         if not self._semaphore:
@@ -74,11 +52,8 @@ class WorkerPool:
 
         # Limit the amount of running workers.
         async with self._semaphore:
-
-            process = None
+            worker = None
             reserved_memory = False
-            if context is None:
-                context = 0
             try:
                 limits = WorkerResourceLimits(max_memory=200 * MiB,
                                               max_cpu_time_seconds_per_call=10)  # TODO
@@ -92,15 +67,13 @@ class WorkerPool:
                     self._total_memory += limits.max_memory
                     reserved_memory = True
 
-                process = WorkerProcess(package, lms, context, limits)
-                await process.start()
-
-                worker = Worker(process)
+                worker = worker_type(package, limits)
+                await worker.start()
 
                 yield worker
             finally:
-                if process:
-                    await process.stop(10)
+                if worker:
+                    await worker.stop(10)
 
                 if reserved_memory:
                     # Free reserved memory and notify waiters.
