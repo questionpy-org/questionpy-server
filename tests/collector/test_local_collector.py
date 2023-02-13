@@ -1,3 +1,4 @@
+import asyncio
 from asyncio import get_running_loop, wait_for
 from os import kill, getpid
 from pathlib import Path
@@ -6,16 +7,14 @@ from signal import SIGUSR1
 from typing import Any, Callable
 from unittest.mock import patch
 
-import asyncio
 import pytest
 from _pytest.tmpdir import TempPathFactory
-
 from questionpy_common.constants import MiB
 
-from questionpy_server.package import Package
-from questionpy_server.worker.controller import WorkerPool
+from questionpy_server import WorkerPool
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.local_collector import LocalCollector
+from questionpy_server.package import Package
 from tests.conftest import PACKAGE, PACKAGE_2, get_file_hash
 
 
@@ -138,7 +137,7 @@ async def test_package_gets_modified(tmp_path_factory: TempPathFactory) -> None:
 
     async with local_collector:
         with patch.object(local_collector.indexer, 'register_package') as mock_register, \
-             patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
+                patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
             # Modify the package.
             package_path.write_bytes(PACKAGE_2.path.read_bytes())
             await local_collector.update()
@@ -181,7 +180,7 @@ async def test_package_gets_moved_from_package_to_package(tmp_path_factory: Temp
 
     async with local_collector:
         with patch.object(local_collector.indexer, 'register_package') as mock_register, \
-             patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
+                patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
             # Rename the package.
             src_path.rename(dest_path)
             await local_collector.update()
@@ -277,7 +276,7 @@ async def test_package_filenames_get_swapped(tmp_path_factory: TempPathFactory) 
 
     async with local_collector:
         with patch.object(local_collector.indexer, 'register_package') as mock_register, \
-             patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
+                patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
             # Swap the package filenames.
             temporary_path = directory / 'temporary_path'
             package_1_path.rename(temporary_path)

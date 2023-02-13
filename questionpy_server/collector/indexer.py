@@ -10,6 +10,7 @@ from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.package import Package
+from questionpy_server.worker.runtime.messages import GetQPyPackageManifest
 
 
 class Indexer:
@@ -103,7 +104,11 @@ class Indexer:
                 if isinstance(path_or_manifest, Path):
                     # ...from path.
                     async with self._worker_pool.get_worker(path_or_manifest, 0, None) as worker:
-                        manifest = await worker.get_manifest()
+                        response = await worker.send_and_wait_response(
+                            GetQPyPackageManifest(path=str(path_or_manifest)),
+                            GetQPyPackageManifest.Response
+                        )
+                        manifest = response.manifest
                     package = Package(package_hash, manifest, source, path_or_manifest)
                 else:
                     # ...from manifest.
