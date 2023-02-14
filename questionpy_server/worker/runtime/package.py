@@ -13,7 +13,7 @@ from questionpy_common.qtype import OptionsFormDefinition, BaseQuestionType
 class QPyPackage(ZipFile):
     def __init__(self, path: Path):
         super().__init__(path, "r")
-        self.path = path
+        self.path = path / self.manifest.namespace / self.manifest.short_name
         self.setup_import()
 
     @cached_property

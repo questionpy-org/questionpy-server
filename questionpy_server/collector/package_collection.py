@@ -86,26 +86,26 @@ class PackageCollection:
 
         raise FileNotFoundError
 
-    def get_by_name(self, short_name: str) -> dict[str, 'Package']:
+    def get_by_identifier(self, identifier: str) -> dict[str, 'Package']:
         """
-        Returns a dict of packages with the given short name and available versions.
+        Returns a dict of packages with the given identifier and available versions.
 
-        :param short_name: short name of the package
+        :param identifier: identifier of the package
         :return: dict of packages and versions
         """
 
-        return self._indexer.get_by_name(short_name)
+        return self._indexer.get_by_identifier(identifier)
 
-    def get_by_name_and_version(self, short_name: str, version: str) -> 'Package':
+    def get_by_identifier_and_version(self, identifier: str, version: str) -> 'Package':
         """
-        Returns a package with the given short name and version.
+        Returns a package with the given identifier and version.
 
-        :param short_name: short name of the package
+        :param identifier: identifier of the package
         :param version: version of the package
         :return: package
         """
 
-        if package := self._indexer.get_by_name_and_version(short_name, version):
+        if package := self._indexer.get_by_identifier_and_version(identifier, version):
             return package
 
         raise FileNotFoundError
