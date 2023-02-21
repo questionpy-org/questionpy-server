@@ -13,7 +13,7 @@ from questionpy_common.qtype import OptionsFormDefinition, BaseQuestionType
 class QPyPackage(ZipFile):
     def __init__(self, path: Path):
         super().__init__(path, "r")
-        self.path = path / self.manifest.namespace / self.manifest.short_name
+        self.path = path
         self.setup_import()
 
     @cached_property
@@ -31,7 +31,8 @@ class QPyMainPackage(QPyPackage):
     def __init__(self, path: Path):
         """This is the main QPy package within this worker. Import and execute the entry point (module)."""
         super().__init__(path)
-        self.main_module: ModuleType = import_module(self.manifest.entrypoint)
+        self.main_module: ModuleType = import_module(f"{self.manifest.namespace}/{self.manifest.short_name}/"
+                                                     f"{self.manifest.entrypoint}")
         if self.main_module.QuestionType.implementation is None:
             raise QuestionTypeImplementationNotFoundError(self.manifest.short_name)
         self.qtype_instance: BaseQuestionType = self.main_module.QuestionType.implementation(manifest=self.manifest)
