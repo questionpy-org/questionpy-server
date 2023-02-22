@@ -31,7 +31,7 @@ class QPyMainPackage(QPyPackage):
     def __init__(self, path: Path):
         """This is the main QPy package within this worker. Import and execute the entry point (module)."""
         super().__init__(path)
-        self.main_module: ModuleType = import_module(f"{self.manifest.namespace}/{self.manifest.short_name}/"
+        self.main_module: ModuleType = import_module(f"{self.manifest.namespace}.{self.manifest.short_name}."
                                                      f"{self.manifest.entrypoint}")
         if self.main_module.QuestionType.implementation is None:
             raise QuestionTypeImplementationNotFoundError(self.manifest.short_name)
