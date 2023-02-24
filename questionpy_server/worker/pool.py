@@ -13,7 +13,8 @@ from .worker.subprocess import SubprocessWorker
 
 
 class WorkerPool:
-    def __init__(self, max_workers: int, max_memory: int):
+    def __init__(self, max_workers: int, max_memory: int,
+                 worker_type: Type[Worker] = SubprocessWorker):
         """
         Initialize the worker pool.
 
@@ -24,6 +25,8 @@ class WorkerPool:
         self.max_workers = max_workers
         self.max_memory = max_memory
 
+        self._worker_type = worker_type
+
         self._semaphore: Optional[Semaphore] = None
         self._condition: Optional[Condition] = None
 
@@ -33,8 +36,7 @@ class WorkerPool:
         return self._total_memory + size <= self.max_memory
 
     @asynccontextmanager
-    async def get_worker(self, package: Path, _lms: int, _context: Optional[int],
-                         worker_type: Type[Worker] = SubprocessWorker) -> AsyncIterator[Worker]:
+    async def get_worker(self, package: Path, _lms: int, _context: Optional[int]) -> AsyncIterator[Worker]:
         """
         Get a (new) worker executing a QuestionPy package. A context manager is used to ensure
         that a worker is always given back to the pool.
@@ -67,7 +69,7 @@ class WorkerPool:
                     self._total_memory += limits.max_memory
                     reserved_memory = True
 
-                worker = worker_type(package, limits)
+                worker = self._worker_type(package, limits)
                 await worker.start()
 
                 yield worker
