@@ -42,7 +42,7 @@ class TestPackage:
             self.manifest = Manifest(**json.loads(manifest_path.read_bytes()))
 
 
-package_dir = Path('tests/test_data/package/')
+package_dir = Path(__file__).parent / 'test_data/package'
 PACKAGE = TestPackage(package_dir / 'package_1.qpy')
 PACKAGE_2 = TestPackage(package_dir / 'package_2.qpy')
 
