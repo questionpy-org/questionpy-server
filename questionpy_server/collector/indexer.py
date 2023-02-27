@@ -16,15 +16,16 @@ class Indexer:
     """
     Handles the indexing of packages which results in a faster lookup and fewer requests to the workers.
 
-    Packages are indexed by their hash and by their name and version. If the package originates from an LMS, it is only
-    indexed by its hash.
+    Packages are indexed by their hash and by their identifier and version. If the package originates from an LMS, it is
+    only indexed by its hash.
     """
 
     def __init__(self, worker_pool: WorkerPool):
         self._worker_pool = worker_pool
 
         self._index_by_hash: dict[str, Package] = {}
-        self._index_by_name: dict[str, dict[str, Package]] = {}
+        self._index_by_identifier: dict[str, dict[str, Package]] = {}
+        """dict[identifier, dict[version, Package]]"""
 
         self._lock: Optional[Lock] = None
 
@@ -38,26 +39,26 @@ class Indexer:
 
         return self._index_by_hash.get(package_hash, None)
 
-    def get_by_name(self, short_name: str) -> dict[str, Package]:
+    def get_by_identifier(self, identifier: str) -> dict[str, Package]:
         """
-        Returns a dict of packages with the given short name and available versions.
+        Returns a dict of packages with the given identifier and available versions.
 
-        :param short_name: short name of the package
+        :param identifier: identifier of the package
         :return: dict of packages and versions
         """
 
-        return self._index_by_name.get(short_name, {}).copy()
+        return self._index_by_identifier.get(identifier, {}).copy()
 
-    def get_by_name_and_version(self, short_name: str, version: str) -> Optional[Package]:
+    def get_by_identifier_and_version(self, identifier: str, version: str) -> Optional[Package]:
         """
-        Returns the package with the given short name and version or None if it does not exist.
+        Returns the package with the given identifier and version or None if it does not exist.
 
-        :param short_name: short name of the package
+        :param identifier: identifier of the package
         :param version: version of the package
         :return: The package or None.
         """
 
-        return self._index_by_name.get(short_name, {}).get(version, None)
+        return self._index_by_identifier.get(identifier, {}).get(version, None)
 
     def get_packages(self) -> set[Package]:
         """
@@ -66,7 +67,7 @@ class Indexer:
         :return: set of packages
         """
 
-        return set(package for packages in self._index_by_name.values() for package in packages.values())
+        return set(package for packages in self._index_by_identifier.values() for package in packages.values())
 
     @overload
     async def register_package(self, package_hash: str, path_or_manifest: Manifest, source: BaseCollector) -> Package:
@@ -109,15 +110,15 @@ class Indexer:
                     package = Package(package_hash, path_or_manifest, source)
                 self._index_by_hash[package.hash] = package
 
-            # Check if package should be accessible by name and version.
+            # Check if package should be accessible by identifier and version.
             if isinstance(source, (LocalCollector, RepoCollector)):
-                package_versions = self._index_by_name.setdefault(package.manifest.short_name, {})
+                package_versions = self._index_by_identifier.setdefault(package.manifest.identifier, {})
                 existing_package = package_versions.get(package.manifest.version, None)
                 if existing_package and existing_package != package:
-                    # Package with the same short_name and version already exists; log a warning.
+                    # Package with the same identifier and version already exists; log a warning.
                     log = logging.getLogger('questionpy-server:indexer')
                     log.warning("The package %s (%s) with hash: %s already exists with a different hash: %s.",
-                                package.manifest.short_name, package.manifest.version, package.hash,
+                                package.manifest.identifier, package.manifest.version, package.hash,
                                 existing_package.hash)
                 else:
                     package_versions[package.manifest.version] = package
@@ -141,14 +142,14 @@ class Indexer:
         package.sources.remove(source)
 
         if isinstance(source, (LocalCollector, RepoCollector)) and not package.sources.contains_searchable():
-            # Package should not be accessible by name and version (anymore).
-            package_versions = self._index_by_name.get(package.manifest.short_name, None)
+            # Package should not be accessible by identifier and version (anymore).
+            package_versions = self._index_by_identifier.get(package.manifest.identifier, None)
             if package_versions:
                 # Remove package from index.
                 package_versions.pop(package.manifest.version, None)
-                # If there are no more packages with the same name, remove the name from the index.
+                # If there are no more packages with the same identifier, remove the identifier from the index.
                 if not package_versions:
-                    self._index_by_name.pop(package.manifest.short_name, None)
+                    self._index_by_identifier.pop(package.manifest.identifier, None)
 
         if len(package.sources) == 0:
             # Package has no more sources; remove it from the index.

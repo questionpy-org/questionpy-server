@@ -36,13 +36,13 @@ async def test_register_package_from_lms(collector: LMSCollector) -> None:
     indexer = Indexer(WorkerPool(1, 200 * MiB))
     await indexer.register_package(PACKAGE.hash, PACKAGE.manifest, collector)
 
-    # Package is not accessible by name and version.
-    package = indexer.get_by_name_and_version(PACKAGE.manifest.short_name, PACKAGE.manifest.version)
+    # Package is not accessible by identifier and version.
+    package = indexer.get_by_identifier_and_version(PACKAGE.manifest.identifier, PACKAGE.manifest.version)
     assert package is None
 
-    # Package is not accessible by name.
-    packages_by_name = indexer.get_by_name(PACKAGE.manifest.short_name)
-    assert len(packages_by_name) == 0
+    # Package is not accessible by identifier.
+    packages_by_identifier = indexer.get_by_identifier(PACKAGE.manifest.identifier)
+    assert len(packages_by_identifier) == 0
 
     # Package is not accessible by retrieving all packages.
     packages = indexer.get_packages()
@@ -63,15 +63,15 @@ async def test_register_package_from_local_and_repo_collector(collector: BaseCol
     assert package.hash == PACKAGE.hash
     assert package.manifest == PACKAGE.manifest
 
-    # Package is accessible by name and version.
-    new_package = indexer.get_by_name_and_version(PACKAGE.manifest.short_name, PACKAGE.manifest.version)
+    # Package is accessible by identifier and version.
+    new_package = indexer.get_by_identifier_and_version(PACKAGE.manifest.identifier, PACKAGE.manifest.version)
     assert new_package is not None
     assert new_package is package
 
-    # Package is accessible by name.
-    packages_by_name = indexer.get_by_name(PACKAGE.manifest.short_name)
-    assert len(packages_by_name) == 1
-    assert packages_by_name[package.manifest.version] is package
+    # Package is accessible by identifier.
+    packages_by_identifier = indexer.get_by_identifier(PACKAGE.manifest.identifier)
+    assert len(packages_by_identifier) == 1
+    assert packages_by_identifier[package.manifest.version] is package
 
     # Package is accessible by retrieving all packages.
     packages = indexer.get_packages()
@@ -101,9 +101,9 @@ async def test_register_package_with_same_hash_as_existing_package() -> None:
         add.assert_called_once_with(lms_collector)
 
     # Package will only be listed once.
-    packages_by_name = indexer.get_by_name(PACKAGE.manifest.short_name)
-    assert len(packages_by_name) == 1
-    assert packages_by_name[package.manifest.version] is package
+    packages_by_identifier = indexer.get_by_identifier(PACKAGE.manifest.identifier)
+    assert len(packages_by_identifier) == 1
+    assert packages_by_identifier[package.manifest.version] is package
 
     packages = indexer.get_packages()
     assert len(packages) == 1
@@ -122,7 +122,7 @@ async def test_register_two_packages_with_same_manifest_but_different_hashes(cap
         # Register same package with different hash and same manifest.
         await indexer.register_package("different_hash", PACKAGE.manifest, collector)
 
-    message = f'The package {PACKAGE.manifest.short_name} ({PACKAGE.manifest.version}) with hash: ' \
+    message = f'The package {PACKAGE.manifest.identifier} ({PACKAGE.manifest.version}) with hash: ' \
               f'different_hash already exists with a different hash: {PACKAGE.hash}.'
     assert caplog.record_tuples == [('questionpy-server:indexer', logging.WARNING, message)]
 
@@ -151,12 +151,12 @@ async def test_unregister_package_with_local_and_repo_source(collector: BaseColl
     package = indexer.get_by_hash(PACKAGE.hash)
     assert package is None
 
-    # Package is not accessible by name and version.
-    package = indexer.get_by_name_and_version(PACKAGE.manifest.short_name, PACKAGE.manifest.version)
+    # Package is not accessible by identifier and version.
+    package = indexer.get_by_identifier_and_version(PACKAGE.manifest.identifier, PACKAGE.manifest.version)
     assert package is None
 
-    # Package is not accessible by name.
-    packages = indexer.get_by_name(PACKAGE.manifest.short_name)
+    # Package is not accessible by identifier.
+    packages = indexer.get_by_identifier(PACKAGE.manifest.identifier)
     assert len(packages) == 0
 
 
@@ -180,12 +180,12 @@ async def test_unregister_package_with_multiple_sources() -> None:
     package = indexer.get_by_hash(PACKAGE.hash)
     assert package is not None
 
-    # Package is still accessible by name and version.
-    package = indexer.get_by_name_and_version(PACKAGE.manifest.short_name, PACKAGE.manifest.version)
+    # Package is still accessible by identifier and version.
+    package = indexer.get_by_identifier_and_version(PACKAGE.manifest.identifier, PACKAGE.manifest.version)
     assert package is not None
 
-    # Package is still accessible by name.
-    packages = indexer.get_by_name(PACKAGE.manifest.short_name)
+    # Package is still accessible by identifier.
+    packages = indexer.get_by_identifier(PACKAGE.manifest.identifier)
     assert len(packages) == 1
 
     # Unregister package from repo collector.
@@ -195,12 +195,12 @@ async def test_unregister_package_with_multiple_sources() -> None:
     package = indexer.get_by_hash(PACKAGE.hash)
     assert package is not None
 
-    # Package is not accessible by name and version.
-    package = indexer.get_by_name_and_version(PACKAGE.manifest.short_name, PACKAGE.manifest.version)
+    # Package is not accessible by identifier and version.
+    package = indexer.get_by_identifier_and_version(PACKAGE.manifest.identifier, PACKAGE.manifest.version)
     assert package is None
 
-    # Package is not accessible by name.
-    packages = indexer.get_by_name(PACKAGE.manifest.short_name)
+    # Package is not accessible by identifier.
+    packages = indexer.get_by_identifier(PACKAGE.manifest.identifier)
     assert len(packages) == 0
 
     # Unregister package from LMS collector.

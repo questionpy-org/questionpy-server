@@ -54,27 +54,27 @@ def test_get_package() -> None:
         get_by_hash.assert_called_once_with('hash')
 
 
-def test_get_package_by_name() -> None:
+def test_get_package_by_identifier() -> None:
     package_collection = PackageCollection(None, [], Mock(), Mock())
 
-    with patch.object(Indexer, 'get_by_name') as get_by_name:
-        package_collection.get_by_name('hash')
-        get_by_name.assert_called_once_with('hash')
+    with patch.object(Indexer, 'get_by_identifier') as get_by_identifier:
+        package_collection.get_by_identifier('@default/name')
+        get_by_identifier.assert_called_once_with('@default/name')
 
 
-def test_get_package_by_name_and_version() -> None:
+def test_get_package_by_identifier_and_version() -> None:
     package_collection = PackageCollection(None, [], Mock(), Mock())
 
     # Package does exist.
-    with patch.object(Indexer, 'get_by_name_and_version') as get_by_name_and_version:
-        package_collection.get_by_name_and_version('hash', '0.1.0')
-        get_by_name_and_version.assert_called_once_with('hash', '0.1.0')
+    with patch.object(Indexer, 'get_by_identifier_and_version') as get_by_identifier_and_version:
+        package_collection.get_by_identifier_and_version('@default/name', '0.1.0')
+        get_by_identifier_and_version.assert_called_once_with('@default/name', '0.1.0')
 
     # Package does not exist.
-    with patch.object(Indexer, 'get_by_name_and_version', return_value=None) as get_by_name_and_version:
+    with patch.object(Indexer, 'get_by_identifier_and_version', return_value=None) as get_by_identifier_and_version:
         with pytest.raises(FileNotFoundError):
-            package_collection.get_by_name_and_version('hash', '0.1.0')
-        get_by_name_and_version.assert_called_once_with('hash', '0.1.0')
+            package_collection.get_by_identifier_and_version('@default/name', '0.1.0')
+        get_by_identifier_and_version.assert_called_once_with('@default/name', '0.1.0')
 
 
 def test_get_packages() -> None:

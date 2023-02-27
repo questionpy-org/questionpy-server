@@ -17,6 +17,7 @@ class PackageInfo(BaseModel):
 
     package_hash: str
     short_name: str
+    namespace: str
     name: Dict[str, str]
     version: Annotated[str, Field(regex=r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)'
                                         r'(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'

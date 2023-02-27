@@ -425,6 +425,9 @@ components:
         short_name:
           type: string
           example: multiple_choice
+        namespace:
+          type: string
+          example: default
         name:
           type: object
           example:
