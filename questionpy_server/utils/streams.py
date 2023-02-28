@@ -65,6 +65,9 @@ class DuplexPipe:
         self._pipe1 = pipe1
         self._pipe2 = pipe2
 
+        self.left = self.Side(pipe1[0], pipe2[1])
+        self.right = self.Side(pipe2[0], pipe1[1])
+
     @classmethod
     def open(cls) -> "DuplexPipe":
         """Opens two pipes and joins them into one DuplexPipe."""
@@ -74,14 +77,6 @@ class DuplexPipe:
     def _open_pipe(cls) -> tuple[BinaryIO, BinaryIO]:
         rx_fd, tx_fd = os.pipe()
         return os.fdopen(rx_fd, "rb"), os.fdopen(tx_fd, "wb", buffering=0)
-
-    @property
-    def left(self) -> Side:
-        return self.Side(self._pipe1[0], self._pipe2[1])
-
-    @property
-    def right(self) -> Side:
-        return self.Side(self._pipe2[0], self._pipe1[1])
 
     def close(self) -> None:
         """Closes both sides of both pipes."""
