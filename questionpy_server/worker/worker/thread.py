@@ -77,7 +77,7 @@ class ThreadWorker(BaseWorker):
 
         self._connection = ServerToWorkerConnection(AsyncReadAdapter(self._pipe.left), self._pipe.left)
 
-        await super().start()
+        await self._initialize()
 
     def _get_observation_tasks(self) -> Sequence[asyncio.Task]:
         if not self._task:

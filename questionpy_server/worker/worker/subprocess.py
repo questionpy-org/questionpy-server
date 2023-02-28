@@ -93,7 +93,11 @@ class SubprocessWorker(BaseWorker):
         self._stderr_buffer = _StderrBuffer(self._proc.stderr)
         self._connection = ServerToWorkerConnection(self._proc.stdout, self._proc.stdin)
 
-        await super().start()
+        try:
+            await self._initialize()
+        finally:
+            # Whether initialization was successful or not, flush the logs.
+            self._stderr_buffer.flush()
 
     async def send_and_wait_response(self, message: MessageToWorker, expected_response_message: Type[_T]) -> _T:
         response = await super().send_and_wait_response(message, expected_response_message)
