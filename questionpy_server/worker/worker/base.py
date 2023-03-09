@@ -3,13 +3,16 @@ import contextlib
 import logging
 from abc import ABC
 from pathlib import Path
-from typing import Optional, Type, TypeVar, Sequence
+from typing import Optional, Type, TypeVar, Sequence, Any
+
+from questionpy_common.elements import OptionsFormDefinition
+from questionpy_common.manifest import Manifest
 
 from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer, MessageIds, WorkerError, \
-    InitWorker, LoadQPyPackage, Exit
+    InitWorker, LoadQPyPackage, Exit, GetQPyPackageManifest, GetOptionsFormDefinition, CreateQuestionFromOptions
 from questionpy_server.worker.worker import WorkerState, Worker
 
 log = logging.getLogger(__name__)
@@ -35,9 +38,9 @@ class BaseWorker(Worker, ABC):
         self._observe_task = asyncio.create_task(self._observe(), name='observe worker task')
 
         try:
-            await self.send_and_wait_response(InitWorker(limits=self.limits), InitWorker.Response)
-            await self.send_and_wait_response(LoadQPyPackage(path=str(self.package), main=True),
-                                              LoadQPyPackage.Response)
+            await self._send_and_wait_response(InitWorker(limits=self.limits), InitWorker.Response)
+            await self._send_and_wait_response(LoadQPyPackage(path=str(self.package), main=True),
+                                               LoadQPyPackage.Response)
         except WorkerNotRunningError as e:
             raise WorkerStartError("Worker has exited before or during initialization.") from e
 
@@ -46,7 +49,7 @@ class BaseWorker(Worker, ABC):
             raise WorkerNotRunningError()
         self._connection.send_message(message)
 
-    async def send_and_wait_response(self, message: MessageToWorker, expected_response_message: Type[_T]) -> _T:
+    async def _send_and_wait_response(self, message: MessageToWorker, expected_response_message: Type[_T]) -> _T:
         self.send(message)
         fut = asyncio.get_running_loop().create_future()
         self._expected_incoming_messages.append((expected_response_message.message_id, fut))
@@ -120,3 +123,18 @@ class BaseWorker(Worker, ABC):
                 await asyncio.wait_for(self._observe_task, timeout)
             except asyncio.TimeoutError:
                 log.info("Worker was killed because it did not stop gracefully")
+
+    async def get_manifest(self) -> Manifest:
+        msg = GetQPyPackageManifest(path=str(self.package))
+        ret = await self._send_and_wait_response(msg, GetQPyPackageManifest.Response)
+        return ret.manifest
+
+    async def get_options_form_definition(self) -> OptionsFormDefinition:
+        msg = GetOptionsFormDefinition()
+        ret = await self._send_and_wait_response(msg, GetOptionsFormDefinition.Response)
+        return ret.definition
+
+    async def create_question_from_options(self, state: Optional[bytes], form_data: dict[str, Any]) -> str:
+        msg = CreateQuestionFromOptions(state=state, form_data=form_data)
+        ret = await self._send_and_wait_response(msg, CreateQuestionFromOptions.Response)
+        return ret.state

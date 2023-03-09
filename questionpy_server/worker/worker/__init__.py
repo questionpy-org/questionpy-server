@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Type, TypeVar
+from typing import Optional, TypeVar, Any
+
+from questionpy_common.elements import OptionsFormDefinition
+from questionpy_common.manifest import Manifest
 
 from questionpy_server.worker import WorkerResources, WorkerResourceLimits
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer
@@ -50,9 +53,17 @@ class Worker(ABC):
         """Send a message to the worker."""
 
     @abstractmethod
-    async def send_and_wait_response(self, message: MessageToWorker, expected_response_message: Type[_T]) -> _T:
-        """Send a message to the worker and wait for a reply."""
-
-    @abstractmethod
     async def get_resource_usage(self) -> Optional[WorkerResources]:
         """Get the worker's current resource usage. If unknown or unsupported, return None."""
+
+    @abstractmethod
+    async def get_manifest(self) -> Manifest:
+        """Get manifest of the main package in the worker."""
+
+    @abstractmethod
+    async def get_options_form_definition(self) -> OptionsFormDefinition:
+        """Get the package options form definition."""
+
+    @abstractmethod
+    async def create_question_from_options(self, state: Optional[bytes], form_data: dict[str, Any]) -> str:
+        pass

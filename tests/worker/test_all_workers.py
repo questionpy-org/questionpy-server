@@ -8,7 +8,6 @@ import pytest
 from questionpy_common.constants import MiB
 
 from questionpy_server import WorkerPool
-from questionpy_server.worker.runtime.messages import GetQPyPackageManifest
 from questionpy_server.worker.worker.subprocess import SubprocessWorker
 from questionpy_server.worker.worker.thread import ThreadWorker
 from tests.conftest import PACKAGE
@@ -21,6 +20,5 @@ def pool(request: pytest.FixtureRequest) -> WorkerPool:
 
 async def test_should_get_manifest(pool: WorkerPool) -> None:
     async with pool.get_worker(PACKAGE.path, 1, 1) as worker:
-        response = await worker.send_and_wait_response(GetQPyPackageManifest(path=str(PACKAGE.path)),
-                                                       GetQPyPackageManifest.Response)
-        assert response.manifest == PACKAGE.manifest
+        manifest = await worker.get_manifest()
+        assert manifest == PACKAGE.manifest
