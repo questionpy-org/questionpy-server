@@ -14,7 +14,6 @@ from questionpy_common.constants import MiB
 from questionpy_server import WorkerPool
 from questionpy_server.worker.exception import WorkerUnknownError, WorkerStartError
 from questionpy_server.worker.runtime.manager import WorkerManager
-from questionpy_server.worker.runtime.messages import GetQPyPackageManifest
 from questionpy_server.worker.worker.thread import ThreadWorker
 from tests.conftest import PACKAGE
 
@@ -43,8 +42,7 @@ async def test_should_gracefully_handle_error_in_loop(pool: WorkerPool) -> None:
     with patch.object(WorkerManager, "on_msg_get_qpy_package_manifest", just_raise):
         async with pool.get_worker(PACKAGE.path, 1, 1) as worker:
             with pytest.raises(WorkerUnknownError):
-                await worker.send_and_wait_response(GetQPyPackageManifest(path=str(PACKAGE.path)),
-                                                    GetQPyPackageManifest.Response)
+                await worker.get_manifest()
 
 
 async def test_should_ignore_limits(pool: WorkerPool) -> None:
