@@ -1,25 +1,41 @@
-from abc import ABC
+from abc import ABC, abstractmethod
+from typing import Optional
+
 from .elements import OptionsFormDefinition
 from .manifest import Manifest
 
 
 class BaseQuestion(ABC):
-    question_state: str
+    question_state: dict[str, object]
 
 
 class BaseQuestionType(ABC):
     def __init__(self, manifest: Manifest):
         self.manifest = manifest
 
-    def get_options_form_definition(self) -> OptionsFormDefinition:
-        raise NotImplementedError()
+    @abstractmethod
+    def get_options_form(self, question_state: Optional[dict[str, object]]) \
+            -> tuple[OptionsFormDefinition, dict[str, object]]:
+        """Get the form used to create a new or edit an existing question.
 
-    def create_question_from_options(self, form_data: dict) -> BaseQuestion:
-        """Create a new question from options form data. May raise OptionsFormValidationError on a validation error."""
-        raise NotImplementedError()
+        :param question_state: The current question state if editing, or ``None`` if creating a new question.
+        :return: Tuple of the form definition and the current data of the inputs.
+        """
 
-    def create_question_from_state(self, question_state: str) -> BaseQuestion:
-        raise NotImplementedError()
+    @abstractmethod
+    def create_question_from_options(self, old_state: Optional[dict[str, object]],
+                                     form_data: dict[str, object]) -> BaseQuestion:
+        """Create or update the question (state) with the form data from a submitted question edit form.
+
+        :param old_state: Current question state if editing, or ``None`` if creating a new question.
+        :param form_data: Form data from a submitted question edit form.
+        :return: New question.
+        :raises OptionsFormValidationError: When `form_data` is invalid.
+        """
+
+    @abstractmethod
+    def create_question_from_state(self, question_state: dict[str, object]) -> BaseQuestion:
+        pass
 
 
 class OptionsFormValidationError(Exception):
