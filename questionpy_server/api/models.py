@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 from enum import Enum
 from typing import Annotated, Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field, FilePath, HttpUrl, Json
+from questionpy_common.elements import OptionsFormDefinition
 
 
 class PackageType(Enum):
@@ -42,8 +44,13 @@ class QuestionStateHash(OptionalQuestionStateHash):
     question_state_hash: str
 
 
+class QuestionEditFormResponse(BaseModel):
+    definition: OptionsFormDefinition
+    form_data: dict[str, object]
+
+
 class QuestionCreateArguments(OptionalQuestionStateHash):
-    form_data: Dict[str, Any]
+    form_data: dict[str, object]
 
 
 class GradingMethod(Enum):

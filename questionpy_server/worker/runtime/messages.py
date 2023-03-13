@@ -1,4 +1,5 @@
 from enum import IntEnum, unique
+from pathlib import Path
 from struct import Struct
 from typing import ClassVar, Type, Optional, Any
 
@@ -81,7 +82,8 @@ class LoadQPyPackage(MessageToWorker):
     """Load/import a QuestionPy package."""
     message_id = MessageIds.LOAD_QPY_PACKAGE
     path: str
-    main: bool  # Set this package as the main package and execute its entry point.
+    main: bool
+    """Set this package as the main package and execute its entry point."""
 
     class Response(MessageToServer):
         """Success message in return to LoadQPyPackage."""
@@ -99,26 +101,29 @@ class GetQPyPackageManifest(MessageToWorker):
         manifest: Manifest
 
 
-class GetOptionsFormDefinition(MessageToWorker):
+class GetOptionsForm(MessageToWorker):
     """Execute a QuestionPy package."""
     message_id = MessageIds.GET_OPTIONS_FORM_DEFINITION
+    state: Optional[Path]
+    """Old question state or ``None`` if the question is new."""
 
     class Response(MessageToServer):
         """Execute a QuestionPy package."""
         message_id = MessageIds.RETURN_OPTIONS_FORM_DEFINITION
         definition: OptionsFormDefinition
+        form_data: dict[str, object]
 
 
 class CreateQuestionFromOptions(MessageToWorker):
     message_id = MessageIds.CREATE_QUESTION
-    # Old question state (NOT base64) or None if the question is new.
-    state: Optional[str]
-    form_data: dict[str, Any]
+    state: Optional[Path]
+    """Old question state or ``None`` if the question is new."""
+    form_data: dict[str, object]
 
     class Response(MessageToServer):
         message_id = MessageIds.RETURN_CREATE_QUESTION
-        # New question state (NOT base64).
-        state: str
+        state: dict[str, object]
+        """New question state."""
 
 
 class WorkerError(MessageToServer):
