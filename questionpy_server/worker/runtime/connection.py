@@ -14,6 +14,7 @@ def send_message(message: Message, out: SupportsWrite) -> None:
 
 
 class WorkerToServerConnection:
+    # pylint: disable=duplicate-code
     """
     Controls the connection (stdin/stdout pipes) from a worker to the server.
     stream_in must be buffered as we want to be able to read exactly the given number of bytes.
@@ -51,6 +52,6 @@ class WorkerToServerConnection:
                 raise BrokenPipeError()
 
             json_obj = json.loads(json_data)
-            return message_type(**json_obj)
+            return message_type.parse_obj(json_obj)
 
         return message_type()
