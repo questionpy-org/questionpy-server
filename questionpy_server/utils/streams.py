@@ -2,7 +2,8 @@ import asyncio
 import logging
 import os
 from abc import abstractmethod
-from typing import Protocol, Optional, BinaryIO
+from io import BufferedReader, FileIO
+from typing import Protocol, Optional
 
 log = logging.getLogger(__name__)
 
@@ -35,33 +36,31 @@ class DuplexPipe:
         methods.
         """
 
-        def __init__(self, receive: BinaryIO, transmit: BinaryIO):
+        def __init__(self, receive: BufferedReader, transmit: FileIO):
             self._receive = receive
             self._transmit = transmit
 
         def read(self, size: int) -> bytes:
-            """Reads exactly size bytes."""
-            buffer = bytearray(size)
-            read = 0
-            while read < size:
-                chunk = self._receive.read(size - read)
-                if len(chunk) == 0:
-                    raise EOFError
-                buffer[read:] = chunk
-                read += len(chunk)
+            """Reads exactly size bytes.
 
-            return buffer
+            :raises EOFError: if EOF is reached before `size` bytes are read
+            """
+            read = self._receive.read(size)
+            if len(read) < size:
+                raise EOFError
+            return read
 
         def write(self, data: bytes) -> int:
             """Writes data to the pipe completely."""
+            view = memoryview(data)
             size = len(data)
             written = 0
             while written < size:
-                written += self._transmit.write(data[written:])
+                written += self._transmit.write(view[written:])
 
             return written
 
-    def __init__(self, pipe1: tuple[BinaryIO, BinaryIO], pipe2: tuple[BinaryIO, BinaryIO]) -> None:
+    def __init__(self, pipe1: tuple[BufferedReader, FileIO], pipe2: tuple[BufferedReader, FileIO]) -> None:
         self._pipe1 = pipe1
         self._pipe2 = pipe2
 
@@ -74,7 +73,7 @@ class DuplexPipe:
         return DuplexPipe(cls._open_pipe(), cls._open_pipe())
 
     @classmethod
-    def _open_pipe(cls) -> tuple[BinaryIO, BinaryIO]:
+    def _open_pipe(cls) -> tuple[BufferedReader, FileIO]:
         rx_fd, tx_fd = os.pipe()
         return os.fdopen(rx_fd, "rb"), os.fdopen(tx_fd, "wb", buffering=0)
 
