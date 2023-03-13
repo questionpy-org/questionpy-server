@@ -1,3 +1,4 @@
+import json
 import resource
 from pathlib import Path
 from typing import TypeVar, Optional, Callable, Any
@@ -5,7 +6,7 @@ from typing import TypeVar, Optional, Callable, Any
 from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageIds, LoadQPyPackage, \
-    GetQPyPackageManifest, GetOptionsFormDefinition, CreateQuestionFromOptions, InitWorker, Exit, WorkerError
+    GetQPyPackageManifest, GetOptionsForm, CreateQuestionFromOptions, InitWorker, Exit, WorkerError
 from questionpy_server.worker.runtime.package import QPyPackage, QPyMainPackage
 
 _M = TypeVar('_M', bound=MessageToServer)
@@ -20,7 +21,7 @@ class WorkerManager:
         self.message_dispatch: dict[MessageIds, Callable[[Any], MessageToServer]] = {
             LoadQPyPackage.message_id: self.on_msg_load_qpy_package,
             GetQPyPackageManifest.message_id: self.on_msg_get_qpy_package_manifest,
-            GetOptionsFormDefinition.message_id: self.on_msg_get_options_form_definition,
+            GetOptionsForm.message_id: self.on_msg_get_options_form_definition,
             CreateQuestionFromOptions.message_id: self.on_msg_create_question_from_options
         }
 
@@ -64,18 +65,29 @@ class WorkerManager:
         package = self.loaded_packages[msg.path]
         return GetQPyPackageManifest.Response(manifest=package.manifest)
 
-    def on_msg_get_options_form_definition(self, _msg: GetOptionsFormDefinition) -> MessageToServer:
+    def on_msg_get_options_form_definition(self, msg: GetOptionsForm) -> MessageToServer:
         if self.main_package is None:
             raise MainPackageNotLoadedError()
 
-        definition = self.main_package.get_options_form_definition()
-        return GetOptionsFormDefinition.Response(definition=definition)
+        state_data: Optional[dict[str, object]] = None
+        if msg.state:
+            with msg.state.open("rb") as state_file:
+                state_data = json.load(state_file)
+
+        definition, form_data = self.main_package.qtype_instance.get_options_form(state_data)
+        return GetOptionsForm.Response(definition=definition, form_data=form_data)
 
     def on_msg_create_question_from_options(self, msg: CreateQuestionFromOptions) -> CreateQuestionFromOptions.Response:
         if self.main_package is None:
             raise MainPackageNotLoadedError()
 
-        question = self.main_package.qtype_instance.create_question_from_options(msg.form_data)
+        state_data: Optional[dict[str, object]] = None
+        if msg.state:
+            with msg.state.open("rb") as state_file:
+                state_data = json.load(state_file)
+
+        question = self.main_package.qtype_instance.create_question_from_options(state_data, msg.form_data)
+
         return CreateQuestionFromOptions.Response(state=question.question_state)
 
 

@@ -1,18 +1,21 @@
 import asyncio
 import contextlib
+import json
 import logging
 from abc import ABC
+from hashlib import sha256
 from pathlib import Path
-from typing import Optional, Type, TypeVar, Sequence, Any
+from typing import Optional, Type, TypeVar, Sequence
 
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.manifest import Manifest
 
+from questionpy_server.api.models import Question, GradingMethod
 from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer, MessageIds, WorkerError, \
-    InitWorker, LoadQPyPackage, Exit, GetQPyPackageManifest, GetOptionsFormDefinition, CreateQuestionFromOptions
+    InitWorker, LoadQPyPackage, Exit, GetQPyPackageManifest, GetOptionsForm, CreateQuestionFromOptions
 from questionpy_server.worker.worker import WorkerState, Worker
 
 log = logging.getLogger(__name__)
@@ -129,12 +132,23 @@ class BaseWorker(Worker, ABC):
         ret = await self._send_and_wait_response(msg, GetQPyPackageManifest.Response)
         return ret.manifest
 
-    async def get_options_form_definition(self) -> OptionsFormDefinition:
-        msg = GetOptionsFormDefinition()
-        ret = await self._send_and_wait_response(msg, GetOptionsFormDefinition.Response)
-        return ret.definition
+    async def get_options_form(self, question_state: Optional[Path]) \
+            -> tuple[OptionsFormDefinition, dict[str, object]]:
+        msg = GetOptionsForm(state=question_state)
+        ret = await self._send_and_wait_response(msg, GetOptionsForm.Response)
+        return ret.definition, ret.form_data
 
-    async def create_question_from_options(self, state: Optional[bytes], form_data: dict[str, Any]) -> str:
-        msg = CreateQuestionFromOptions(state=state, form_data=form_data)
+    async def create_question_from_options(self, old_state: Optional[Path], form_data: dict[str, object]) \
+            -> Question:
+        msg = CreateQuestionFromOptions(state=old_state, form_data=form_data)
         ret = await self._send_and_wait_response(msg, CreateQuestionFromOptions.Response)
-        return ret.state
+
+        new_state_str = json.dumps(ret.state)
+        new_state_hash = sha256(new_state_str.encode()).hexdigest()
+
+        return Question(
+            question_state=new_state_str,
+            question_state_hash=new_state_hash,
+            grading_method=GradingMethod.ALWAYS_MANUAL_GRADING_REQUIRED,
+            response_analysis_by_variant=False
+        )

@@ -7,7 +7,7 @@ from types import ModuleType
 from zipfile import ZipFile
 
 from questionpy_common.manifest import Manifest
-from questionpy_common.qtype import OptionsFormDefinition, BaseQuestionType
+from questionpy_common.qtype import BaseQuestionType
 
 
 class QPyPackage(ZipFile):
@@ -36,9 +36,6 @@ class QPyMainPackage(QPyPackage):
         if self.main_module.QuestionType.implementation is None:
             raise QuestionTypeImplementationNotFoundError(self.manifest.short_name)
         self.qtype_instance: BaseQuestionType = self.main_module.QuestionType.implementation(manifest=self.manifest)
-
-    def get_options_form_definition(self) -> OptionsFormDefinition:
-        return self.qtype_instance.get_options_form_definition()
 
 
 class QuestionTypeImplementationNotFoundError(Exception):

@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
-from typing import Optional, TypeVar, Any
+from typing import Optional, TypeVar
 
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.manifest import Manifest
 
+from questionpy_server.api.models import Question
 from questionpy_server.worker import WorkerResources, WorkerResourceLimits
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer
 
@@ -61,9 +62,22 @@ class Worker(ABC):
         """Get manifest of the main package in the worker."""
 
     @abstractmethod
-    async def get_options_form_definition(self) -> OptionsFormDefinition:
-        """Get the package options form definition."""
+    async def get_options_form(self, question_state: Optional[Path]) \
+            -> tuple[OptionsFormDefinition, dict[str, object]]:
+        """Get the form used to create a new or edit an existing question.
+
+        :param question_state: The path to a file containing the current question state if editing, or ``None`` if
+            creating a new question.
+        :return: Tuple of the form definition and the current data of the inputs.
+        """
 
     @abstractmethod
-    async def create_question_from_options(self, state: Optional[bytes], form_data: dict[str, Any]) -> str:
-        pass
+    async def create_question_from_options(self, old_state: Optional[Path], form_data: dict[str, object]) \
+            -> Question:
+        """Create or update the question (state) with the form data from a submitted question edit form.
+
+        :param old_state: The path to a file containing the current question state if editing, or ``None`` if creating a
+            new question.
+        :param form_data: Form data from a submitted question edit form.
+        :return: New question.
+        """
