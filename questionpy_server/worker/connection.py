@@ -8,6 +8,7 @@ from questionpy_server.worker.runtime.messages import MessageToServer, MessageTo
 
 
 class ServerToWorkerConnection(AsyncIterator[MessageToServer]):
+    # pylint: disable=duplicate-code
     """Controls the connection (stdin/stdout pipes) from the server to a worker."""
 
     def __init__(self, stream_in: SupportsAsyncRead, stream_out: SupportsWrite):
