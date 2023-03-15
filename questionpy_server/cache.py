@@ -1,8 +1,8 @@
 import logging
+from asyncio import to_thread, Lock
 from collections import OrderedDict
 from pathlib import Path
-from typing import NamedTuple, Callable, Awaitable
-from asyncio import to_thread, Lock
+from typing import NamedTuple, Callable, Awaitable, Optional
 
 from pydantic import ByteSize
 
@@ -26,7 +26,8 @@ class FileLimitLRU:
     Only `bytes` type values are accepted. Their size is calculated by passing them into the builtin `len()` function.
     """
 
-    def __init__(self, directory: Path, max_size: int, extension: str = None, name: str = None) -> None:
+    def __init__(self, directory: Path, max_size: int, extension: Optional[str] = None,
+                 name: Optional[str] = None) -> None:
         """A cache should be initialised while starting a server therefore it is not necessary for it to be async."""
 
         async def on_remove(_key: str) -> None:
