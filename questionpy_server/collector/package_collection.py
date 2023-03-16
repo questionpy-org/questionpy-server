@@ -1,6 +1,9 @@
 from asyncio import gather
+from datetime import timedelta
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
+
+from pydantic import HttpUrl
 
 from questionpy_server import WorkerPool
 from questionpy_server.cache import FileLimitLRU
@@ -9,6 +12,7 @@ from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
+from questionpy_server.utils.manfiest import SemVer
 
 if TYPE_CHECKING:
     from questionpy_server.web import HashContainer
@@ -18,7 +22,8 @@ if TYPE_CHECKING:
 class PackageCollection:
     """Handles packages from a local directory, remote repositories, and packages received by an LMS."""
 
-    def __init__(self, local_dir: Optional[Path], repo_urls: list[str], cache: FileLimitLRU, worker_pool: WorkerPool):
+    def __init__(self, local_dir: Optional[Path], repos: dict[HttpUrl, timedelta], cache: FileLimitLRU,
+                 worker_pool: WorkerPool):
         self._indexer = Indexer(worker_pool)
         self._collectors: list[BaseCollector] = []
 
@@ -26,8 +31,8 @@ class PackageCollection:
             local_collector = LocalCollector(local_dir, self._indexer)
             self._collectors.append(local_collector)
 
-        for repo_url in repo_urls:
-            repo_collector = RepoCollector(cache, repo_url, self._indexer)
+        for url, update_interval in repos.items():
+            repo_collector = RepoCollector(cache, url, update_interval, self._indexer)
             self._collectors.append(repo_collector)
 
         self._lms_collector = LMSCollector(cache, self._indexer)
@@ -83,7 +88,7 @@ class PackageCollection:
 
         raise FileNotFoundError
 
-    def get_by_identifier(self, identifier: str) -> dict[str, 'Package']:
+    def get_by_identifier(self, identifier: str) -> dict[SemVer, 'Package']:
         """Returns a dict of packages with the given identifier and available versions.
 
         Args:
@@ -95,7 +100,7 @@ class PackageCollection:
 
         return self._indexer.get_by_identifier(identifier)
 
-    def get_by_identifier_and_version(self, identifier: str, version: str) -> 'Package':
+    def get_by_identifier_and_version(self, identifier: str, version: SemVer) -> 'Package':
         """Returns a package with the given identifier and version.
 
         Args:

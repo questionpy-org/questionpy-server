@@ -4,8 +4,9 @@ from struct import Struct
 from typing import ClassVar, Type, Optional, Any
 
 from pydantic import BaseModel
-from questionpy_common.manifest import Manifest
+
 from questionpy_common.qtype import OptionsFormDefinition
+from questionpy_common.manifest import Manifest
 
 from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.exception import WorkerMemoryLimitExceededError, WorkerUnknownError

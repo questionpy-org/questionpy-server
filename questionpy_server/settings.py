@@ -1,15 +1,18 @@
 import logging
 from configparser import ConfigParser
+from datetime import timedelta
 from pathlib import Path
 from pydoc import locate
-from typing import Any, Callable, Dict, Tuple, Optional, Type
+from typing import Any, Callable, Dict, Tuple, Optional, Type, Union, Final
 
-from pydantic import BaseModel, BaseSettings, validator, Field, DirectoryPath, ByteSize
+from pydantic import BaseModel, BaseSettings, validator, Field, DirectoryPath, ByteSize, HttpUrl
 from pydantic.env_settings import InitSettingsSource, SettingsSourceCallable
 from questionpy_common.constants import MAX_PACKAGE_SIZE, MiB
 
 from questionpy_server.worker.worker import Worker
 from questionpy_server.worker.worker.subprocess import SubprocessWorker
+
+REPOSITORY_MINIMUM_INTERVAL: Final[timedelta] = timedelta(minutes=5)
 
 
 class IniFileSettingsSource:
@@ -86,6 +89,8 @@ class QuestionStateCacheSettings(BaseModel):
 
 class CollectorSettings(BaseModel):
     local_directory: Optional[DirectoryPath]
+    repository_default_interval: timedelta = timedelta(hours=1, minutes=30)
+    repositories: dict[HttpUrl, timedelta] = {}
 
     @validator('local_directory')
     # pylint: disable=no-self-argument
@@ -93,6 +98,53 @@ class CollectorSettings(BaseModel):
         if value is None or value == Path(''):
             return None
         return value.resolve()
+
+    @validator('repository_default_interval')
+    # pylint: disable=no-self-argument
+    def check_is_bigger_than_minimum_interval(cls, value: timedelta) -> timedelta:
+        if value < REPOSITORY_MINIMUM_INTERVAL:
+            raise ValueError(f"must be at least {REPOSITORY_MINIMUM_INTERVAL}")
+        return value
+
+    @validator('repositories', pre=True)
+    # pylint: disable=no-self-argument
+    def transform_to_set_of_repositories(cls, value: str, values: dict[str, Any]) -> dict[str, Union[str, timedelta]]:
+        repositories: dict[str, Union[str, timedelta]] = {}
+
+        for line in value.splitlines():
+            if not line:
+                continue
+
+            # Split line into url and custom update interval.
+            data = line.split(maxsplit=1)
+
+            if len(data) == 1:
+                url = data[0]
+                custom_interval = None
+            else:
+                url, custom_interval = data
+
+            if not url.endswith('/'):
+                url += '/'
+
+            if url in repositories:
+                raise ValueError(f"must contain unique repositories: failed for {url}")
+
+            # Either use the custom or default update interval.
+            # If no custom interval is specified and the validation for `repository_default_interval` failed, a valid
+            # interval (the minimum) is provided to ensure that the validation continues to take place.
+            repositories[url] = custom_interval or values.get('repository_default_interval') or \
+                REPOSITORY_MINIMUM_INTERVAL
+
+        return repositories
+
+    @validator('repositories')
+    # pylint: disable=no-self-argument
+    def check_custom_interval_is_bigger_than_minimum(cls, value: dict[HttpUrl, timedelta]) -> dict[HttpUrl, timedelta]:
+        for url, custom_interval in value.items():
+            if custom_interval < REPOSITORY_MINIMUM_INTERVAL:
+                raise ValueError(f"update intervals must be at least {REPOSITORY_MINIMUM_INTERVAL}: failed for {url}")
+        return value
 
 
 class Settings(BaseSettings):

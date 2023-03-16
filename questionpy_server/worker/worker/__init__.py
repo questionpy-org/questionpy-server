@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Optional, TypeVar
 
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.manifest import Manifest
 
 from questionpy_server.api.models import Question
+from questionpy_server.utils.manfiest import ComparableManifest
 from questionpy_server.worker import WorkerResources, WorkerResourceLimits
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer
 
@@ -58,7 +58,7 @@ class Worker(ABC):
         """Get the worker's current resource usage. If unknown or unsupported, return None."""
 
     @abstractmethod
-    async def get_manifest(self) -> Manifest:
+    async def get_manifest(self) -> ComparableManifest:
         """Get manifest of the main package in the worker."""
 
     @abstractmethod

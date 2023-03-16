@@ -1,13 +1,13 @@
 from pathlib import Path
 from typing import Optional
 
-from questionpy_common.manifest import Manifest
-
 from questionpy_server.api.models import PackageInfo
+
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
+from questionpy_server.utils.manfiest import ComparableManifest
 
 
 class PackageSources:
@@ -95,14 +95,14 @@ class PackageSources:
 
 class Package:
     hash: str
-    manifest: Manifest
+    manifest: ComparableManifest
 
     sources: PackageSources
 
     _info: Optional[PackageInfo]
     _path: Optional[Path]
 
-    def __init__(self, package_hash: str, manifest: Manifest, source: Optional[BaseCollector] = None,
+    def __init__(self, package_hash: str, manifest: ComparableManifest, source: Optional[BaseCollector] = None,
                  path: Optional[Path] = None):
         self.hash = package_hash
         self.manifest = manifest
@@ -130,7 +130,9 @@ class Package:
         """
 
         if not self._info:
-            self._info = PackageInfo(**self.manifest.dict(), package_hash=self.hash)
+            tmp = self.manifest.dict()
+            tmp['version'] = str(tmp['version'])
+            self._info = PackageInfo(**tmp, package_hash=self.hash)
         return self._info
 
     async def get_path(self) -> Path:
