@@ -1,12 +1,15 @@
 import logging
 from configparser import ConfigParser
 from pathlib import Path
-from typing import Any, Callable, Dict, Tuple, Optional
-
-from questionpy_common.constants import MAX_PACKAGE_SIZE, MiB
+from pydoc import locate
+from typing import Any, Callable, Dict, Tuple, Optional, Type
 
 from pydantic import BaseModel, BaseSettings, validator, Field, DirectoryPath, ByteSize
 from pydantic.env_settings import InitSettingsSource, SettingsSourceCallable
+from questionpy_common.constants import MAX_PACKAGE_SIZE, MiB
+
+from questionpy_server.worker.worker import Worker
+from questionpy_server.worker.worker.subprocess import SubprocessWorker
 
 
 class IniFileSettingsSource:
@@ -44,8 +47,21 @@ class WebserviceSettings(BaseModel):
 
 
 class WorkerSettings(BaseModel):
+    type: Type[Worker] = SubprocessWorker
+    """Fully qualified name of the worker class or the class itself (for the default)."""
     max_workers: int = 8
     max_memory: ByteSize = ByteSize(500 * MiB)
+
+    @validator("type")
+    # pylint: disable=no-self-argument
+    def _load_worker_class(cls, value: object) -> Type[Worker]:
+        if isinstance(value, str):
+            value = locate(value)
+
+        if not isinstance(value, type) or not issubclass(value, Worker):
+            raise TypeError(f"{value} is not a subclass of Worker")
+
+        return value
 
 
 class PackageCacheSettings(BaseModel):
