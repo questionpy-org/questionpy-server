@@ -45,7 +45,15 @@ class DuplexPipe:
 
             :raises EOFError: if EOF is reached before `size` bytes are read
             """
-            read = self._receive.read(size)
+            try:
+                read = self._receive.read(size)
+            except ValueError as e:
+                if e.args[0] == "read of closed file":
+                    # Sometimes, depending on the timing of close and read, this error gets raised instead of EOF
+                    # returned. So we we treat it the same.
+                    raise EOFError from e
+                raise e
+
             if len(read) < size:
                 raise EOFError
             return read
