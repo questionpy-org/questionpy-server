@@ -50,9 +50,7 @@ async def get_package(request: web.Request) -> web.Response:
 # pylint: disable=unused-argument
 async def post_options(request: web.Request, package: Package, question_state: Optional[Path],
                        data: OptionalQuestionStateHash) -> web.Response:
-    """
-    Get the options form definition that allow a question creator to customize a question.
-    """
+    """Get the options form definition that allow a question creator to customize a question."""
     qpyserver: 'QPyServer' = request.app['qpy_server_app']
 
     package_path = await package.get_path()

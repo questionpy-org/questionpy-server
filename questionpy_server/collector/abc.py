@@ -10,9 +10,7 @@ if TYPE_CHECKING:
 
 
 class BaseCollector(ABC):
-    """
-    A collector responsible for getting packages from a source.
-    """
+    """A collector responsible for getting packages from a source."""
 
     indexer: 'Indexer'
 
@@ -21,15 +19,11 @@ class BaseCollector(ABC):
 
     @abstractmethod
     async def start(self) -> None:
-        """
-        Starts the collector.
-        """
+        """Starts the collector."""
         raise NotImplementedError
 
     async def stop(self) -> None:
-        """
-        Stops the collector.
-        """
+        """Stops the collector."""
         return
 
     async def __aenter__(self) -> 'BaseCollector':
@@ -41,20 +35,20 @@ class BaseCollector(ABC):
 
     @abstractmethod
     async def get_path(self, package: 'Package') -> Path:
-        """
-        Get the path of a package.
+        """Get the path of a package.
 
-        :param package: The package to get the path of.
-        :raises FileNotFoundError: If the collector does not contain the package.
-        :return: The path of the package.
+        Args:
+            package (Package): The package to get the path of.
+        Raises:
+            FileNotFoundError: If the collector does not contain the package.
+        Returns:
+            Path: The path of the package.
         """
         raise NotImplementedError
 
 
 class CachedCollector(BaseCollector, ABC):
-    """
-    A collector that caches retrieved packages locally.
-    """
+    """A collector that caches retrieved packages locally."""
 
     _cache: FileLimitLRU
 

@@ -45,9 +45,7 @@ class _WorkerThread(threading.Thread):
 
 
 class ThreadWorker(BaseWorker):
-    """
-    Worker implementation using a thread withing the server process for simpler debugging of package code.
-    """
+    """Worker implementation using a thread withing the server process for simpler debugging of package code."""
 
     def __init__(self, package: Path, limits: Optional[WorkerResourceLimits] = None) -> None:
         super().__init__(package, limits)

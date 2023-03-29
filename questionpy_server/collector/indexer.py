@@ -13,9 +13,8 @@ from questionpy_server.package import Package
 
 
 class Indexer:
-    """
-    Handles the indexing of packages which results in a faster lookup and fewer requests to the workers.
-
+    """Handles the indexing of packages which results in a faster lookup and fewer requests to the workers.
+    
     Packages are indexed by their hash and by their identifier and version. If the package originates from an LMS, it is
     only indexed by its hash.
     """
@@ -30,63 +29,69 @@ class Indexer:
         self._lock: Optional[Lock] = None
 
     def get_by_hash(self, package_hash: str) -> Optional[Package]:
-        """
-        Returns the package with the given hash or None if it does not exist.
+        """Returns the package with the given hash or None if it does not exist.
 
-        :param package_hash: The hash of the package.
-        :return: The package or None.
+        Args:
+          package_hash (str): The hash of the package.
+
+        Returns:
+          The package or None.
         """
 
         return self._index_by_hash.get(package_hash, None)
 
     def get_by_identifier(self, identifier: str) -> dict[str, Package]:
-        """
-        Returns a dict of packages with the given identifier and available versions.
+        """Returns a dict of packages with the given identifier and available versions.
 
-        :param identifier: identifier of the package
-        :return: dict of packages and versions
+        Args:
+          identifier str: identifier of the package
+
+        Returns:
+          dict of packages and versions
         """
 
         return self._index_by_identifier.get(identifier, {}).copy()
 
     def get_by_identifier_and_version(self, identifier: str, version: str) -> Optional[Package]:
-        """
-        Returns the package with the given identifier and version or None if it does not exist.
+        """Returns the package with the given identifier and version or None if it does not exist.
 
-        :param identifier: identifier of the package
-        :param version: version of the package
-        :return: The package or None.
+        Args:
+          identifier (str): identifier of the package
+          version (str): version of the package
+
+        Returns:
+          The package or None.
         """
 
         return self._index_by_identifier.get(identifier, {}).get(version, None)
 
     def get_packages(self) -> set[Package]:
-        """
-        Returns all packages in the index (excluding packages from LMSs).
+        """Returns all packages in the index (excluding packages from LMSs).
 
-        :return: set of packages
+        Returns:
+            set of packages
         """
 
         return set(package for packages in self._index_by_identifier.values() for package in packages.values())
 
     @overload
     async def register_package(self, package_hash: str, path_or_manifest: Manifest, source: BaseCollector) -> Package:
-        """
-        Registers a package in the index.
+        """Registers a package in the index.
 
-        :param package_hash: The hash of the package.
-        :param path_or_manifest: The manifest of the package.
-        :param source: The source of the package.
+        Args:
+            package_hash (str): The hash of the package.
+            path_or_manifest (Manifest): The manifest of the package.
+            source (BaseCollector): The source of the package.
         """
 
     @overload
     async def register_package(self, package_hash: str, path_or_manifest: Path, source: BaseCollector) -> Package:
-        """
-        Registers a package in the index.
+        """Registers a package in the index.
 
-        :param package_hash: The hash of the package.
-        :param path_or_manifest: The path to the package.
-        :param source: The source of the package.
+        Args:
+            package_hash (str): The hash of the package.
+            path_or_manifest (Manifest): The manifest of the package.
+            source (BaseCollector): The source of the package.
         """
 
     async def register_package(self, package_hash: str, path_or_manifest: Union[Path, Manifest],
@@ -126,12 +131,14 @@ class Indexer:
         return package
 
     async def unregister_package(self, package_hash: str, source: BaseCollector) -> None:
-        """
-        Removes the given source from the package. If the only left source of the package is an LMS, it will only be
-        accessible by its hash. If the package has no more sources, it is removed from the index.
+        """Removes the given source from the package.
+        If the only left source of the package is an LMS, it will only be
+        accessible by its hash.
+        If the package has no more sources, it is removed from the index.
 
-        :param package_hash: The hash of the package to unregister.
-        :param source: The source of the package.
+        Args:
+            package_hash (str): The hash of the package to unregister.
+            source (BaseCollector): The source of the package.
         """
 
         package = self._index_by_hash.get(package_hash, None)

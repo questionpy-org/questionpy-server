@@ -12,9 +12,7 @@ from questionpy_server.collector.repo_collector import RepoCollector
 
 
 class PackageSources:
-    """
-    A container for all package sources.
-    """
+    """A container for all package sources."""
 
     def __init__(self, package: 'Package'):
         self._package = package
@@ -29,10 +27,10 @@ class PackageSources:
         return local_collector + len(self._repo_collectors) + lms_collector
 
     def add(self, collector: BaseCollector) -> None:
-        """
-        Adds a collector to the package sources.
+        """Adds a collector to the package sources.
 
-        :param collector: collector to add
+        Args:
+            collector (BaseCollector): The collector to add.
         """
 
         if isinstance(collector, LocalCollector):
@@ -45,10 +43,10 @@ class PackageSources:
             raise TypeError(f'Invalid collector type: {type(collector)}')
 
     def remove(self, collector: BaseCollector) -> None:
-        """
-        Removes a collector from the package sources.
+        """ Removes a collector from the package sources.
 
-        :param collector: collector to remove
+        Args:
+            collector (BaseCollector): The collector to remove.
         """
 
         if isinstance(collector, LocalCollector):
@@ -64,15 +62,15 @@ class PackageSources:
             raise TypeError(f'Invalid collector type: {type(collector)}')
 
     async def get_path(self) -> Path:
-        """
-        Returns the path to the package.
+        """Returns the path to the package.
 
         Goes through all available collectors and tries to retrieve a path to the package in the following order:
         1. LocalCollector
         2. RepoCollectors
         3. LMSCollector
 
-        :return: The path to the package.
+        Returns:
+            The path to the package.
         """
 
         if self._local_collector:
@@ -125,10 +123,10 @@ class Package:
         return self.hash == other.hash
 
     def get_info(self) -> PackageInfo:
-        """
-        Returns the package info.
+        """Returns the package info.
 
-        :return: package info
+        Returns:
+            The package info.
         """
 
         if not self._info:
@@ -136,10 +134,10 @@ class Package:
         return self._info
 
     async def get_path(self) -> Path:
-        """
-        Returns the path to the package.
+        """Returns the path to the package.
 
-        :return: path to the package
+        Returns:
+            The path to the package.
         """
 
         if not (self._path and self._path.is_file()):

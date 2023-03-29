@@ -10,9 +10,8 @@ if TYPE_CHECKING:
 
 
 class RepoCollector(CachedCollector):
-    """
-    Handles packages located in a remote repository.
-
+    """Handles packages located in a remote repository.
+    
     This collector is responsible for downloading packages from a remote repository and caching them locally.
     """
 

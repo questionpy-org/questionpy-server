@@ -15,9 +15,8 @@ if TYPE_CHECKING:
 
 
 class PathToHash:
-    """
-    A class that maps paths to hashes.
-
+    """A class that maps paths to hashes.
+    
     Maps package hashes to their file paths. There can be multiple file paths for a single package hash.
     """
 
@@ -28,11 +27,11 @@ class PathToHash:
         self.hashes: dict[str, set[Path]] = {}
 
     def insert(self, package_hash: str, path: Path) -> None:
-        """
-        Inserts a package hash and its path into the map.
+        """Inserts a package hash and its path into the map.
 
-        :param package_hash: The package hash.
-        :param path: The path.
+        Args:
+            package_hash (str): The package hash.
+            path (Path): The path.
         """
 
         self.paths[path] = package_hash
@@ -40,20 +39,24 @@ class PathToHash:
 
     @overload
     def get(self, key: Path) -> Optional[str]:
-        """
-        Gets the hash of a package from its path.
+        """Gets the hash of a package from its path.
 
-        :param key: The path of the package.
-        :return: The hash of the package.
+        Args:
+            key (Path): The path of the package.
+
+        Returns:
+            The hash of the package.
         """
 
     @overload
     def get(self, key: str) -> Optional[set[Path]]:
-        """
-        Gets the paths of a package from its hash.
+        """Gets the paths of a package from its hash.
 
-        :param key: The hash of the package.
-        :return: The paths of the package.
+        Args:
+            key (str): The hash of the package.
+
+        Returns:
+            The paths of the package.
         """
 
     def get(self, key: Union[str, Path]) -> Union[Optional[set[Path]], Optional[str]]:
@@ -69,20 +72,24 @@ class PathToHash:
 
     @overload
     def pop(self, key: Path) -> Optional[str]:
-        """
-        Removes the package with the given path and returns its hash.
+        """Removes the package with the given path and returns its hash.
 
-        :param key: The path of the package.
-        :return: The hash of the package.
+        Args:
+            key (Path): The path of the package.
+
+        Returns:
+            The hash of the package.
         """
 
     @overload
     def pop(self, key: str) -> Optional[set[Path]]:
-        """
-        Removes all packages with the given hash and returns their paths.
+        """Removes all packages with the given hash and returns their paths.
 
-        :param key: The hash of the packages.
-        :return: The paths of the packages.
+        Args:
+            key (str): The hash of the packages.
+
+        Returns:
+            The paths of the packages.
         """
 
     def pop(self, key: Union[Path, str]) -> Union[Optional[str], Optional[set[Path]]]:
@@ -112,9 +119,7 @@ class PathToHash:
 
 
 class LocalCollector(BaseCollector):
-    """
-    Handles packages located in a local directory.
-    """
+    """Handles packages located in a local directory."""
 
     def __init__(self, directory: Path, indexer: 'Indexer'):
         super().__init__(indexer)
@@ -141,19 +146,21 @@ class LocalCollector(BaseCollector):
         get_running_loop().remove_signal_handler(SIGUSR1)
 
     async def update(self, with_log: bool = True) -> None:
-        """
-        Reflect changes in the directory to the indexer and internal map.
+        """Reflect changes in the directory to the indexer and internal map.
 
-        :param with_log: Whether to log the changes.
+        Args:
+            with_log (bool): Whether to log the changes.
         """
 
         def directory_iterator(directory: str) -> Generator[Path, Any, None]:
-            """
-            Iterates over all packages in the directory.
+            """Iterates over all packages in the directory.
             Used as the custom directory iterator for DirectorySnapshot.
 
-            :param directory: The directory.
-            :return: A generator of paths.
+            Args:
+                directory (str): The directory.
+
+            Returns:
+                A generator of paths.
             """
 
             for file in Path(directory).glob('*.qpy'):
@@ -161,21 +168,21 @@ class LocalCollector(BaseCollector):
                     yield file
 
         async def add_package(pkg_hash: str, pkg_path: Path) -> None:
-            """
-            Adds a package to the map and registers it in the indexer.
+            """Adds a package to the map and registers it in the indexer.
 
-            :param pkg_hash: The hash of the package.
-            :param pkg_path: The path of the package.
+            Args:
+                pkg_hash (str): The hash of the package.
+                pkg_path (Path): The path of the package.
             """
 
             self.map.insert(pkg_hash, pkg_path)
             await self.indexer.register_package(pkg_hash, pkg_path, self)
 
         async def remove_package(pkg_path: Path) -> None:
-            """
-            Removes a package from the map and unregisters it from the indexer.
+            """Removes a package from the map and unregisters it from the indexer.
 
-            :param pkg_path: The path of the package.
+            Args:
+                pkg_path (Path): The path of the package.
             """
 
             if not (pkg_hash := self.map.pop(pkg_path)):
