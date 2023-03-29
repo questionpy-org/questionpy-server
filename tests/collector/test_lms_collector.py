@@ -15,11 +15,13 @@ from tests.conftest import PACKAGE
 
 
 def create_lms_collector(tmp_path_factory: TempPathFactory) -> tuple[LMSCollector, FileLimitLRU]:
-    """
-    Create a local collector and return it and the cache it is using.
+    """Create a local collector and return it and the cache it is using.
 
-    :param tmp_path_factory: Factory for temporary directories.
-    :return: Local collector and cache.
+    Args:
+        tmp_path_factory (TempPathFactory): Factory for temporary directories.
+
+    Returns:
+        Local collector and cache.
     """
 
     path = tmp_path_factory.mktemp('qpy')
