@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 class LMSCollector(CachedCollector):
     """Handles packages received by an LMS.
-    
+
     This collector is a bit different from the others, as it does not have a fixed source of packages.
     Instead, it is used to store packages that are received by an LMS. These packages are stored in
     a cache, and can be retrieved exclusively by their hash.

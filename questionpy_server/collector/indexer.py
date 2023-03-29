@@ -14,7 +14,7 @@ from questionpy_server.package import Package
 
 class Indexer:
     """Handles the indexing of packages which results in a faster lookup and fewer requests to the workers.
-    
+
     Packages are indexed by their hash and by their identifier and version. If the package originates from an LMS, it is
     only indexed by its hash.
     """

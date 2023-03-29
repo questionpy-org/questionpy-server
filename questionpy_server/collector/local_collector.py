@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 class PathToHash:
     """A class that maps paths to hashes.
-    
+
     Maps package hashes to their file paths. There can be multiple file paths for a single package hash.
     """
 
