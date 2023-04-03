@@ -1,13 +1,12 @@
 from typing import List, Literal, Union, Optional, get_args
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PositiveInt
+from questionpy_common.conditions import Condition
 from typing_extensions import TypeGuard, TypeAlias
 
-from questionpy_common.conditions import Condition
-
 __all__ = ["CanHaveConditions", "StaticTextElement", "TextInputElement", "CheckboxElement", "CheckboxGroupElement",
-           "Option", "RadioGroupElement", "SelectElement", "HiddenElement", "GroupElement", "FormElement",
-           "FormSection", "OptionsFormDefinition", "is_form_element"]
+           "Option", "RadioGroupElement", "SelectElement", "HiddenElement", "GroupElement", "RepetitionElement",
+           "FormElement", "FormSection", "OptionsFormDefinition", "is_form_element"]
 
 
 class _Labelled(BaseModel):
@@ -77,12 +76,23 @@ class GroupElement(_Labelled, _Named, CanHaveConditions):
     elements: List["FormElement"]
 
 
+class RepetitionElement(_Named):
+    kind: Literal["repetition"] = "repetition"
+
+    initial_elements: PositiveInt
+    increment: PositiveInt
+    button_label: Optional[str] = None
+
+    elements: list["FormElement"]
+
+
 FormElement: TypeAlias = Union[
     StaticTextElement, TextInputElement, CheckboxElement, CheckboxGroupElement,
-    RadioGroupElement, SelectElement, HiddenElement, GroupElement
+    RadioGroupElement, SelectElement, HiddenElement, GroupElement, RepetitionElement
 ]
 
 GroupElement.update_forward_refs()
+RepetitionElement.update_forward_refs()
 
 
 class FormSection(_Named):
