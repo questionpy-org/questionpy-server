@@ -52,7 +52,7 @@ class WorkerSettings(BaseModel):
     max_workers: int = 8
     max_memory: ByteSize = ByteSize(500 * MiB)
 
-    @validator("type")
+    @validator("type", pre=True)
     # pylint: disable=no-self-argument
     def _load_worker_class(cls, value: object) -> Type[Worker]:
         if isinstance(value, str):
