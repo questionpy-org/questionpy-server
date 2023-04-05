@@ -22,7 +22,7 @@ DEFAULT_PACKAGETYPE = PackageType.QUESTIONTYPE
 # Regular expressions.
 RE_SEMVER = re.compile(r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'
                        r'(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$')
-RE_API = re.compile(r'^\d+\.\d+$')
+RE_API = re.compile(r'^(0|[1-9]\d*)\.(0|[1-9]\d*)$')
 RE_VALID_CHARS_NAME = re.compile(r"^[a-z\d_]+$")
 
 

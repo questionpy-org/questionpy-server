@@ -98,3 +98,42 @@ def test_not_valid_name(field: str, name: str, error_message: str) -> None:
     manifest[field] = name
     with pytest.raises(ValidationError, match=error):
         Manifest(**manifest)
+
+
+@pytest.mark.parametrize('version', (
+    '0.1',
+    '1.0',
+    '10.1',
+    '2023.4'
+))
+def test_valid_api_version(version: str) -> None:
+    manifest = minimal_manifest.copy()
+    manifest['api_version'] = version
+    Manifest(**manifest)
+
+
+@pytest.mark.parametrize('version', (
+    '1',
+    '.1',
+    '1.',
+    '01.0'
+    '0.01',
+    '-1.0',
+    '1.0-',
+    '1.-1',
+    '1.0.',
+    '.1.0',
+    '0.1.0',
+    'v1.0',
+    'v1.0.0',
+    'V1.0'
+    'V1.0.0',
+    '1.0-alpha',
+    'version',
+))
+def test_not_valid_api_version(version: str) -> None:
+    error = '1 validation error for Manifest\napi_version\n*'
+    manifest = minimal_manifest.copy()
+    manifest['api_version'] = version
+    with pytest.raises(ValidationError, match=error):
+        Manifest(**manifest)
