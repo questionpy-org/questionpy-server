@@ -28,16 +28,18 @@ RE_VALID_CHARS_NAME = re.compile(r"^[a-z\d_]+$")
 
 # Validators.
 def ensure_is_valid_name(name: str) -> str:
-    """
-    Raises ValueError if the given name does not match the following conditions:
+    """Raises ValueError if the given name does not match the following conditions:
         - contains only lowercase alphanumeric characters and underscores
         - is 1 - 127 characters long
         - does not start with a number
         - is a valid Python identifier
         - is NOT a Python keyword
 
-    :param name: the name to be checked
-    :return: name
+    Args:
+      name (str): the name to be checked
+
+    Returns:
+      name
     """
     length = len(name)
 
