@@ -16,9 +16,7 @@ if TYPE_CHECKING:
 
 
 class PackageCollection:
-    """
-    Handles packages from a local directory, remote repositories, and packages received by an LMS.
-    """
+    """Handles packages from a local directory, remote repositories, and packages received by an LMS."""
 
     def __init__(self, local_dir: Optional[Path], repo_urls: list[str], cache: FileLimitLRU, worker_pool: WorkerPool):
         self._indexer = Indexer(worker_pool)
@@ -39,23 +37,18 @@ class PackageCollection:
         cache.on_remove = self._unregister_package_from_index
 
     async def start(self) -> None:
-        """
-        Starts the package collection.
-        """
+        """Starts the package collection."""
 
         # Get every start()-coroutine of the collectors and start them.
         await gather(*[collector.start() for collector in self._collectors])
 
     async def stop(self) -> None:
-        """
-        Stops the package collection.
-        """
+        """Stops the package collection."""
         # Get every stop()-coroutine of the collectors and start them.
         await gather(*[collector.stop() for collector in self._collectors])
 
     async def _unregister_package_from_index(self, package_hash: str) -> None:
-        """
-        This function should be called when a package gets removed from the cache. A package from a repository should
+        """This function should be called when a package gets removed from the cache. A package from a repository should
         not be removed from the index, as it might be still available. Therefore, this function only removes packages
         from the index if they were received by an LMS.
         """
@@ -63,21 +56,25 @@ class PackageCollection:
         await self._indexer.unregister_package(package_hash, self._lms_collector)
 
     async def put(self, package_container: 'HashContainer') -> 'Package':
-        """
-        Handles a package sent by an LMS.
+        """Handles a package sent by an LMS.
 
-        :param package_container: package container
-        :return: package
+        Args:
+            package_container: package container
+
+        Returns:
+            package
         """
 
         return await self._lms_collector.put(package_container)
 
     def get(self, package_hash: str) -> 'Package':
-        """
-        Returns a package if it exists.
+        """Returns a package if it exists.
 
-        :param package_hash: hash value of the package
-        :return: path to the package
+        Args:
+          package_hash (str): hash value of the package
+
+        Returns:
+          path to the package
         """
 
         # Check if package was indexed
@@ -87,22 +84,26 @@ class PackageCollection:
         raise FileNotFoundError
 
     def get_by_identifier(self, identifier: str) -> dict[str, 'Package']:
-        """
-        Returns a dict of packages with the given identifier and available versions.
+        """Returns a dict of packages with the given identifier and available versions.
 
-        :param identifier: identifier of the package
-        :return: dict of packages and versions
+        Args:
+          identifier (str): identifier of the package
+
+        Returns:
+          dict of packages and versions
         """
 
         return self._indexer.get_by_identifier(identifier)
 
     def get_by_identifier_and_version(self, identifier: str, version: str) -> 'Package':
-        """
-        Returns a package with the given identifier and version.
+        """Returns a package with the given identifier and version.
 
-        :param identifier: identifier of the package
-        :param version: version of the package
-        :return: package
+        Args:
+          identifier (str): identifier of the package
+          version (str): version of the package
+
+        Returns:
+          package
         """
 
         if package := self._indexer.get_by_identifier_and_version(identifier, version):
@@ -111,10 +112,10 @@ class PackageCollection:
         raise FileNotFoundError
 
     def get_packages(self) -> set['Package']:
-        """
-        Returns a set of all available packages.
+        """Returns a set of all available packages.
 
-        :return: set of packages
+        Returns:
+            set of packages
         """
 
         return self._indexer.get_packages()

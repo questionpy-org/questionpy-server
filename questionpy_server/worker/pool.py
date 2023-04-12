@@ -15,12 +15,12 @@ from .worker.subprocess import SubprocessWorker
 class WorkerPool:
     def __init__(self, max_workers: int, max_memory: int,
                  worker_type: Type[Worker] = SubprocessWorker):
-        """
-        Initialize the worker pool.
+        """Initialize the worker pool.
 
-        :param max_workers: maximum number of workers being executed in parallel
-        :param max_memory: maximum memory (in bytes) that all workers in the pool are allowed to consume
-        :param worker_type: worker implementation
+        Args:
+            max_workers (int): maximum number of workers being executed in parallel
+            max_memory (int): maximum memory (in bytes) that all workers in the pool are allowed to consume
+            worker_type (Type[Worker]): worker implementation
         """
         self.max_workers = max_workers
         self.max_memory = max_memory
@@ -37,14 +37,17 @@ class WorkerPool:
 
     @asynccontextmanager
     async def get_worker(self, package: Path, _lms: int, _context: Optional[int]) -> AsyncIterator[Worker]:
-        """
-        Get a (new) worker executing a QuestionPy package. A context manager is used to ensure
-        that a worker is always given back to the pool.
+        """Get a (new) worker executing a QuestionPy package.
 
-        :param package: path to QuestionPy package
-        :param _lms: id of the LMS
-        :param _context: context id within the lms
-        :return: a worker
+        A context manager is used to ensure that a worker is always given back to the pool.
+
+        Args:
+            package (Path): path to QuestionPy package
+            _lms (int): id of the LMS
+            _context (Optional[int]): context id within the lms
+
+        Returns:
+            A worker
         """
         if not self._semaphore:
             self._semaphore = Semaphore(self.max_workers)

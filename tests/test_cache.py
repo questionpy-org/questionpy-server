@@ -47,11 +47,11 @@ def settings(tmp_path_factory: TempPathFactory) -> Settings:
 
 
 def write_files_to_directory(files: List[Tuple[str, bytes]], directory: Path) -> None:
-    """
-    Writes files onto a specific directory on the filesystem.
+    """Writes files onto a specific directory on the filesystem.
 
-    :param files: files to be written
-    :param directory: where files should be created
+    Args:
+        files (List[Tuple[str, bytes]]): files to be written
+        directory (Path): where files should be created
     """
 
     for file, content in files:
@@ -60,22 +60,24 @@ def write_files_to_directory(files: List[Tuple[str, bytes]], directory: Path) ->
 
 
 def get_file_count(directory: Path) -> int:
-    """
-    Counts files in a directory.
+    """Counts files in a directory.
 
-    :param directory: of which to get the file count
-    :return: count of files in directory
+    Args:
+        directory (Path): of which to get the file count
+    Returns:
+        count of files in directory
     """
 
     return len(list(file for file in directory.iterdir() if file.is_file()))
 
 
 def get_directory_size(directory: str) -> int:
-    """
-    Calculates directory size.
+    """Calculates directory size.
 
-    :param directory: of which to get the size
-    :return: size of directory
+    Args:
+        directory (str): of which to get the size
+    Returns:
+        size of directory
     """
 
     return sum(file.stat().st_size for file in Path(directory).iterdir() if file.is_file())

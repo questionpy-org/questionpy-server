@@ -27,9 +27,7 @@ class FileLimitLRU:
     """
 
     def __init__(self, directory: Path, max_size: int, extension: str = None, name: str = None) -> None:
-        """
-        A cache should be initialised while starting a server therefore it is not necessary for it to be async.
-        """
+        """A cache should be initialised while starting a server therefore it is not necessary for it to be async."""
 
         async def on_remove(_key: str) -> None:
             pass
@@ -75,8 +73,9 @@ class FileLimitLRU:
                  ByteSize(self._total_size).human_readable(), ByteSize(self.max_size).human_readable())
 
     def contains(self, key: str) -> bool:
-        """
-        Checks if the file exists in cache and places it to the end ensuring that it is the most recent accessed file.
+        """Checks if the file exists in cache.
+
+        Additionally, the file is placed to the end ensuring that it is the most recent accessed file.
         """
 
         if key not in self._files:
@@ -92,9 +91,7 @@ class FileLimitLRU:
         return self._files[key]
 
     def get(self, key: str) -> Path:
-        """
-        Returns path of the file in the cache.
-        """
+        """Returns path of the file in the cache."""
 
         return self._get_file(key).path
 
@@ -107,22 +104,23 @@ class FileLimitLRU:
         await self.on_remove(key)
 
     async def remove(self, key: str) -> None:
-        """
-        Removes file from the cache and the filesystem.
-        """
+        """Removes file from the cache and the filesystem."""
 
         async with self._lock:
             await self._remove(key)
 
     async def put(self, key: str, value: bytes) -> Path:
-        """
-        Only accepts `bytes` objects as values; raises a `TypeError` otherwise.
-        If the length/size of the provided `value` exceeds `.max_bytes` a `SizeError` is raised.
+        """Puts a file in the cache and the filesystem.
+
         The internal `._total_bytes` attribute is updated.
         If the key existed before and just the value is replaced, the item is treated as most recently accessed and
         thus moved to the end of the internal linked list.
         If after adding the item `._total_bytes` exceeds `.max_bytes`, items are deleted in order from least to most
         recently accessed until the total size (in bytes) is in line with the specified maximum.
+
+        Raises:
+            TypeError: If `value` is not a `bytes` object.
+            SizeError: If the length/size of the provided `value` exceeds `.max_bytes`.
         """
 
         if not isinstance(value, bytes):
@@ -171,9 +169,9 @@ class FileLimitLRU:
 
     @property
     def files(self) -> OrderedDict[str, File]:
-        """
-        Dictionary of all files in the cache where the key is the hash of the file.
+        """Dictionary of all files in the cache where the key is the hash of the file.
 
-        :return: A copy of the internal dictionary.
+        Returns:
+             A copy of the internal dictionary.
         """
         return self._files.copy()

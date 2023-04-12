@@ -19,11 +19,13 @@ from tests.conftest import PACKAGE, PACKAGE_2, get_file_hash
 
 
 def create_local_collector(tmp_path_factory: TempPathFactory) -> tuple[LocalCollector, Path]:
-    """
-    Create a local collector and return it and the directory it is using.
+    """Create a local collector and return it and the directory it is using.
 
-    :param tmp_path_factory: Factory for temporary directories.
-    :return: Local collector and directory.
+    Args:
+        tmp_path_factory (TempPathFactory): Factory for temporary directories.
+
+    Returns:
+        Local collector and directory.
     """
 
     path = tmp_path_factory.mktemp('qpy')
@@ -33,10 +35,10 @@ def create_local_collector(tmp_path_factory: TempPathFactory) -> tuple[LocalColl
 
 class WaitForAsyncFunctionCall:
     def __init__(self, func: Callable):
-        """
-        Wrapper around a function that is being watched.
+        """Wrapper around a function that is being watched.
 
-        :param func: Function to wait for.
+        Args:
+            func (Callable): Function to wait for.
         """
         self.func = func
         self.fut = get_running_loop().create_future()
@@ -51,10 +53,10 @@ class WaitForAsyncFunctionCall:
             self.fut.set_exception(e)
 
     async def wait_for_fn_call(self, timeout: float) -> None:
-        """
-        Wait until the function has been called.
+        """Wait until the function has been called.
 
-        :param timeout: Maximum time to wait (in seconds).
+        Args:
+            timeout (float): Maximum time to wait (in seconds).
         """
         try:
             await wait_for(self.fut, timeout)

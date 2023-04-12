@@ -26,12 +26,14 @@ if TYPE_CHECKING:
 
 
 def json_response(data: Union[Sequence[BaseModel], BaseModel], status: int = 200) -> Response:
-    """
-    Creates a json response from a single BaseModel or a list of BaseModels.
+    """Creates a json response from a single BaseModel or a list of BaseModels.
 
-    :param data: a BaseModel or a list of BaseModels
-    :param status: HTTP status code
-    :return: response object
+    Args:
+        data (Union[Sequence[BaseModel]): A BaseModel or a list of BaseModels.
+        status (int): The HTTP status code.
+
+    Returns:
+        Response: A response object.
     """
 
     if isinstance(data, Sequence):
@@ -41,12 +43,14 @@ def json_response(data: Union[Sequence[BaseModel], BaseModel], status: int = 200
 
 
 def create_model_from_json(json: Union[object, str], param_class: Type[M]) -> M:
-    """
-    Creates a BaseModel from an object.
+    """Creates a BaseModel from an object.
 
-    :param json: object containing the parsed json
-    :param param_class: BaseModel class
-    :return: BaseModel
+    Args:
+        json (Union[object, str]): object containing the parsed json
+        param_class (Type[M]): BaseModel class
+
+    Returns:
+        M: BaseModel
     """
 
     try:
@@ -78,13 +82,15 @@ async def read_part(part: BodyPartReader, max_size: int, calculate_hash: Literal
 
 
 async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = False) -> Union[HashContainer, bytes]:
-    """
-    Reads a body part of a multipart/form-data request.
+    """Reads a body part of a multipart/form-data request.
 
-    :param part: body part
-    :param max_size: maximum size of the body part
-    :param calculate_hash: if True, returns a tuple of the body part and its hash
-    :return: body part or tuple of body part and its hash
+    Args:
+        part (BodyPartReader): body part
+        max_size (int): The maximum size of the body part.
+        calculate_hash (bool): if True, returns a tuple of the body part and its hash
+
+    Returns:
+        body part or tuple of body part and its hash
     """
 
     buffer = BytesIO()
@@ -114,11 +120,13 @@ async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = 
 
 async def parse_form_data(request: Request) \
         -> tuple[bytes, Optional[HashContainer], Optional[HashContainer]]:
-    """
-    Parses a multipart/form-data request.
+    """Parses a multipart/form-data request.
 
-    :param request: request to be parsed
-    :return: tuple of main field, package, and question state
+    Args:
+        request (Request): The request to be parsed.
+
+    Returns:
+        tuple of main field, package, and question state
     """
 
     server: 'QPyServer' = request.app['qpy_server_app']
@@ -146,13 +154,15 @@ async def parse_form_data(request: Request) \
 
 async def get_or_save_with_cache(cache: FileLimitLRU, hash_value: str, container: Optional[HashContainer]) \
         -> Optional[Path]:
-    """
-    Gets a file from the cache or saves it if it is not in the cache.
+    """Gets a file from the cache or saves it if it is not in the cache.
 
-    :param cache: cache
-    :param container: container with the file data and its hash
-    :param hash_value: hash of the file
-    :return: path to the file
+    Args:
+        cache (FileLimitLRU): The cache.
+        hash_value (str): The hash of the file.
+        container (Optional[HashContainer]): container with the file data and its hash
+
+    Returns:
+        The path to the file.
     """
 
     try:
@@ -169,12 +179,14 @@ async def get_or_save_with_cache(cache: FileLimitLRU, hash_value: str, container
 
 
 def get_from_cache(cache: FileLimitLRU, hash_value: str) -> Optional[Path]:
-    """
-    Gets a file from the cache.
+    """Gets a file from the cache.
 
-    :param cache: cache
-    :param hash_value: hash of the file
-    :return: path to the file
+    Args:
+        cache (FileLimitLRU): The cache.
+        hash_value (str): The hash of the file.
+
+    Returns:
+        The path to the file.
     """
 
     try:
@@ -186,13 +198,15 @@ def get_from_cache(cache: FileLimitLRU, hash_value: str) -> Optional[Path]:
 
 async def get_or_save_package(collection: PackageCollection, hash_value: str, container: Optional[HashContainer]) \
         -> Optional[Package]:
-    """
-    Gets a package from or saves it in the package collection.
+    """Gets a package from or saves it in the package collection.
 
-    :param collection: package collection
-    :param hash_value: hash of the package
-    :param container: container with the package data and its hash
-    :return: package
+    Args:
+        collection (PackageCollection): package collection
+        hash_value (str): The hash of the package.
+        container (Optional[HashContainer]): container with the package data and its hash
+
+    Returns:
+        package
     """
 
     try:
@@ -209,12 +223,14 @@ async def get_or_save_package(collection: PackageCollection, hash_value: str, co
 
 
 async def get_data_package(collection: PackageCollection, hash_value: str) -> Optional[Package]:
-    """
-    Gets a package from the collection.
+    """Gets a package from the collection.
 
-    :param collection: package collection
-    :param hash_value: hash of the package
-    :return: package
+    Args:
+        collection (PackageCollection): package collection
+        hash_value (str): The hash of the package.
+
+    Returns:
+        package
     """
 
     try:
@@ -231,16 +247,17 @@ class BodyContents(NamedTuple):
 
 def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = None) \
         -> Union[RouteHandler, Callable[[RouteHandler], RouteHandler]]:
-    """
-    Decorator function used to ensure that the package and question type exists and that the json
+    """Decorator function used to ensure that the package and question type exists and that the json
     corresponds to the model given as a type annotation in func.
 
-    :param _func: Control parameter; allows using the decorator with or without arguments.
+    Args:
+        _func (Optional[RouteHandler]): Control parameter; allows using the decorator with or without arguments.
             If this decorator is used with any arguments, this will always be the decorated function itself.
+            (Default value = None)
     """
 
     def decorator(function: RouteHandler) -> RouteHandler:
-        """internal decorator function"""
+        """Internal decorator function."""
         param_name, param_class = get_route_model_param(function, OptionalQuestionStateHash)
         require_question_state = issubclass(param_class, QuestionStateHash)
 
@@ -309,7 +326,7 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
 def ensure_package_exists(_func: Optional[RouteHandler] = None, required_hash: bool = True) \
         -> Union[RouteHandler, Callable[[RouteHandler], RouteHandler]]:
     def decorator(function: RouteHandler) -> RouteHandler:
-        """internal decorator function"""
+        """Internal decorator function."""
 
         @functools.wraps(function)
         async def wrapper(request: Request, *args: Any, **kwargs: Any) -> Any:

@@ -43,7 +43,8 @@ class DuplexPipe:
         def read(self, size: int) -> bytes:
             """Reads exactly size bytes.
 
-            :raises EOFError: if EOF is reached before `size` bytes are read
+            Raises:
+                EOFError: if EOF is reached before `size` bytes are read
             """
             try:
                 read = self._receive.read(size)

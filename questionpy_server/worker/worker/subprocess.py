@@ -21,9 +21,7 @@ _T = TypeVar("_T", bound=MessageToServer)
 
 
 class _StderrBuffer:
-    """
-    Size-limited buffer for untrusted worker output.
-    """
+    """Size-limited buffer for untrusted worker output."""
 
     def __init__(self, stderr: StreamReader):
         self._stderr = stderr
@@ -67,9 +65,7 @@ class _StderrBuffer:
 
 
 class SubprocessWorker(BaseWorker):
-    """
-    Worker implementation running in a non-sandboxed subprocess.
-    """
+    """Worker implementation running in a non-sandboxed subprocess."""
 
     def __init__(self, package: Path, limits: Optional[WorkerResourceLimits]):
         super().__init__(package, limits)

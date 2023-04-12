@@ -8,7 +8,8 @@ def setup_server_communication() -> WorkerToServerConnection:
     """Setup stdin/stdout/stderr.
 
     The application server communicates with its worker through stdin/stdout, which means only this class is allowed to
-    read from and write to these pipes. Other output should go through stderr."""
+    read from and write to these pipes. Other output should go through stderr.
+    """
     file_stdin = FileIO(sys.stdin.buffer.fileno(), 'r', closefd=False)
     file_stdout = FileIO(sys.stdout.fileno(), 'w', closefd=False)
     connection = WorkerToServerConnection(BufferedReader(file_stdin), file_stdout)
