@@ -62,22 +62,26 @@ class Worker(ABC):
         """Get manifest of the main package in the worker."""
 
     @abstractmethod
-    async def get_options_form(self, question_state: Optional[Path]) \
-            -> tuple[OptionsFormDefinition, dict[str, object]]:
+    async def get_options_form(self, question_state: Optional[Path]) -> tuple[OptionsFormDefinition, dict[str, object]]:
         """Get the form used to create a new or edit an existing question.
 
-        :param question_state: The path to a file containing the current question state if editing, or ``None`` if
-            creating a new question.
-        :return: Tuple of the form definition and the current data of the inputs.
+        Args:
+            question_state: The path to a file containing the current question state if editing, or ``None`` if creating
+                a new question.
+
+        Returns:
+             Tuple of the form definition and the current data of the inputs.
         """
 
     @abstractmethod
-    async def create_question_from_options(self, old_state: Optional[Path], form_data: dict[str, object]) \
-            -> Question:
+    async def create_question_from_options(self, old_state: Optional[Path], form_data: dict[str, object]) -> Question:
         """Create or update the question (state) with the form data from a submitted question edit form.
 
-        :param old_state: The path to a file containing the current question state if editing, or ``None`` if creating a
-            new question.
-        :param form_data: Form data from a submitted question edit form.
-        :return: New question.
+        Args:
+            old_state: The path to a file containing the current question state if editing, or ``None`` if creating a
+                new question.
+            form_data: Form data from a submitted question edit form.
+
+        Returns:
+            New question.
         """
