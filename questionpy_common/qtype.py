@@ -18,8 +18,11 @@ class BaseQuestionType(ABC):
             -> tuple[OptionsFormDefinition, dict[str, object]]:
         """Get the form used to create a new or edit an existing question.
 
-        :param question_state: The current question state if editing, or ``None`` if creating a new question.
-        :return: Tuple of the form definition and the current data of the inputs.
+        Args:
+            question_state: The current question state if editing, or ``None`` if creating a new question.
+
+        Returns:
+            Tuple of the form definition and the current data of the inputs.
         """
 
     @abstractmethod
@@ -27,10 +30,15 @@ class BaseQuestionType(ABC):
                                      form_data: dict[str, object]) -> BaseQuestion:
         """Create or update the question (state) with the form data from a submitted question edit form.
 
-        :param old_state: Current question state if editing, or ``None`` if creating a new question.
-        :param form_data: Form data from a submitted question edit form.
-        :return: New question.
-        :raises OptionsFormValidationError: When `form_data` is invalid.
+        Args:
+            old_state: Current question state if editing, or ``None`` if creating a new question.
+            form_data: Form data from a submitted question edit form.
+
+        Returns:
+            New question.
+
+        Raises:
+            OptionsFormValidationError: When `form_data` is invalid.
         """
 
     @abstractmethod
