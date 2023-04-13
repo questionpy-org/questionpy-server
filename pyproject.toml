@@ -23,7 +23,6 @@ mypy = "^1.1.1"
 flake8 = "^6.0.0"
 coverage = { extras = ["toml"], version = "^7.2.1" }
 tox = "^4.4.6"
-tox-gh-actions = "^3.0.0"
 
 
 [tool.pytest.ini_options]
@@ -95,13 +94,6 @@ env_list =
     mypy
 
 minversion = 4.2.6
-
-[gh-actions]
-# Associates python versions installed in GitHub Actions (left) with one or more factors (right)
-python =
-    3.9: py39
-    3.10: py310
-    3.11: py311
 
 [testenv]
 allowlist_externals = poetry
