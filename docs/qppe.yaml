@@ -110,7 +110,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OptionsFormDefinition"
+                type: object
+                properties:
+                  definition:
+                    $ref: "#/components/schemas/OptionsFormDefinition"
+                  form_data:
+                    $ref: "#/components/schemas/FormData"
         404:
           description: Package not found.
           content:
@@ -493,6 +498,21 @@ components:
             additionalProperties: false
       additionalProperties: false
 
+    FormData:
+      type: object
+      description: Mapping of element names to their current values. The value of containers of elements, such as
+        sections and groups, is a nested mapping of their contained element values. Some elements such as repetitions 
+        and multi-selects may also produce arrays as their values.
+      additionalProperties: true
+      example:
+        my_section:
+          my_group:
+            my_input: text value
+          my_checkbox: true
+          my_multi_select:
+            - OPT_1
+            - OPT_2
+
     QuestionStateHash:
       type: object
       properties:
@@ -524,8 +544,7 @@ components:
         - type: object
           properties:
             form_data:
-              type: object
-              description: Options set by question creator according to OptionsFormDefinition
+              $ref: "#/components/schemas/FormData"
           required: [ form_data ]
 
     Question:
