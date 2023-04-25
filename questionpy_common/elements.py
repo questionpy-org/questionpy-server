@@ -1,6 +1,6 @@
-from typing import List, Literal, Union, Optional, get_args
+from typing import List, Literal, Union, Optional, get_args, Annotated
 
-from pydantic import BaseModel, PositiveInt
+from pydantic import BaseModel, PositiveInt, Field
 from typing_extensions import TypeGuard, TypeAlias
 
 from questionpy_common.conditions import Condition
@@ -10,14 +10,16 @@ __all__ = ["CanHaveConditions", "StaticTextElement", "TextInputElement", "Checkb
            "FormElement", "FormSection", "OptionsFormDefinition", "is_form_element"]
 
 
+class _BaseElement(BaseModel):
+    kind: str
+    """Discriminator which decides the subclass when deserializing to FormElement."""
+    name: str
+    """Name which will later identify the element in submitted form data."""
+
+
 class _Labelled(BaseModel):
     label: str
     """Text describing the element, shown verbatim."""
-
-
-class _Named(BaseModel):
-    name: str
-    """Name which will later identify the element in submitted form data."""
 
 
 class CanHaveConditions(BaseModel):
@@ -28,13 +30,13 @@ class CanHaveConditions(BaseModel):
     """Hide this element if any of these conditions match."""
 
 
-class StaticTextElement(_Labelled, _Named, CanHaveConditions):
+class StaticTextElement(_BaseElement, _Labelled, CanHaveConditions):
     """Some static text with a label."""
     kind: Literal["static_text"] = "static_text"
     text: str
 
 
-class TextInputElement(_Labelled, _Named, CanHaveConditions):
+class TextInputElement(_BaseElement, _Labelled, CanHaveConditions):
     kind: Literal["input"] = "input"
     required: bool = False
     """Require some non-empty input to be entered before the form can be submitted."""
@@ -44,7 +46,7 @@ class TextInputElement(_Labelled, _Named, CanHaveConditions):
     """Placeholder to show when no value has been entered yet. Not part of the submitted form data."""
 
 
-class CheckboxElement(_Named, CanHaveConditions):
+class CheckboxElement(_BaseElement, CanHaveConditions):
     kind: Literal["checkbox"] = "checkbox"
     left_label: Optional[str] = None
     """Label shown the same way as labels on other element types."""
@@ -56,7 +58,7 @@ class CheckboxElement(_Named, CanHaveConditions):
     """Default state of the checkbox."""
 
 
-class CheckboxGroupElement(_Named):
+class CheckboxGroupElement(_BaseElement):
     """Adds a 'Select all/none' button after multiple checkboxes."""
     kind: Literal["checkbox_group"] = "checkbox_group"
     checkboxes: List[CheckboxElement]
@@ -72,7 +74,7 @@ class Option(BaseModel):
     """Default state of the option."""
 
 
-class RadioGroupElement(_Labelled, _Named, CanHaveConditions):
+class RadioGroupElement(_BaseElement, _Labelled, CanHaveConditions):
     """Group of radio buttons, of which at most one can be selected at a time."""
     kind: Literal["radio_group"] = "radio_group"
     options: List[Option]
@@ -81,7 +83,7 @@ class RadioGroupElement(_Labelled, _Named, CanHaveConditions):
     """Require one of the options to be selected before the form can be submitted."""
 
 
-class SelectElement(_Labelled, _Named, CanHaveConditions):
+class SelectElement(_BaseElement, _Labelled, CanHaveConditions):
     """A drop-down list."""
     kind: Literal["select"] = "select"
     multiple: bool = False
@@ -92,19 +94,19 @@ class SelectElement(_Labelled, _Named, CanHaveConditions):
     """Require at least one of the options to be selected before the form can be submitted."""
 
 
-class HiddenElement(_Named, CanHaveConditions):
+class HiddenElement(_BaseElement, CanHaveConditions):
     """An element which isn't shown to the user but still submits its fixed value."""
     kind: Literal["hidden"] = "hidden"
     value: str
 
 
-class GroupElement(_Labelled, _Named, CanHaveConditions):
+class GroupElement(_BaseElement, _Labelled, CanHaveConditions):
     """Groups multiple elements horizontally with a common label."""
     kind: Literal["group"] = "group"
     elements: List["FormElement"]
 
 
-class RepetitionElement(_Named):
+class RepetitionElement(_BaseElement):
     """Repeats a number of elements, allowing the user to add new repetitions with the click of a button."""
     kind: Literal["repetition"] = "repetition"
 
@@ -119,17 +121,19 @@ class RepetitionElement(_Named):
     """Elements which will be repeated."""
 
 
-FormElement: TypeAlias = Union[
+FormElement: TypeAlias = Annotated[Union[
     StaticTextElement, TextInputElement, CheckboxElement, CheckboxGroupElement,
     RadioGroupElement, SelectElement, HiddenElement, GroupElement, RepetitionElement
-]
+], Field(discriminator="kind")]
 
 GroupElement.update_forward_refs()
 RepetitionElement.update_forward_refs()
 
 
-class FormSection(_Named):
+class FormSection(BaseModel):
     """Form section which can be expanded and collapsed."""
+    name: str
+    """Name which will later identify the element in submitted form data."""
     header: str
     """Header to be shown at the top of the section."""
     elements: List[FormElement] = []
@@ -146,4 +150,4 @@ class OptionsFormDefinition(BaseModel):
 def is_form_element(value: object) -> TypeGuard[FormElement]:
     # unions don't support runtime type checking through isinstance
     # this checks if value is an instance of any of the union members
-    return isinstance(value, get_args(FormElement))
+    return isinstance(value, get_args(get_args(FormElement)[0]))
