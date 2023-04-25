@@ -9,6 +9,8 @@ from questionpy_common.manifest import Manifest
 class SemVer(_Version):
     @classmethod
     def _parse(cls, version: Union[str, bytes]) -> 'SemVer':
+        if isinstance(version, cls):
+            return version
         return cls.parse(version)
 
     @classmethod
