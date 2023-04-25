@@ -3,10 +3,11 @@ from configparser import ConfigParser
 from datetime import timedelta
 from pathlib import Path
 from pydoc import locate
-from typing import Any, Callable, Dict, Tuple, Optional, Type, Union, Final
+from typing import Any, Callable, Optional, Type, Literal, Union, Final
 
 from pydantic import BaseModel, BaseSettings, validator, Field, DirectoryPath, ByteSize, HttpUrl
-from pydantic.env_settings import InitSettingsSource, SettingsSourceCallable
+from pydantic.env_settings import InitSettingsSource, EnvSettingsSource, SettingsSourceCallable
+
 from questionpy_common.constants import MAX_PACKAGE_SIZE, MiB
 
 from questionpy_server.worker.worker import Worker
@@ -14,25 +15,35 @@ from questionpy_server.worker.worker.subprocess import SubprocessWorker
 
 REPOSITORY_MINIMUM_INTERVAL: Final[timedelta] = timedelta(minutes=5)
 
+_LOG = logging.getLogger('questionpy-server:settings')
+
 
 class IniFileSettingsSource:
-    def __init__(self, config_files: Tuple[Path, ...]):
-        self.config_files = config_files
+    def __init__(self, config_files: tuple[Path, ...]):
+        self._config_files = config_files
 
-    def __call__(self, settings: BaseSettings) -> Dict[str, Any]:
-        log = logging.getLogger('questionpy-server')
-        for path in self.config_files:
+    def __call__(self, settings: BaseSettings) -> dict[str, Any]:
+        for path in self._config_files:
             if not path.is_file():
-                log.info("No file found at '%s'", path)
+                _LOG.info("No file found at '%s'", path)
                 continue
-            log.info("Reading config file '%s'", path)
+            _LOG.info("Reading config file '%s'", path)
 
             parser = ConfigParser()
             parser.read(path)
-            return {key: section for key, section in parser.items() if key != 'DEFAULT'}
+            return {key: dict(section) for key, section in parser.items() if key != 'DEFAULT'}
 
-        log.fatal('No config file found!')
+        _LOG.warning('No config file found!')
         return {}
+
+
+class GeneralSettings(BaseModel):
+    log_level: Literal['NONE', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'] = 'INFO'
+
+    @validator('log_level', pre=True)
+    # pylint: disable=no-self-argument
+    def logging_level_to_upper(cls, value: str) -> str:
+        return value.upper()
 
 
 class WebserviceSettings(BaseModel):
@@ -157,7 +168,38 @@ class CollectorSettings(BaseModel):
         return value
 
 
+class EnvSettingsSourceWrapper:
+    """
+    Notifies the user if any environment variables are found which overwrite the settings file.
+
+    If the loglevel is `DEBUG` it outputs the exact variables.
+    """
+    def __init__(self, env_settings_source: EnvSettingsSource) -> None:
+        self._env_settings_source = env_settings_source
+
+    def _get_settings(self, settings: dict[str, Any], result: Optional[set] = None, parent: str = '') -> set[str]:
+        if result is None:
+            result = set()
+
+        for key, value in settings.items():
+            if isinstance(value, dict):
+                self._get_settings(value, result, f'{parent}{key}->')
+            else:
+                result.add(f'{parent}{key}: {value}')
+
+        return result
+
+    def __call__(self, settings: BaseSettings) -> dict[str, Any]:
+        env_settings = self._env_settings_source(settings)
+        if env_settings:
+            _LOG.info("Reading settings from environment variables, %s in total. Environment variables overwrite "
+                      "settings from the config file.", len(env_settings))
+            _LOG.debug("Following settings were read from environment variables: %s", self._get_settings(env_settings))
+        return env_settings
+
+
 class Settings(BaseSettings):
+    general: GeneralSettings
     webservice: WebserviceSettings
     worker: WorkerSettings
     cache_package: PackageCacheSettings
@@ -165,20 +207,22 @@ class Settings(BaseSettings):
     cache_repo_index: RepoIndexCacheSettings
     collector: CollectorSettings
 
-    config_files: Tuple[Path, ...] = ()
+    config_files: tuple[Path, ...] = ()
 
     class Config:
         env_prefix = 'qpy_'
+        env_nested_delimiter = '__'
 
         @classmethod
         def customise_sources(
                 cls,
                 init_settings: InitSettingsSource,
-                env_settings: SettingsSourceCallable,
+                env_settings: EnvSettingsSource,
                 # pylint: disable=unused-argument
                 file_secret_settings: SettingsSourceCallable
-        ) -> Tuple[Callable, ...]:
+        ) -> tuple[Callable, ...]:
             if "config_files" in init_settings.init_kwargs:
-                return init_settings, IniFileSettingsSource(init_settings.init_kwargs["config_files"]), env_settings
+                ini_settings = IniFileSettingsSource(init_settings.init_kwargs["config_files"])
+                return init_settings, EnvSettingsSourceWrapper(env_settings), ini_settings
 
             return init_settings, env_settings

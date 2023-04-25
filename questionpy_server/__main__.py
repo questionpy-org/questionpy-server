@@ -13,9 +13,19 @@ _DEFAULT_CONFIG_FILES = (
 )
 
 
+def update_logging(level: str) -> None:
+    if level == 'NONE':
+        logging.disable()
+    elif level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
+        # We need to set force=True because we might have already set the logging level by logging a message.
+        # reference: https://docs.python.org/3/library/logging.html#logging.basicConfig
+        logging.basicConfig(level=level, force=True)
+
+
 def main() -> None:
     # Initialize logging here because we also log things while reading the settings
-    logging.basicConfig(level=os.getenv("QPY_LOGLEVEL", "INFO"))
+    if log_level := os.getenv('QPY_GENERAL__LOG_LEVEL', 'INFO'):
+        update_logging(log_level)
 
     # Arguments
     parser = argparse.ArgumentParser(description=f"QuestionPy Application Server {__version__}")
@@ -23,6 +33,7 @@ def main() -> None:
     args = parser.parse_args()
 
     settings = Settings(config_files=args.config)
+    update_logging(settings.general.log_level)
 
     qpy_server = QPyServer(settings)
     qpy_server.start_server()
