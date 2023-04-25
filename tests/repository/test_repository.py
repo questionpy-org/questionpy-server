@@ -1,7 +1,6 @@
 # pylint: disable=redefined-outer-name
 
 from json import dumps
-from pathlib import Path
 from unittest.mock import patch
 from gzip import compress
 from urllib.parse import urljoin
@@ -89,7 +88,7 @@ async def test_get_packages(repository: Repository) -> None:
 
 async def test_get_package(repository: Repository) -> None:
     manifest = ManifestFactory.build(short_name='package', namespace='namespace')
-    package_path = Path('path/to/package.qpy')
+    package_path = 'path/to/package.qpy'
     package = RepoPackage(manifest=manifest, sha256='hash', size=1, path=package_path)
     with patch('questionpy_server.repository.download') as mock:
         mock.return_value = b'package'

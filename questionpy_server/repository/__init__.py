@@ -53,6 +53,6 @@ class Repository:
         :return: raw package bytes
         """
 
-        url = urljoin(self._url_base, str(package.path))
+        url = urljoin(self._url_base, package.path)
         data = await download(url, size=package.size, expected_hash=package.sha256)
         return data

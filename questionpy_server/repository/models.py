@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
 from functools import total_ordering
-from pathlib import Path
 
 from pydantic import BaseModel, PositiveInt
 from questionpy_server.utils.manfiest import ComparableManifest, SemVer
@@ -18,7 +17,7 @@ class RepoPackageVersion(BaseModel):
     version: SemVer
     api_version: str
 
-    path: Path
+    path: str
     size: PositiveInt
     sha256: str
 
@@ -46,7 +45,7 @@ class RepoPackageIndex(BaseModel):
 class RepoPackage:
     manifest: ComparableManifest
 
-    path: Path
+    path: str
     size: PositiveInt
     sha256: str
 
