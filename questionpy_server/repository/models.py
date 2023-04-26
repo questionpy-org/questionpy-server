@@ -10,6 +10,7 @@ class RepoMeta(BaseModel):
     timestamp: datetime
     size: PositiveInt
     sha256: str
+    version: int
 
 
 @total_ordering
