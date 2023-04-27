@@ -87,6 +87,16 @@ class QuestionStateCacheSettings(BaseModel):
         return value.resolve()
 
 
+class RepoIndexCacheSettings(BaseModel):
+    size: ByteSize = ByteSize(200 * MiB)
+    directory: DirectoryPath = Path('cache/repo_index').resolve()
+
+    @validator('directory')
+    # pylint: disable=no-self-argument
+    def resolve_path(cls, value: Path) -> Path:
+        return value.resolve()
+
+
 class CollectorSettings(BaseModel):
     local_directory: Optional[DirectoryPath]
     repository_default_interval: timedelta = timedelta(hours=1, minutes=30)
@@ -152,6 +162,7 @@ class Settings(BaseSettings):
     worker: WorkerSettings
     cache_package: PackageCacheSettings
     cache_question_state: QuestionStateCacheSettings
+    cache_repo_index: RepoIndexCacheSettings
     collector: CollectorSettings
 
     config_files: Tuple[Path, ...] = ()

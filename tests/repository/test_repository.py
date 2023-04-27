@@ -1,12 +1,15 @@
 # pylint: disable=redefined-outer-name
 
 from json import dumps
-from unittest.mock import patch
+from unittest.mock import patch, Mock, ANY
 from gzip import compress
 from urllib.parse import urljoin
 
-import pytest
+from _pytest.tmpdir import TempPathFactory
 
+from questionpy_common.constants import KiB
+
+from questionpy_server.cache import FileLimitLRU
 from questionpy_server.repository import Repository, RepoMeta, RepoPackage, RepoPackageIndex
 from questionpy_server.utils.manfiest import ComparableManifest, semver_encoder
 from tests.test_data.factories import RepoMetaFactory, RepoPackageVersionsFactory, ManifestFactory
@@ -15,12 +18,8 @@ from tests.test_data.factories import RepoMetaFactory, RepoPackageVersionsFactor
 REPO_URL = 'https://example.com/repo/'
 
 
-@pytest.fixture
-def repository() -> Repository:
-    return Repository(REPO_URL)
-
-
-async def test_get_meta(repository: Repository) -> None:
+async def test_get_meta() -> None:
+    repository = Repository(REPO_URL, Mock())
     with patch('questionpy_server.repository.download') as mock:
         expected = RepoMetaFactory.build()
         mock.return_value = expected.json().encode()
@@ -35,7 +34,7 @@ async def test_get_meta(repository: Repository) -> None:
         assert meta == expected
 
 
-async def test_get_packages(repository: Repository) -> None:
+async def test_get_packages(tmp_path_factory: TempPathFactory) -> None:
     package_versions_0 = {
         'manifest': {
             'short_name': 'package_0',
@@ -52,6 +51,8 @@ async def test_get_packages(repository: Repository) -> None:
         },
         'versions': [{'sha256': '2', 'version': '3.0.0', 'api_version': '3.0'}],
     }
+
+    repository = Repository(REPO_URL, FileLimitLRU(tmp_path_factory.mktemp('qpy'), 100 * KiB))
 
     package_index = RepoPackageIndex(packages=[
                         RepoPackageVersionsFactory().build(**package_versions_0),  # type: ignore[arg-type]
@@ -86,10 +87,46 @@ async def test_get_packages(repository: Repository) -> None:
                 assert package.manifest == ComparableManifest(**expected_manifest)
 
 
-async def test_get_package(repository: Repository) -> None:
+async def test_get_packages_cached(tmp_path_factory: TempPathFactory) -> None:
+    package_versions = {
+        'manifest': {
+            'short_name': 'package_1',
+            'namespace': 'namespace_1',
+        },
+        'versions': [{'sha256': '2', 'version': '3.0.0', 'api_version': '3.0'}],
+    }
+
+    cache = FileLimitLRU(tmp_path_factory.mktemp('qpy'), 100 * KiB)
+    repository = Repository(REPO_URL, cache)
+    package_index = RepoPackageIndex(packages=[
+        RepoPackageVersionsFactory().build(**package_versions)  # type: ignore[arg-type]
+    ])
+
+    with patch('questionpy_server.repository.download') as mock_download, \
+            patch.object(cache, 'put', wraps=cache.put) as mock_put:
+        parsed = dumps(package_index, default=semver_encoder)
+        mock_download.return_value = compress(parsed.encode())
+
+        # Get packages.
+        meta: RepoMeta = RepoMetaFactory.build()
+        index_1 = await repository.get_packages(meta)
+        mock_put.assert_awaited_once_with(meta.sha256, ANY)
+
+    with patch.object(cache, 'get', wraps=cache.get) as mock_get:
+        # Get packages again.
+        index_2 = await repository.get_packages(meta)
+        mock_get.assert_called_once_with(meta.sha256)
+
+    assert index_1 == index_2
+
+
+async def test_get_package() -> None:
+    repository = Repository(REPO_URL, Mock())
+
     manifest = ManifestFactory.build(short_name='package', namespace='namespace')
     package_path = 'path/to/package.qpy'
     package = RepoPackage(manifest=manifest, sha256='hash', size=1, path=package_path)
+
     with patch('questionpy_server.repository.download') as mock:
         mock.return_value = b'package'
 

@@ -27,10 +27,12 @@ class RepoCollector(CachedCollector):
     This collector is responsible for downloading packages from a remote repository and caching them locally.
     """
 
-    def __init__(self, cache: FileLimitLRU, url: str, update_interval: timedelta, indexer: 'Indexer'):
-        super().__init__(cache=cache, indexer=indexer)
+    def __init__(self, url: str, update_interval: timedelta, package_cache: FileLimitLRU,
+                 repo_index_cache: FileLimitLRU, indexer: 'Indexer'):
+        super().__init__(cache=package_cache, indexer=indexer)
+
         self._url = url
-        self._repository = Repository(self._url)
+        self._repository = Repository(self._url, repo_index_cache)
 
         self._meta: Optional[RepoMeta] = None
         self._index: dict[str, RepoPackage] = {}
@@ -78,7 +80,6 @@ class RepoCollector(CachedCollector):
 
         # Get every package.
         new_packages = await self._repository.get_packages(self._meta)
-        # TODO: cache package index
 
         old_package_hashes = self._index.keys()
         new_package_hashes = new_packages.keys()

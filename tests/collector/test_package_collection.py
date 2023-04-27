@@ -15,7 +15,7 @@ from questionpy_server.collector.lms_collector import LMSCollector
 
 
 async def test_start() -> None:
-    package_collection = PackageCollection(Path("test_dir/"), {}, Mock(), Mock())
+    package_collection = PackageCollection(Path("test_dir/"), {}, Mock(), Mock(), Mock())
 
     with patch.object(LMSCollector, 'start') as lms_start, patch.object(LocalCollector, 'start') as local_start:
         await package_collection.start()
@@ -24,7 +24,7 @@ async def test_start() -> None:
 
 
 async def test_stop() -> None:
-    package_collection = PackageCollection(Path("test_dir/"), {}, Mock(), Mock())
+    package_collection = PackageCollection(Path("test_dir/"), {}, Mock(), Mock(), Mock())
 
     with patch.object(LMSCollector, 'stop') as lms_stop, patch.object(LocalCollector, 'stop') as local_stop:
         await package_collection.stop()
@@ -33,7 +33,7 @@ async def test_stop() -> None:
 
 
 async def test_put_package() -> None:
-    package_collection = PackageCollection(None, {}, Mock(), Mock())
+    package_collection = PackageCollection(None, {}, Mock(), Mock(), Mock())
 
     with patch.object(LMSCollector, 'put') as put:
         await package_collection.put(HashContainer(b'', 'hash'))
@@ -41,7 +41,7 @@ async def test_put_package() -> None:
 
 
 def test_get_package() -> None:
-    package_collection = PackageCollection(None, {}, Mock(), Mock())
+    package_collection = PackageCollection(None, {}, Mock(), Mock(), Mock())
 
     # Package does exist.
     with patch.object(Indexer, 'get_by_hash') as get_by_hash:
@@ -56,7 +56,7 @@ def test_get_package() -> None:
 
 
 def test_get_package_by_identifier() -> None:
-    package_collection = PackageCollection(None, {}, Mock(), Mock())
+    package_collection = PackageCollection(None, {}, Mock(), Mock(), Mock())
 
     with patch.object(Indexer, 'get_by_identifier') as get_by_identifier:
         package_collection.get_by_identifier('@default/name')
@@ -64,7 +64,7 @@ def test_get_package_by_identifier() -> None:
 
 
 def test_get_package_by_identifier_and_version() -> None:
-    package_collection = PackageCollection(None, {}, Mock(), Mock())
+    package_collection = PackageCollection(None, {}, Mock(), Mock(), Mock())
 
     # Package does exist.
     with patch.object(Indexer, 'get_by_identifier_and_version') as get_by_identifier_and_version:
@@ -81,7 +81,7 @@ def test_get_package_by_identifier_and_version() -> None:
 
 
 def test_get_packages() -> None:
-    package_collection = PackageCollection(None, {}, Mock(), Mock())
+    package_collection = PackageCollection(None, {}, Mock(), Mock(), Mock())
 
     # Package does exist.
     with patch.object(Indexer, 'get_packages') as get_packages:
@@ -91,7 +91,7 @@ def test_get_packages() -> None:
 
 async def test_notify_indexer_on_cache_deletion(tmp_path_factory: TempPathFactory) -> None:
     cache = FileLimitLRU(tmp_path_factory.mktemp('qpy'), 100)
-    PackageCollection(None, {}, cache, Mock())
+    PackageCollection(None, {}, Mock(), cache, Mock())
 
     # The callback should unregister the package from the indexer.
     with patch.object(Indexer, 'unregister_package') as unregister_package:
