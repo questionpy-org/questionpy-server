@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Annotated, Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field, FilePath, HttpUrl, Json
+
 from questionpy_common.elements import OptionsFormDefinition
 
 

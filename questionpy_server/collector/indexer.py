@@ -3,13 +3,12 @@ from asyncio import Lock
 from pathlib import Path
 from typing import Optional, overload, Union
 
-from questionpy_common.manifest import Manifest
-
 from questionpy_server import WorkerPool
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.package import Package
+from questionpy_server.utils.manfiest import ComparableManifest, SemVer
 
 
 class Indexer:
@@ -23,7 +22,7 @@ class Indexer:
         self._worker_pool = worker_pool
 
         self._index_by_hash: dict[str, Package] = {}
-        self._index_by_identifier: dict[str, dict[str, Package]] = {}
+        self._index_by_identifier: dict[str, dict[SemVer, Package]] = {}
         """dict[identifier, dict[version, Package]]"""
 
         self._lock: Optional[Lock] = None
@@ -40,7 +39,7 @@ class Indexer:
 
         return self._index_by_hash.get(package_hash, None)
 
-    def get_by_identifier(self, identifier: str) -> dict[str, Package]:
+    def get_by_identifier(self, identifier: str) -> dict[SemVer, Package]:
         """Returns a dict of packages with the given identifier and available versions.
 
         Args:
@@ -52,7 +51,7 @@ class Indexer:
 
         return self._index_by_identifier.get(identifier, {}).copy()
 
-    def get_by_identifier_and_version(self, identifier: str, version: str) -> Optional[Package]:
+    def get_by_identifier_and_version(self, identifier: str, version: SemVer) -> Optional[Package]:
         """Returns the package with the given identifier and version or None if it does not exist.
 
         Args:
@@ -75,7 +74,8 @@ class Indexer:
         return set(package for packages in self._index_by_identifier.values() for package in packages.values())
 
     @overload
-    async def register_package(self, package_hash: str, path_or_manifest: Manifest, source: BaseCollector) -> Package:
+    async def register_package(self, package_hash: str, path_or_manifest: ComparableManifest,
+                               source: BaseCollector) -> Package:
         """Registers a package in the index.
 
         Args:
@@ -94,7 +94,7 @@ class Indexer:
             source (BaseCollector): The source of the package.
         """
 
-    async def register_package(self, package_hash: str, path_or_manifest: Union[Path, Manifest],
+    async def register_package(self, package_hash: str, path_or_manifest: Union[Path, ComparableManifest],
                                source: BaseCollector) -> Package:
         if not self._lock:
             self._lock = Lock()

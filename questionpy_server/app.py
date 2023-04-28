@@ -23,8 +23,8 @@ class QPyServer:
 
         self.package_cache = FileLimitLRU(settings.cache_package.directory, settings.cache_package.size,
                                           extension='.qpy', name='PackageCache')
-        self.package_collection = PackageCollection(settings.collector.local_directory, [], self.package_cache,
-                                                    self.worker_pool)
+        self.package_collection = PackageCollection(settings.collector.local_directory, settings.collector.repositories,
+                                                    self.package_cache, self.worker_pool)
         self.question_state_cache = FileLimitLRU(settings.cache_question_state.directory,
                                                  settings.cache_question_state.size, name='QuestionStateCache')
 

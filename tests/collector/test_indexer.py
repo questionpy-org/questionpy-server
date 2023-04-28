@@ -6,7 +6,6 @@ from unittest.mock import patch
 import pytest
 
 from questionpy_common.constants import MiB
-from questionpy_common.manifest import Manifest
 
 from questionpy_server import WorkerPool
 from questionpy_server.collector.abc import BaseCollector
@@ -15,12 +14,14 @@ from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.package import PackageSources
+from questionpy_server.utils.manfiest import ComparableManifest
 from tests.conftest import PACKAGE
 
 
 @pytest.mark.parametrize('kind', [PACKAGE.path, PACKAGE.manifest])
 @patch('questionpy_server.collector.lms_collector.LMSCollector', spec=LMSCollector)
-async def test_register_package_with_path_and_manifest(collector: LMSCollector, kind: Union[Path, Manifest]) -> None:
+async def test_register_package_with_path_and_manifest(collector: LMSCollector,
+                                                       kind: Union[Path, ComparableManifest]) -> None:
     indexer = Indexer(WorkerPool(1, 200 * MiB))
     await indexer.register_package(PACKAGE.hash, kind, collector)
 

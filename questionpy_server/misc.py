@@ -1,7 +1,7 @@
 from hashlib import sha256
 from inspect import Parameter, signature, isclass
 from pathlib import Path
-from typing import Callable, List, Type, Tuple
+from typing import Callable, List, Type, Tuple, Union
 
 from questionpy_common.constants import MiB
 
@@ -28,12 +28,20 @@ def get_route_model_param(route_handler: RouteHandler, model: Type[M]) -> Tuple[
     return params[0].name, params[0].annotation
 
 
-def calculate_hash(path: Path, chunk_size: int = 5 * MiB) -> str:
-    """Calculate SHA256 hash of a file."""
-    package_hash = sha256()
+def calculate_hash(source: Union[bytes, Path]) -> str:
+    """
+    Calculates the sha256 of either bytes or a file.
 
-    with path.open('rb') as file:
-        while chunk := file.read(chunk_size):
-            package_hash.update(chunk)
+    :param source: bytes or path to file
+    :return: the sha256
+    """
+    sha = sha256()
 
-    return package_hash.hexdigest()
+    if isinstance(source, bytes):
+        sha.update(source)
+    else:
+        with source.open('rb') as file:
+            while chunk := file.read(5 * MiB):
+                sha.update(chunk)
+
+    return sha.hexdigest()

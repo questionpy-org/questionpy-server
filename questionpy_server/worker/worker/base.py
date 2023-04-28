@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Optional, Type, TypeVar, Sequence
 
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.manifest import Manifest
 
 from questionpy_server.api.models import Question, GradingMethod
+from questionpy_server.utils.manfiest import ComparableManifest
 from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
@@ -127,10 +127,10 @@ class BaseWorker(Worker, ABC):
             except asyncio.TimeoutError:
                 log.info("Worker was killed because it did not stop gracefully")
 
-    async def get_manifest(self) -> Manifest:
+    async def get_manifest(self) -> ComparableManifest:
         msg = GetQPyPackageManifest(path=str(self.package))
         ret = await self._send_and_wait_response(msg, GetQPyPackageManifest.Response)
-        return ret.manifest
+        return ComparableManifest(**ret.manifest.dict())
 
     async def get_options_form(self, question_state: Optional[Path]) \
             -> tuple[OptionsFormDefinition, dict[str, object]]:
