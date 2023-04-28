@@ -56,7 +56,7 @@ class CheckboxElement(_Named, CanHaveConditions):
     """Default state of the checkbox."""
 
 
-class CheckboxGroupElement(BaseModel):
+class CheckboxGroupElement(_Named):
     """Adds a 'Select all/none' button after multiple checkboxes."""
     kind: Literal["checkbox_group"] = "checkbox_group"
     checkboxes: List[CheckboxElement]
