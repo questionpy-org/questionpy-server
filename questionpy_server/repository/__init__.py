@@ -1,12 +1,14 @@
+import logging
 from asyncio import to_thread
 from gzip import decompress
 from urllib.parse import urljoin
 
 from pydantic import parse_raw_as
 
-from questionpy_server.cache import FileLimitLRU
+from questionpy_server.cache import FileLimitLRU, SizeError
 from questionpy_server.repository.helper import download
 from questionpy_server.repository.models import RepoMeta, RepoPackage, RepoPackageIndex
+from questionpy_server.utils.logger import URLAdapter
 
 
 class Repository:
@@ -16,6 +18,9 @@ class Repository:
         self._url_meta = urljoin(self._url_base, 'META.json')
 
         self._cache = cache
+
+        logger = logging.getLogger('questionpy-server:repository')
+        self._log = URLAdapter(logger, {'url': self._url_base})
 
     async def get_meta(self) -> RepoMeta:
         """
@@ -41,9 +46,10 @@ class Repository:
         except FileNotFoundError:
             # Download and parse RepoPackageVersions.
             raw_index_zip = await download(self._url_index, size=meta.size, expected_hash=meta.sha256)
-            if meta.size <= self._cache.max_size:
-                # TODO: What happens if the cache is too small?
+            try:
                 await self._cache.put(meta.sha256, raw_index_zip)
+            except SizeError:
+                self._log.warning('Package index is too big to be cached.')
 
         raw_index = decompress(raw_index_zip)
         index = RepoPackageIndex.parse_raw(raw_index)

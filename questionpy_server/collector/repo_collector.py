@@ -2,23 +2,17 @@ import logging
 from asyncio import sleep, Task, create_task
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, MutableMapping, Any
+from typing import TYPE_CHECKING, Optional
 
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector.abc import CachedCollector
 from questionpy_server.repository import Repository, RepoMeta, RepoPackage
 from questionpy_server.repository.helper import DownloadError
+from questionpy_server.utils.logger import URLAdapter
 
 if TYPE_CHECKING:
     from questionpy_server.collector.indexer import Indexer
     from questionpy_server.package import Package
-
-
-class URLAdapter(logging.LoggerAdapter):
-    def process(self, msg: str, kwargs: MutableMapping[str, Any]) -> tuple[str, MutableMapping[str, Any]]:
-        if self.extra and 'url' in self.extra:
-            return f'({self.extra["url"]}): {msg}', kwargs
-        return msg, kwargs
 
 
 class RepoCollector(CachedCollector):

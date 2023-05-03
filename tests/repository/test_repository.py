@@ -1,21 +1,37 @@
 # pylint: disable=redefined-outer-name
-
+import logging
 from json import dumps
 from unittest.mock import patch, Mock, ANY
 from gzip import compress
 from urllib.parse import urljoin
 
+import pytest
 from _pytest.tmpdir import TempPathFactory
 
 from questionpy_common.constants import KiB
 
-from questionpy_server.cache import FileLimitLRU
+from questionpy_server.cache import FileLimitLRU, SizeError
 from questionpy_server.repository import Repository, RepoMeta, RepoPackage, RepoPackageIndex
 from questionpy_server.utils.manfiest import ComparableManifest, semver_encoder
 from tests.test_data.factories import RepoMetaFactory, RepoPackageVersionsFactory, ManifestFactory
 
 
 REPO_URL = 'https://example.com/repo/'
+REPO_PACKAGE_VERSIONS_0 = RepoPackageVersionsFactory.build(
+    manifest={
+        'short_name': 'package_1',
+        'namespace': 'namespace_1',
+    },
+    versions=[{'sha256': '2', 'version': '3.0.0', 'api_version': '3.0'}]
+)
+REPO_PACKAGE_VERSIONS_1 = RepoPackageVersionsFactory.build(
+    manifest={
+        'short_name': 'package_0',
+        'namespace': 'namespace_0',
+    },
+    versions=[{'sha256': '0', 'version': '1.0.0', 'api_version': '1.0'},
+              {'sha256': '1', 'version': '2.0.0', 'api_version': '2.0'}]
+)
 
 
 async def test_get_meta() -> None:
@@ -35,29 +51,9 @@ async def test_get_meta() -> None:
 
 
 async def test_get_packages(tmp_path_factory: TempPathFactory) -> None:
-    package_versions_0 = {
-        'manifest': {
-            'short_name': 'package_0',
-            'namespace': 'namespace_0',
-        },
-        'versions': [{'sha256': '0', 'version': '1.0.0', 'api_version': '1.0'},
-                     {'sha256': '1', 'version': '2.0.0', 'api_version': '2.0'}],
-    }
-
-    package_versions_1 = {
-        'manifest': {
-            'short_name': 'package_1',
-            'namespace': 'namespace_1',
-        },
-        'versions': [{'sha256': '2', 'version': '3.0.0', 'api_version': '3.0'}],
-    }
-
     repository = Repository(REPO_URL, FileLimitLRU(tmp_path_factory.mktemp('qpy'), 100 * KiB))
 
-    package_index = RepoPackageIndex(packages=[
-                        RepoPackageVersionsFactory().build(**package_versions_0),  # type: ignore[arg-type]
-                        RepoPackageVersionsFactory().build(**package_versions_1)   # type: ignore[arg-type]
-                    ])
+    package_index = RepoPackageIndex(packages=[REPO_PACKAGE_VERSIONS_0, REPO_PACKAGE_VERSIONS_1])
 
     with patch('questionpy_server.repository.download') as mock:
         parsed = dumps(package_index, default=semver_encoder)
@@ -88,19 +84,9 @@ async def test_get_packages(tmp_path_factory: TempPathFactory) -> None:
 
 
 async def test_get_packages_cached(tmp_path_factory: TempPathFactory) -> None:
-    package_versions = {
-        'manifest': {
-            'short_name': 'package_1',
-            'namespace': 'namespace_1',
-        },
-        'versions': [{'sha256': '2', 'version': '3.0.0', 'api_version': '3.0'}],
-    }
-
     cache = FileLimitLRU(tmp_path_factory.mktemp('qpy'), 100 * KiB)
     repository = Repository(REPO_URL, cache)
-    package_index = RepoPackageIndex(packages=[
-        RepoPackageVersionsFactory().build(**package_versions)  # type: ignore[arg-type]
-    ])
+    package_index = RepoPackageIndex(packages=[REPO_PACKAGE_VERSIONS_0])
 
     with patch('questionpy_server.repository.download') as mock_download, \
             patch.object(cache, 'put', wraps=cache.put) as mock_put:
@@ -118,6 +104,27 @@ async def test_get_packages_cached(tmp_path_factory: TempPathFactory) -> None:
         mock_get.assert_called_once_with(meta.sha256)
 
     assert index_1 == index_2
+
+
+async def test_log_warning_when_package_index_is_too_big_for_cache(tmp_path_factory: TempPathFactory,
+                                                                   caplog: pytest.LogCaptureFixture) -> None:
+    cache = FileLimitLRU(tmp_path_factory.mktemp('qpy'), 100 * KiB)
+    repository = Repository(REPO_URL, cache)
+    package_index = RepoPackageIndex(packages=[REPO_PACKAGE_VERSIONS_0])
+
+    with patch('questionpy_server.repository.download') as mock_download, \
+            patch.object(cache, 'put', side_effect=SizeError):
+        parsed = dumps(package_index, default=semver_encoder)
+        mock_download.return_value = compress(parsed.encode())
+
+        # Get packages.
+        meta: RepoMeta = RepoMetaFactory.build()
+
+        with caplog.at_level('WARNING'):
+            await repository.get_packages(meta)
+
+        assert caplog.record_tuples == [('questionpy-server:repository', logging.WARNING,
+                                         f'({REPO_URL}): Package index is too big to be cached.')]
 
 
 async def test_get_package() -> None:
