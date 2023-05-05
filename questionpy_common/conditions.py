@@ -1,32 +1,38 @@
 from abc import ABC
-from typing import Literal, Union, List
+from typing import Literal, Union, Annotated
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing_extensions import TypeAlias
+
+_Value: TypeAlias = Union[str, int, bool]
 
 
-class Condition(ABC, BaseModel):
-    kind: str = ""
+class _BaseCondition(ABC, BaseModel):
+    kind: str
     name: str
 
 
-class IsChecked(Condition):
+class IsChecked(_BaseCondition):
     kind: Literal["is_checked"] = "is_checked"
 
 
-class IsNotChecked(Condition):
+class IsNotChecked(_BaseCondition):
     kind: Literal["is_not_checked"] = "is_not_checked"
 
 
-class Equals(Condition):
+class Equals(_BaseCondition):
     kind: Literal["equals"] = "equals"
-    value: Union[str, int, float]
+    value: _Value
 
 
-class DoesNotEqual(Condition):
+class DoesNotEqual(_BaseCondition):
     kind: Literal["does_not_equal"] = "does_not_equal"
-    value: Union[str, int, float]
+    value: _Value
 
 
-class In(Condition):
+class In(_BaseCondition):
     kind: Literal["in"] = "in"
-    value: List[Union[str, int, float]]
+    value: list[_Value]
+
+
+Condition = Annotated[Union[IsChecked, IsNotChecked, Equals, DoesNotEqual, In], Field(discriminator="kind")]
