@@ -147,7 +147,7 @@ class Response(BaseModel):
 
 
 class AttemptGradeArguments(AttemptViewArguments):
-    responses: Optional[List[Response]]
+    responses: Optional[List[Response]] = None
     generate_hint: Optional[bool]
 
 
@@ -190,7 +190,7 @@ class PackageQuestionStateNotFound(BaseModel):
     question_state_not_found: bool
 
 
-class Code(Enum):
+class QuestionStateMigrationErrorCode(Enum):
     NOT_IMPLEMENTED = 'NOT_IMPLEMENTED'
     DOWNGRADE_NOT_POSSIBLE = 'DOWNGRADE_NOT_POSSIBLE'
     PACKAGE_MISMATCH = 'PACKAGE_MISMATCH'
@@ -203,5 +203,5 @@ class QuestionStateMigrationError(BaseModel):
     class Config:
         use_enum_values = True
 
-    code: Code
+    code: QuestionStateMigrationErrorCode
     reason: Optional[str]

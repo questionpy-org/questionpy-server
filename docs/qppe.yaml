@@ -33,7 +33,7 @@ paths:
         schema:
           type: string
     get:
-      summary: Get a specific package by ID
+      summary: Get a specific package by its hash
       responses:
         200:
           description: OK
@@ -157,6 +157,9 @@ paths:
                   type: string
                   format: binary
                   description: question package
+                question_state:
+                  type: string
+                  description: Question state that was previously returned by the question endpoint.
                 main:
                   $ref: "#/components/schemas/QuestionCreateArguments"
               required: [ main ]
@@ -215,10 +218,10 @@ paths:
                   type: string
                   format: binary
                   description: question package
-                old_options:
+                question_state:
                   type: string
                   description: Question state that was created by another package or another version.
-              required: [ old_options ]
+              required: [ question_state ]
       responses:
         200:
           description: Successfully updated data
@@ -395,7 +398,7 @@ paths:
         schema:
           type: string
     post:
-      summary: Post a new package to the server. Returns the package info.
+      summary: Post a new package to the server and extract package info.
       requestBody:
         required: true
         content:
@@ -472,7 +475,6 @@ components:
         tags:
           type: array
       required: [ package_hash, short_name, name, version, type ]
-      additionalProperties: false
 
     OptionsFormDefinition:
       type: object
@@ -495,8 +497,6 @@ components:
                 items:
                   $ref: "#/components/schemas/FormElement"
             required: [ header, elements ]
-            additionalProperties: false
-      additionalProperties: false
 
     FormData:
       type: object
@@ -559,9 +559,13 @@ components:
         num_variants:
           type: integer
           default: 1
+          minimum: 1
+          description: Number of available variants of this question.
         num_subquestions:
           type: integer
           default: 1
+          minimum: 1
+          description: Maximum number of subquestions that this question can have.
         grade_min_fraction:
           type: number
           format: double
@@ -576,13 +580,14 @@ components:
             - ALWAYS_MANUAL_GRADING_REQUIRED
             - AUTOMATICALLY_GRADABLE
             - AUTOMATICALLY_GRADABLE_WITH_COUNTBACK
-          description: AUTOMATICALLY_GRADABLE_WITH_COUNTBACK means it can compute a final grade, taking into
-            account previous submissions to this question.
+          description: AUTOMATICALLY_GRADABLE_WITH_COUNTBACK means the package is able to compute a final grade,
+            taking into account previous submissions to this question.
         penalty:
           type: number
           nullable: true
           format: double
-          description: Penalty factor (might be used when package cannot compute a final grade).
+          description: Penalty factor (fraction that is subtracted from the score after each failed attempt,
+            might be used when package cannot compute a final score).
         random_guess_score:
           type: number
           nullable: true
@@ -597,9 +602,13 @@ components:
             properties:
               subquestion_id:
                 type: string
+                maxLength: 30
               max_fraction:
                 type: number
                 format: double
+                nullable: true
+                description: Maximum score. May be null if no score can be assigned directly to this
+                  specific subquestion.
               response_classes:
                 type: array
                 nullable: true
@@ -611,13 +620,12 @@ components:
                   properties:
                     response_class:
                       type: string
+                      maxLength: 30
                     fraction:
                       type: number
                       format: double
                   required: [ response_class, fraction ]
-                  additionalProperties: false
             required: [ subquestion_id, response_classes ]
-            additionalProperties: false
         response_analysis_by_variant:
           type: boolean
           description: If true, the LMS should break down the stats and response analysis by the question variant.
@@ -629,10 +637,9 @@ components:
           type: string
           nullable: true
           description: General feedback that is shown to everyone after grading.
-      required: [ package_hash, state, num_variants, num_subquestions, grade_min_fraction,
-                  grade_max_fraction, grading_method, penalty, random_guess_grade, response_classes,
+      required: [ question_state, question_state_hash, num_variants, num_subquestions, grade_min_fraction,
+                  grade_max_fraction, grading_method, penalty, random_guess_grade, subquestions,
                   response_analysis_by_variant, render_every_view, general_feedback ]
-      additionalProperties: false
 
     AttemptStartArguments:
       allOf:
@@ -644,7 +651,6 @@ components:
               minimum: 1
               description: Which variant of this question to start, between 1 and question.num_variants.
           required: [ variant ]
-          additionalProperties: false
 
     Attempt:
       type: object
@@ -652,7 +658,7 @@ components:
         variant:
           type: integer
           minimum: 1
-          description: Which variant of this question to start, between 1 and question.num_variants.
+          description: Which variant of this question, between 1 and question.num_variants.
         question_summary:
           type: string
           description: Plain-text summary of the question.
@@ -687,7 +693,6 @@ components:
                     type: string
                     nullable: true
                 required: [ name, type, default, regex, required, correct_response ]
-                additionalProperties: false
             text:
               type: string
               format: text/html
@@ -715,7 +720,6 @@ components:
                   args:
                     type: string
                 required: [ module, function, args ]
-                additionalProperties: false
             files:
               type: array
               items:
@@ -730,13 +734,10 @@ components:
                     description: file data
                   mime_type:
                     type: string
-                required: [ name, data ]
-                additionalProperties: false
+                required: [ name, data, mime_type ]
           required: [ fields, text ]
-          additionalProperties: false
           readOnly: true
       required: [ response_schema, ui ]
-      additionalProperties: false
 
     AttemptStarted:
       allOf:
@@ -746,7 +747,6 @@ components:
               type: string
               description: Arbitrary values set by the question package code (LMS must store this data unmodified).
           required: [ attempt_state ]
-          additionalProperties: false
         - $ref: "#/components/schemas/Attempt"
 
     AttemptViewArguments:
@@ -766,8 +766,7 @@ components:
               type: object
               nullable: true
               description: Data from the question's input fields.
-          required: [ attempt_state ]
-          additionalProperties: false
+          required: [ attempt_state, grading_state, response ]
 
     AttemptGradeArguments:
       # nested subquestions
@@ -779,6 +778,7 @@ components:
             responses:
               type: array
               nullable: true
+              default: null
               items:
                 type: object
                 properties:
@@ -789,8 +789,7 @@ components:
             generate_hint:
               type: boolean
               description: Try to give a hint on how to improve the response.
-          required: [ ]
-          additionalProperties: false
+          required: [ generate_hint ]
 
     AttemptGraded:
       allOf:
@@ -819,10 +818,13 @@ components:
             hint:
               type: string
               nullable: true
+              description: Null if LMS has not requested a hint in AttemptScoreArguments.generate_hint or if no
+                hint is available.
             more_hints_available:
               type: boolean
               nullable: true
-              description: The question package is able to give more hints.
+              description: The question package is able to give at least one more hint. Null if no hint has been
+                requested or if the package is not able to tell whether there are more hints.
             response_summary:
               type: string
               description: This is a plain-text summary of the response.
@@ -845,7 +847,6 @@ components:
                     type: number
                     format: double
                 required: [ subquestion_id, response_class, response, fraction ]
-                additionalProperties: false
             graded_fields:
               type: array
               nullable: true
@@ -869,10 +870,8 @@ components:
                     type: string
                     nullable: true
                 required: [ name, correct, score, max_score, feedback ]
-                additionalProperties: false
               description: Give specific feedback
           required: [ grading_state, grading_code ]
-          additionalProperties: false
         - $ref: "#/components/schemas/Attempt"
 
     PackageQuestionStateNotFound:
@@ -883,7 +882,6 @@ components:
         question_state_not_found:
           type: boolean
       required: [ package_not_found, question_state_not_found ]
-      additionalProperties: false
 
     QuestionStateMigrationError:
       type: object
@@ -899,13 +897,13 @@ components:
             - OTHER_ERROR
         reason:
           type: string
-          description: Human-readable reason why there was an error.
+          description: Human-readable reason why the error occurred.
       required: [ code ]
-      additionalProperties: false
 
     FormLabel:
       type: string
       description: The displayed label for this form element
+
     FormName:
       type: string
       pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
