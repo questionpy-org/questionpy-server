@@ -22,8 +22,8 @@ if TYPE_CHECKING:
 class PackageCollection:
     """Handles packages from a local directory, remote repositories, and packages received by an LMS."""
 
-    def __init__(self, local_dir: Optional[Path], repos: dict[HttpUrl, timedelta], cache: FileLimitLRU,
-                 worker_pool: WorkerPool):
+    def __init__(self, local_dir: Optional[Path], repos: dict[HttpUrl, timedelta], repo_index_cache: FileLimitLRU,
+                 package_cache: FileLimitLRU, worker_pool: WorkerPool):
         self._indexer = Indexer(worker_pool)
         self._collectors: list[BaseCollector] = []
 
@@ -32,14 +32,14 @@ class PackageCollection:
             self._collectors.append(local_collector)
 
         for url, update_interval in repos.items():
-            repo_collector = RepoCollector(cache, url, update_interval, self._indexer)
+            repo_collector = RepoCollector(url, update_interval, package_cache, repo_index_cache, self._indexer)
             self._collectors.append(repo_collector)
 
-        self._lms_collector = LMSCollector(cache, self._indexer)
+        self._lms_collector = LMSCollector(package_cache, self._indexer)
         self._collectors.append(self._lms_collector)
 
         # Update indexer if package in cache gets removed.
-        cache.on_remove = self._unregister_package_from_index
+        package_cache.on_remove = self._unregister_package_from_index
 
     async def start(self) -> None:
         """Starts the package collection."""

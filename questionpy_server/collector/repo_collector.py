@@ -2,23 +2,17 @@ import logging
 from asyncio import sleep, Task, create_task
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, MutableMapping, Any
+from typing import TYPE_CHECKING, Optional
 
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector.abc import CachedCollector
 from questionpy_server.repository import Repository, RepoMeta, RepoPackage
 from questionpy_server.repository.helper import DownloadError
+from questionpy_server.utils.logger import URLAdapter
 
 if TYPE_CHECKING:
     from questionpy_server.collector.indexer import Indexer
     from questionpy_server.package import Package
-
-
-class URLAdapter(logging.LoggerAdapter):
-    def process(self, msg: str, kwargs: MutableMapping[str, Any]) -> tuple[str, MutableMapping[str, Any]]:
-        if self.extra and 'url' in self.extra:
-            return f'({self.extra["url"]}): {msg}', kwargs
-        return msg, kwargs
 
 
 class RepoCollector(CachedCollector):
@@ -27,10 +21,12 @@ class RepoCollector(CachedCollector):
     This collector is responsible for downloading packages from a remote repository and caching them locally.
     """
 
-    def __init__(self, cache: FileLimitLRU, url: str, update_interval: timedelta, indexer: 'Indexer'):
-        super().__init__(cache=cache, indexer=indexer)
+    def __init__(self, url: str, update_interval: timedelta, package_cache: FileLimitLRU,
+                 repo_index_cache: FileLimitLRU, indexer: 'Indexer'):
+        super().__init__(cache=package_cache, indexer=indexer)
+
         self._url = url
-        self._repository = Repository(self._url)
+        self._repository = Repository(self._url, repo_index_cache)
 
         self._meta: Optional[RepoMeta] = None
         self._index: dict[str, RepoPackage] = {}
@@ -78,7 +74,6 @@ class RepoCollector(CachedCollector):
 
         # Get every package.
         new_packages = await self._repository.get_packages(self._meta)
-        # TODO: cache package index
 
         old_package_hashes = self._index.keys()
         new_package_hashes = new_packages.keys()

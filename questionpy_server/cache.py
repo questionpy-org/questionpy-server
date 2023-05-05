@@ -30,6 +30,11 @@ class FileLimitLRU:
                  name: Optional[str] = None) -> None:
         """A cache should be initialised while starting a server therefore it is not necessary for it to be async."""
 
+        self._extension: str = '' if extension is None else '.' + extension.lstrip('.')
+        self._tmp_extension: str = '.tmp'
+        if self._extension == self._tmp_extension:
+            raise ValueError(f'Extension cannot be "{self._tmp_extension}" as it is used internally.')
+
         async def on_remove(_key: str) -> None:
             pass
 
@@ -41,10 +46,7 @@ class FileLimitLRU:
         self.max_size = max_size
         self._total_size: int = 0
 
-        self._extension: str = '' if extension is None else '.' + extension.lstrip('.')
-        self._tmp_extension: str = '.tmp'
-
-        self._name = name or "Cache"
+        self._name = name or 'Cache'
 
         self._files: OrderedDict[str, File] = OrderedDict()
 
@@ -92,7 +94,11 @@ class FileLimitLRU:
         return self._files[key]
 
     def get(self, key: str) -> Path:
-        """Returns path of the file in the cache."""
+        """Returns path of the file in the cache.
+
+        Raises:
+            FileNotFoundError: If the file does not exist in the cache.
+        """
 
         return self._get_file(key).path
 

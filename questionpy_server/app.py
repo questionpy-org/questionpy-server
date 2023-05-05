@@ -23,10 +23,13 @@ class QPyServer:
 
         self.package_cache = FileLimitLRU(settings.cache_package.directory, settings.cache_package.size,
                                           extension='.qpy', name='PackageCache')
-        self.package_collection = PackageCollection(settings.collector.local_directory, settings.collector.repositories,
-                                                    self.package_cache, self.worker_pool)
         self.question_state_cache = FileLimitLRU(settings.cache_question_state.directory,
                                                  settings.cache_question_state.size, name='QuestionStateCache')
+        self.repo_index_cache = FileLimitLRU(settings.cache_repo_index.directory, settings.cache_repo_index.size,
+                                             name='RepoIndexCache')
+
+        self.package_collection = PackageCollection(settings.collector.local_directory, settings.collector.repositories,
+                                                    self.repo_index_cache, self.package_cache, self.worker_pool)
 
         self.web_app.on_startup.append(self._start_package_collection)
         self.web_app.on_shutdown.append(self._stop_package_collection)

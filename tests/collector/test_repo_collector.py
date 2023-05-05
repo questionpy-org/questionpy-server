@@ -11,7 +11,7 @@ from tests.test_data.factories import RepoMetaFactory
 
 
 async def test_update_gets_called_periodically_after_start() -> None:
-    collector = RepoCollector(AsyncMock(), "", timedelta(seconds=0.1), AsyncMock())
+    collector = RepoCollector('', timedelta(seconds=0.1), AsyncMock(), AsyncMock(), AsyncMock())
     with patch.object(collector, 'update') as update:
         async with collector:
             await sleep(0.25)
@@ -19,7 +19,7 @@ async def test_update_gets_called_periodically_after_start() -> None:
 
 
 async def test_update_downloads_packages_only_on_newer_package_index() -> None:
-    collector = RepoCollector(AsyncMock(), "", Mock(), AsyncMock())
+    collector = RepoCollector('', Mock(), AsyncMock(), AsyncMock(), AsyncMock())
     with patch.object(collector, '_repository') as repository:
         # Initial update.
         repository.get_packages = AsyncMock(return_value={})
@@ -52,7 +52,7 @@ async def test_update_downloads_packages_only_on_newer_package_index() -> None:
 ])
 async def test_package_index_gets_updated(first_update: list[str], second_update: list[str]) -> None:
     indexer = AsyncMock()
-    collector = RepoCollector(AsyncMock(), "", Mock(), indexer)
+    collector = RepoCollector('', Mock(), AsyncMock(), AsyncMock(), indexer)
 
     first_packages = {package_hash: Mock() for package_hash in first_update}
     second_packages = {package_hash: Mock() for package_hash in second_update}
@@ -84,13 +84,13 @@ async def test_package_index_gets_updated(first_update: list[str], second_update
 
 
 async def test_get_path_raises_file_not_found_error_if_package_does_not_exist() -> None:
-    collector = RepoCollector(AsyncMock(), "", Mock(), AsyncMock())
+    collector = RepoCollector('', Mock(), AsyncMock(), AsyncMock(), AsyncMock())
     with pytest.raises(FileNotFoundError):
         await collector.get_path(Mock())
 
 
 async def test_get_path_raises_file_not_found_error_on_download_error() -> None:
-    collector = RepoCollector(AsyncMock(), "", Mock(), AsyncMock())
+    collector = RepoCollector('', Mock(), AsyncMock(), AsyncMock(), AsyncMock())
 
     package = Mock()
 
@@ -108,7 +108,7 @@ async def test_get_path_raises_file_not_found_error_on_download_error() -> None:
 
 async def test_get_path_caches_package() -> None:
     cache = AsyncMock()
-    collector = RepoCollector(cache, "", Mock(), AsyncMock())
+    collector = RepoCollector('', Mock(), cache, AsyncMock(), AsyncMock())
 
     package = Mock()
 
