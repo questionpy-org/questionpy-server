@@ -9,7 +9,7 @@ from typing import Optional, Type, TypeVar, Sequence
 
 from questionpy_common.elements import OptionsFormDefinition
 
-from questionpy_server.api.models import Question, GradingMethod
+from questionpy_server.api.models import Question, ScoringMethod
 from questionpy_server.utils.manfiest import ComparableManifest
 from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.connection import ServerToWorkerConnection
@@ -149,6 +149,6 @@ class BaseWorker(Worker, ABC):
         return Question(
             question_state=new_state_str,
             question_state_hash=new_state_hash,
-            grading_method=GradingMethod.ALWAYS_MANUAL_GRADING_REQUIRED,
+            scoring_method=ScoringMethod.ALWAYS_MANUAL_SCORING_REQUIRED,
             response_analysis_by_variant=False
         )

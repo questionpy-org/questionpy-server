@@ -342,7 +342,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Attempt"
 
-  /packages/{package_hash}/attempt/grade:
+  /packages/{package_hash}/attempt/score:
     parameters:
       - name: package_hash
         in: path
@@ -361,18 +361,18 @@ paths:
         schema:
           type: string
     post:
-      summary: Grade an attempt
+      summary: Score an attempt
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AttemptGradeArguments"
+              $ref: "#/components/schemas/AttemptScoreArguments"
           multipart/form-data:
             schema:
               type: object
               properties:
                 main:
-                  $ref: "#/components/schemas/AttemptGradeArguments"
+                  $ref: "#/components/schemas/AttemptScoreArguments"
                 package:
                   type: string
                   format: binary
@@ -387,7 +387,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AttemptGraded"
+                $ref: "#/components/schemas/AttemptScored"
 
   /package-extract-info:
     parameters:
@@ -566,21 +566,21 @@ components:
           default: 1
           minimum: 1
           description: Maximum number of subquestions that this question can have.
-        grade_min_fraction:
+        score_min:
           type: number
           format: double
           default: 0
-        grade_max_fraction:
+        score_max:
           type: number
           format: double
           default: 1
-        grading_method:
+        scoring_method:
           type: string
           enum:
-            - ALWAYS_MANUAL_GRADING_REQUIRED
-            - AUTOMATICALLY_GRADABLE
-            - AUTOMATICALLY_GRADABLE_WITH_COUNTBACK
-          description: AUTOMATICALLY_GRADABLE_WITH_COUNTBACK means the package is able to compute a final grade,
+            - ALWAYS_MANUAL_SCORING_REQUIRED
+            - AUTOMATICALLY_SCORABLE
+            - AUTOMATICALLY_SCORABLE_WITH_COUNTBACK
+          description: AUTOMATICALLY_SCORABLE_WITH_COUNTBACK means the package is able to compute a final score,
             taking into account previous submissions to this question.
         penalty:
           type: number
@@ -592,7 +592,7 @@ components:
           type: number
           nullable: true
           format: double
-          description: Average expected grade when the response is just selected randomly.
+          description: Average expected score when the response is just selected randomly.
         subquestions:
           type: array
           nullable: true
@@ -603,7 +603,7 @@ components:
               subquestion_id:
                 type: string
                 maxLength: 30
-              max_fraction:
+              score_max:
                 type: number
                 format: double
                 nullable: true
@@ -621,11 +621,11 @@ components:
                     response_class:
                       type: string
                       maxLength: 30
-                    fraction:
+                    score:
                       type: number
                       format: double
-                  required: [ response_class, fraction ]
-            required: [ subquestion_id, response_classes ]
+                  required: [ response_class, score ]
+            required: [ subquestion_id, score_max, response_classes ]
         response_analysis_by_variant:
           type: boolean
           description: If true, the LMS should break down the stats and response analysis by the question variant.
@@ -636,9 +636,9 @@ components:
         general_feedback:
           type: string
           nullable: true
-          description: General feedback that is shown to everyone after grading.
-      required: [ question_state, question_state_hash, num_variants, num_subquestions, grade_min_fraction,
-                  grade_max_fraction, grading_method, penalty, random_guess_grade, subquestions,
+          description: General feedback that is shown to everyone after scoring.
+      required: [ question_state, question_state_hash, num_variants, num_subquestions, score_min,
+                  score_max, scoring_method, penalty, random_guess_score, subquestions,
                   response_analysis_by_variant, render_every_view, general_feedback ]
 
     AttemptStartArguments:
@@ -685,10 +685,10 @@ components:
                   validation_regex:
                     type: string
                     nullable: true
-                    description: Validate response with this regex. If the response does not match, the response might not be gradable.
+                    description: Validate response with this regex. If the response does not match, the response might not be scorable.
                   required:
                     type: boolean
-                    description: This field is required. Otherwise the response will not be gradable.
+                    description: This field is required. Otherwise the response will not be scorable.
                   correct_response:
                     type: string
                     nullable: true
@@ -757,18 +757,18 @@ components:
             attempt_state:
               type: string
               description: Arbitrary values set by the question package code.
-            grading_state:
+            scoring_state:
               type: string
               nullable: true
               description: Arbitrary values set by the question package code (has to be passed
-                when the attempt was already graded).
+                when the attempt was already scored).
             response:
               type: object
               nullable: true
               description: Data from the question's input fields.
-          required: [ attempt_state, grading_state, response ]
+          required: [ attempt_state, scoring_state, response ]
 
-    AttemptGradeArguments:
+    AttemptScoreArguments:
       # nested subquestions
       allOf:
         - $ref: "#/components/schemas/QuestionStateHash"
@@ -785,31 +785,31 @@ components:
                   response:
                     type: object
               description: All tries and their data from the question's input fields
-                (only when question.grading_method is AUTOMATICALLY_GRADABLE_WITH_COUNTBACK).
+                (only when question.scoring_method is AUTOMATICALLY_SCORABLE_WITH_COUNTBACK).
             generate_hint:
               type: boolean
               description: Try to give a hint on how to improve the response.
           required: [ generate_hint ]
 
-    AttemptGraded:
+    AttemptScored:
       allOf:
         - type: object
           properties:
-            grading_state:
+            scoring_state:
               type: string
               nullable: true
               description: Arbitrary values set by the question package code (LMS must store this data unmodified).
-            grading_code:
+            scoring_code:
               type: string
               enum:
-                - AUTOMATICALLY_GRADED
-                - NEEDS_MANUAL_GRADING
-                - RESPONSE_NOT_GRADABLE
+                - AUTOMATICALLY_SCORED
+                - NEEDS_MANUAL_SCORING
+                - RESPONSE_NOT_SCORABLE
                 - INVALID_RESPONSE
-            fraction:
+            score:
               type: number
               format: double
-              description: A fracton between question.grade_min_fraction and question.grade_max_fraction.
+              description: A fraction between question.score_min_fraction and question.score_max_fraction.
             specific_feedback:
               type: string
               nullable: true
@@ -843,11 +843,11 @@ components:
                   response:
                     type: string
                     description: Actual response to this subquestion given by user.
-                  fraction:
+                  score:
                     type: number
                     format: double
-                required: [ subquestion_id, response_class, response, fraction ]
-            graded_fields:
+                required: [ subquestion_id, response_class, response, score ]
+            scored_fields:
               type: array
               nullable: true
               items:
@@ -858,11 +858,11 @@ components:
                   correct:
                     type: boolean
                     nullable: true
-                  fraction:
+                  score:
                     type: number
                     format: double
                     nullable: true
-                  max_fraction:
+                  max_score:
                     type: number
                     format: double
                     nullable: true
@@ -871,7 +871,7 @@ components:
                     nullable: true
                 required: [ name, correct, score, max_score, feedback ]
               description: Give specific feedback
-          required: [ grading_state, grading_code ]
+          required: [ scoring_state, scoring_code, score ]
         - $ref: "#/components/schemas/Attempt"
 
     PackageQuestionStateNotFound:
