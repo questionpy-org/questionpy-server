@@ -1,6 +1,6 @@
 from pydantic_factories import ModelFactory
 
-from questionpy_server.api.models import Attempt, AttemptGraded, AttemptStarted
+from questionpy_server.api.models import Attempt, AttemptScored, AttemptStarted
 
 
 class AttemptStartedFactory(ModelFactory):
@@ -11,5 +11,5 @@ class AttemptFactory(ModelFactory):
     __model__ = Attempt
 
 
-class AttemptGradedFactory(ModelFactory):
-    __model__ = AttemptGraded
+class AttemptScoredFactory(ModelFactory):
+    __model__ = AttemptScored

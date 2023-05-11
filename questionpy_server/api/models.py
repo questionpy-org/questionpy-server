@@ -54,20 +54,20 @@ class QuestionCreateArguments(OptionalQuestionStateHash):
     form_data: dict[str, object]
 
 
-class GradingMethod(Enum):
-    ALWAYS_MANUAL_GRADING_REQUIRED = 'ALWAYS_MANUAL_GRADING_REQUIRED'
-    AUTOMATICALLY_GRADABLE = 'AUTOMATICALLY_GRADABLE'
-    AUTOMATICALLY_GRADABLE_WITH_COUNTBACK = 'AUTOMATICALLY_GRADABLE_WITH_COUNTBACK'
+class ScoringMethod(Enum):
+    ALWAYS_MANUAL_SCORING_REQUIRED = 'ALWAYS_MANUAL_SCORING_REQUIRED'
+    AUTOMATICALLY_SCORABLE = 'AUTOMATICALLY_SCORABLE'
+    AUTOMATICALLY_SCORABLE_WITH_COUNTBACK = 'AUTOMATICALLY_SCORABLE_WITH_COUNTBACK'
 
 
 class ResponseClass(BaseModel):
     response_class: str
-    fraction: float
+    score: float
 
 
 class Subquestion(BaseModel):
     subquestion_id: str
-    max_fraction: Optional[float]
+    score_max: Optional[float]
     response_classes: Optional[List[ResponseClass]]
 
 
@@ -79,9 +79,9 @@ class Question(BaseModel):
     question_state_hash: Optional[str]
     num_variants: Annotated[int, Field(ge=1, strict=True)] = 1
     num_subquestions: Annotated[int, Field(ge=1, strict=True)] = 1
-    grade_min_fraction: float = 0
-    grade_max_fraction: float = 1
-    grading_method: GradingMethod
+    score_min: float = 0
+    score_max: float = 1
+    scoring_method: ScoringMethod
     penalty: Optional[float]
     random_guess_score: Optional[float]
     subquestions: Optional[List[Subquestion]]
@@ -138,7 +138,7 @@ class AttemptStarted(Attempt):
 
 class AttemptViewArguments(QuestionStateHash):
     attempt_state: Json
-    grading_state: Optional[Json]
+    scoring_state: Optional[Json]
     response: Optional[Dict[str, Any]]
 
 
@@ -146,15 +146,15 @@ class Response(BaseModel):
     response: Optional[Dict[str, Any]]
 
 
-class AttemptGradeArguments(AttemptViewArguments):
+class AttemptScoreArguments(AttemptViewArguments):
     responses: Optional[List[Response]] = None
     generate_hint: Optional[bool]
 
 
-class GradingCode(Enum):
-    AUTOMATICALLY_GRADED = 'AUTOMATICALLY_GRADED'
-    NEEDS_MANUAL_GRADING = 'NEEDS_MANUAL_GRADING'
-    RESPONSE_NOT_GRADABLE = 'RESPONSE_NOT_GRADABLE'
+class ScoringCode(Enum):
+    AUTOMATICALLY_SCORED = 'AUTOMATICALLY_SCORED'
+    NEEDS_MANUAL_SCORING = 'NEEDS_MANUAL_SCORING'
+    RESPONSE_NOT_SCORABLE = 'RESPONSE_NOT_SCORABLE'
     INVALID_RESPONSE = 'INVALID_RESPONSE'
 
 
@@ -162,27 +162,27 @@ class ClassificationItem(BaseModel):
     subquestion_id: str
     response_class: str
     response: str
-    fraction: float
+    score: float
 
 
-class GradedField(BaseModel):
+class ScoredField(BaseModel):
     name: str
     correct: Optional[bool]
-    fraction: Optional[float]
-    max_fraction: Optional[float]
+    score: Optional[float]
+    max_score: Optional[float]
     feedback: Optional[str]
 
 
-class AttemptGraded(Attempt):
-    grading_state: Optional[Json]
-    grading_code: GradingCode
-    fraction: Optional[float]
+class AttemptScored(Attempt):
+    scoring_state: Optional[Json]
+    scoring_code: ScoringCode
+    score: Optional[float]
     specific_feedback: Optional[str]
     hint: Optional[str]
     more_hints_available: Optional[bool]
     response_summary: Optional[str]
     classification: Optional[List[ClassificationItem]]
-    graded_fields: Optional[List[GradedField]]
+    scored_fields: Optional[List[ScoredField]]
 
 
 class PackageQuestionStateNotFound(BaseModel):
