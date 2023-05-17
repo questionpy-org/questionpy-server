@@ -38,7 +38,7 @@ class PackageInfo(BaseModel):
 
 class OptionalQuestionStateHash(BaseModel):
     question_state_hash: Optional[str]
-    context: Optional[int]
+    context: Optional[int] = None
 
 
 class QuestionStateHash(OptionalQuestionStateHash):
@@ -61,12 +61,12 @@ class ScoringMethod(Enum):
 
 
 class ResponseClass(BaseModel):
-    response_class: str
+    response_class: Annotated[str, Field(max_length=30, strict=True)]
     score: float
 
 
 class Subquestion(BaseModel):
-    subquestion_id: str
+    subquestion_id: Annotated[str, Field(max_length=30, strict=True)]
     score_max: Optional[float]
     response_classes: Optional[List[ResponseClass]]
 
@@ -76,7 +76,7 @@ class Question(BaseModel):
         use_enum_values = True
 
     question_state: str
-    question_state_hash: Optional[str]
+    question_state_hash: str
     num_variants: Annotated[int, Field(ge=1, strict=True)] = 1
     num_subquestions: Annotated[int, Field(ge=1, strict=True)] = 1
     score_min: float = 0
@@ -118,17 +118,17 @@ class UiFile(BaseModel):
 class Ui(BaseModel):
     fields: List[UiField]
     text: str
-    include_inline_css: Optional[str]
-    include_css_file: Optional[str]
-    include_javascript_modules: Optional[List[str]]
-    call_javascript: Optional[List[UiCallJavascriptItem]]
-    files: Optional[List[UiFile]]
+    include_inline_css: Optional[str] = None
+    include_css_file: Optional[str] = None
+    include_javascript_modules: List[str] = []
+    call_javascript: List[UiCallJavascriptItem] = []
+    files: List[UiFile] = []
 
 
 class Attempt(BaseModel):
-    variant: Annotated[Optional[int], Field(ge=1, strict=True)]
-    question_summary: Optional[str]
-    right_answer_summary: Optional[str]
+    variant: Annotated[int, Field(ge=1, strict=True)]
+    question_summary: Optional[str] = None
+    right_answer_summary: Optional[str] = None
     ui: Ui
 
 
@@ -148,7 +148,7 @@ class Response(BaseModel):
 
 class AttemptScoreArguments(AttemptViewArguments):
     responses: Optional[List[Response]] = None
-    generate_hint: Optional[bool]
+    generate_hint: bool
 
 
 class ScoringCode(Enum):
@@ -159,8 +159,8 @@ class ScoringCode(Enum):
 
 
 class ClassificationItem(BaseModel):
-    subquestion_id: str
-    response_class: str
+    subquestion_id: Annotated[str, Field(max_length=30, strict=True)]
+    response_class: Annotated[str, Field(max_length=30, strict=True)]
     response: str
     score: float
 
@@ -177,11 +177,11 @@ class AttemptScored(Attempt):
     scoring_state: Optional[Json]
     scoring_code: ScoringCode
     score: Optional[float]
-    specific_feedback: Optional[str]
-    hint: Optional[str]
-    more_hints_available: Optional[bool]
-    response_summary: Optional[str]
-    classification: Optional[List[ClassificationItem]]
+    specific_feedback: Optional[str] = None
+    hint: Optional[str] = None
+    more_hints_available: Optional[bool] = None
+    response_summary: Optional[str] = None
+    classification: Optional[List[ClassificationItem]] = None
     scored_fields: Optional[List[ScoredField]]
 
 
@@ -204,4 +204,4 @@ class QuestionStateMigrationError(BaseModel):
         use_enum_values = True
 
     code: QuestionStateMigrationErrorCode
-    reason: Optional[str]
+    reason: Optional[str] = None
