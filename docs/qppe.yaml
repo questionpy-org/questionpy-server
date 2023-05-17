@@ -104,6 +104,7 @@ paths:
                   type: string
                   description: Question state that was previously returned by the question endpoint or empty
                     in order to show default option values.
+              required: [ main ]
       responses:
         200:
           description: Definition that can be used in order to display a form.
@@ -116,6 +117,7 @@ paths:
                     $ref: "#/components/schemas/OptionsFormDefinition"
                   form_data:
                     $ref: "#/components/schemas/FormData"
+                required: [ definition, form_data ]
         404:
           description: Package not found.
           content:
@@ -410,6 +412,7 @@ paths:
                   type: string
                   format: binary
                   description: QuestionPy Package
+              required: [ package ]
       responses:
         201:
           description: Created
@@ -457,24 +460,33 @@ components:
           type: string
         url:
           type: string
+          nullable: true
+          default: null
         languages:
           type: array
           items:
             type: string
+          default: []
         description:
           type: object
+          default: {}
           example:
             en: Multiple Choice
             de: Mehrfachauswahl
         icon:
           type: string
           format: uri
+          nullable: true
+          default: null
           example: "https://example.org/favicon.ico"
         license:
           type: string
+          nullable: true
+          default: null
         tags:
           type: array
-      required: [ package_hash, short_name, name, version, type ]
+          default: []
+      required: [ package_hash, short_name, namespace, name, version, type, author ]
 
     OptionsFormDefinition:
       type: object
@@ -482,11 +494,13 @@ components:
         general:
           type: array
           description: Elements to add to the general settings section
+          default: []
           items:
             $ref: "#/components/schemas/FormElement"
         sections:
           type: array
           description: Custom sections
+          default: []
           items:
             type: object
             properties:
@@ -523,6 +537,7 @@ components:
           type: integer
           description: Some context information where the question is located (e.g. course or quiz/test id).
           nullable: true
+          default: null
       required: [ question_state_hash ]
 
     OptionalQuestionStateHash:
@@ -536,6 +551,7 @@ components:
           type: integer
           description: Some context information where the question is located (e.g. course or quiz/test id).
           nullable: true
+          default: null
 
     QuestionCreateArguments:
       description: Information that is needed to create a new question.
@@ -558,22 +574,18 @@ components:
           description: SHA256 hash of question state JSON data
         num_variants:
           type: integer
-          default: 1
           minimum: 1
           description: Number of available variants of this question.
         num_subquestions:
           type: integer
-          default: 1
           minimum: 1
           description: Maximum number of subquestions that this question can have.
         score_min:
           type: number
           format: double
-          default: 0
         score_max:
           type: number
           format: double
-          default: 1
         scoring_method:
           type: string
           enum:
@@ -661,10 +673,13 @@ components:
           description: Which variant of this question, between 1 and question.num_variants.
         question_summary:
           type: string
+          nullable: true
+          default: null
           description: Plain-text summary of the question.
         right_answer_summary:
           type: string
           nullable: true
+          default: null
           description: Plain-text summary of the right answer.
         ui:
           type: object
@@ -692,7 +707,7 @@ components:
                   correct_response:
                     type: string
                     nullable: true
-                required: [ name, type, default, regex, required, correct_response ]
+                required: [ name, type, default, validation_regex, required, correct_response ]
             text:
               type: string
               format: text/html
@@ -706,10 +721,12 @@ components:
               nullable: true
             include_javascript_modules:
               type: array
+              default: []
               items:
                 type: string
             call_javascript:
               type: array
+              default: []
               items:
                 type: object
                 properties:
@@ -722,6 +739,7 @@ components:
                 required: [ module, function, args ]
             files:
               type: array
+              default: []
               items:
                 type: object
                 properties:
@@ -734,10 +752,11 @@ components:
                     description: file data
                   mime_type:
                     type: string
+                    nullable: true
                 required: [ name, data, mime_type ]
           required: [ fields, text ]
           readOnly: true
-      required: [ response_schema, ui ]
+      required: [ variant, ui ]
 
     AttemptStarted:
       allOf:
@@ -808,29 +827,36 @@ components:
                 - INVALID_RESPONSE
             score:
               type: number
+              nullable: true
               format: double
               description: A fraction between question.score_min_fraction and question.score_max_fraction.
             specific_feedback:
               type: string
               nullable: true
+              default: null
               description: Might be null when there is no specific feedback or the specific feedback is shown inline
                 within the question text.
             hint:
               type: string
               nullable: true
+              default: null
               description: Null if LMS has not requested a hint in AttemptScoreArguments.generate_hint or if no
                 hint is available.
             more_hints_available:
               type: boolean
               nullable: true
+              default: null
               description: The question package is able to give at least one more hint. Null if no hint has been
                 requested or if the package is not able to tell whether there are more hints.
             response_summary:
               type: string
+              nullable: true
+              default: null
               description: This is a plain-text summary of the response.
             classification:
               type: array
               nullable: true
+              default: null
               description: Classified response per subquestion. Can be null if question does not support
                 a response analysis. Must correspond to question.subquestions.
               items:
@@ -838,8 +864,10 @@ components:
                 properties:
                   subquestion_id:
                     type: string
+                    maxLength: 30
                   response_class:
                     type: string
+                    maxLength: 30
                   response:
                     type: string
                     description: Actual response to this subquestion given by user.
@@ -897,6 +925,8 @@ components:
             - OTHER_ERROR
         reason:
           type: string
+          nullable: true
+          default: null
           description: Human-readable reason why the error occurred.
       required: [ code ]
 
@@ -939,10 +969,12 @@ components:
           type: string
           description: The initial value in this element, if any
           nullable: true
+          default: null
         placeholder:
           type: string
           description: Text to show while no value is entered
           nullable: true
+          default: null
       required: [ kind, label, name ]
 
     CheckboxElement:
@@ -955,10 +987,12 @@ components:
           type: string
           description: A label displayed to the left of the checkbox
           nullable: true
+          default: null
         right_label:
           type: string
           description: A label displayed to the right of the checkbox
           nullable: true
+          default: null
         name:
           $ref: "#/components/schemas/FormName"
         required:
@@ -1073,7 +1107,7 @@ components:
           items:
             $ref: "#/components/schemas/FormElement"
           minItems: 1
-      required: [ kind, label, elements, ]
+      required: [ kind, label, elements ]
 
     FormElement:
       oneOf:
