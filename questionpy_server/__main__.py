@@ -17,13 +17,12 @@ def update_logging(level: str) -> None:
     if level == 'NONE':
         logging.disable()
     elif level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
-        # We need to set force=True because we might have already set the logging level by logging a message.
-        # reference: https://docs.python.org/3/library/logging.html#logging.basicConfig
-        logging.basicConfig(level=level, force=True)
+        logging.getLogger().setLevel(level)
 
 
 def main() -> None:
     # Initialize logging here because we also log things while reading the settings
+    logging.basicConfig()
     if log_level := os.getenv('QPY_GENERAL__LOG_LEVEL', 'INFO'):
         update_logging(log_level)
 
