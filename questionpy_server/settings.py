@@ -15,7 +15,7 @@ from questionpy_server.worker.worker.subprocess import SubprocessWorker
 
 REPOSITORY_MINIMUM_INTERVAL: Final[timedelta] = timedelta(minutes=5)
 
-_LOG = logging.getLogger('questionpy-server:settings')
+_log = logging.getLogger('questionpy-server:settings')
 
 
 class IniFileSettingsSource:
@@ -25,15 +25,15 @@ class IniFileSettingsSource:
     def __call__(self, settings: BaseSettings) -> dict[str, Any]:
         for path in self._config_files:
             if not path.is_file():
-                _LOG.info("No file found at '%s'", path)
+                _log.info("No file found at '%s'", path)
                 continue
-            _LOG.info("Reading config file '%s'", path)
+            _log.info("Reading config file '%s'", path)
 
             parser = ConfigParser()
             parser.read(path)
             return {key: dict(section) for key, section in parser.items() if key != 'DEFAULT'}
 
-        _LOG.warning('No config file found!')
+        _log.warning('No config file found!')
         return {}
 
 
@@ -192,9 +192,9 @@ class EnvSettingsSourceWrapper:
     def __call__(self, settings: BaseSettings) -> dict[str, Any]:
         env_settings = self._env_settings_source(settings)
         if env_settings:
-            _LOG.info("Reading settings from environment variables, %s in total. Environment variables overwrite "
+            _log.info("Reading settings from environment variables, %s in total. Environment variables overwrite "
                       "settings from the config file.", len(env_settings))
-            _LOG.debug("Following settings were read from environment variables: %s", self._get_settings(env_settings))
+            _log.debug("Following settings were read from environment variables: %s", self._get_settings(env_settings))
         return env_settings
 
 
