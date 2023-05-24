@@ -15,8 +15,8 @@ from aiohttp.test_utils import TestClient
 from questionpy_common.constants import KiB
 
 from questionpy_server.app import QPyServer
-from questionpy_server.settings import Settings, WebserviceSettings, PackageCacheSettings, CollectorSettings, \
-    QuestionStateCacheSettings, WorkerSettings, RepoIndexCacheSettings
+from questionpy_server.settings import Settings, GeneralSettings, WebserviceSettings, PackageCacheSettings, \
+    CollectorSettings, QuestionStateCacheSettings, WorkerSettings, RepoIndexCacheSettings
 from questionpy_server.utils.manfiest import ComparableManifest
 
 
@@ -51,6 +51,7 @@ PACKAGE_2 = TestPackage(package_dir / 'package_2.qpy')
 def qpy_server(tmp_path_factory: TempPathFactory) -> QPyServer:
     server = QPyServer(Settings(
         config_files=(),
+        general=GeneralSettings(),
         webservice=WebserviceSettings(listen_address="127.0.0.1", listen_port=0),
         worker=WorkerSettings(),
         cache_package=PackageCacheSettings(directory=tmp_path_factory.mktemp('qpy_package_cache')),
