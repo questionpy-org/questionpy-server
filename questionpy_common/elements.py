@@ -12,9 +12,9 @@ __all__ = ["CanHaveConditions", "StaticTextElement", "TextInputElement", "Checkb
 
 class _BaseElement(BaseModel):
     kind: str
-    """Discriminator which decides the subclass when deserializing to FormElement."""
+    """Discriminator that decides the subclass when deserializing to FormElement."""
     name: str
-    """Name which will later identify the element in submitted form data."""
+    """Name that will later identify the element in submitted form data."""
 
 
 class _Labelled(BaseModel):
@@ -23,20 +23,26 @@ class _Labelled(BaseModel):
 
 
 class CanHaveConditions(BaseModel):
-    """Mixin class for elements which can have conditions on other elements."""
+    """Mixin class for elements that can have conditions on other elements."""
     disable_if: list[Condition] = []
     """Disable this element if any of these conditions match."""
     hide_if: list[Condition] = []
     """Hide this element if any of these conditions match."""
 
 
-class StaticTextElement(_BaseElement, _Labelled, CanHaveConditions):
+class CanHaveHelp(BaseModel):
+    """Mixin class for elements that can have a help text hidden behind a button."""
+    help: Optional[str] = None
+    """Text to be shown when the help button is clicked."""
+
+
+class StaticTextElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     """Some static text with a label."""
     kind: Literal["static_text"] = "static_text"
     text: str
 
 
-class TextInputElement(_BaseElement, _Labelled, CanHaveConditions):
+class TextInputElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     kind: Literal["input"] = "input"
     required: bool = False
     """Require some non-empty input to be entered before the form can be submitted."""
@@ -46,7 +52,7 @@ class TextInputElement(_BaseElement, _Labelled, CanHaveConditions):
     """Placeholder to show when no value has been entered yet. Not part of the submitted form data."""
 
 
-class CheckboxElement(_BaseElement, CanHaveConditions):
+class CheckboxElement(_BaseElement, CanHaveConditions, CanHaveHelp):
     kind: Literal["checkbox"] = "checkbox"
     left_label: Optional[str] = None
     """Label shown the same way as labels on other element types."""
@@ -69,12 +75,12 @@ class Option(BaseModel):
     label: str
     """Text describing the option, shown verbatim."""
     value: str
-    """Value which will be taken by the radio group or drop-down when this option is selected."""
+    """Value that will be taken by the radio group or drop-down when this option is selected."""
     selected: bool = False
     """Default state of the option."""
 
 
-class RadioGroupElement(_BaseElement, _Labelled, CanHaveConditions):
+class RadioGroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     """Group of radio buttons, of which at most one can be selected at a time."""
     kind: Literal["radio_group"] = "radio_group"
     options: List[Option]
@@ -83,7 +89,7 @@ class RadioGroupElement(_BaseElement, _Labelled, CanHaveConditions):
     """Require one of the options to be selected before the form can be submitted."""
 
 
-class SelectElement(_BaseElement, _Labelled, CanHaveConditions):
+class SelectElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     """A drop-down list."""
     kind: Literal["select"] = "select"
     multiple: bool = False
@@ -95,12 +101,12 @@ class SelectElement(_BaseElement, _Labelled, CanHaveConditions):
 
 
 class HiddenElement(_BaseElement, CanHaveConditions):
-    """An element which isn't shown to the user but still submits its fixed value."""
+    """An element that isn't shown to the user but still submits its fixed value."""
     kind: Literal["hidden"] = "hidden"
     value: str
 
 
-class GroupElement(_BaseElement, _Labelled, CanHaveConditions):
+class GroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     """Groups multiple elements horizontally with a common label."""
     kind: Literal["group"] = "group"
     elements: List["FormElement"]
@@ -115,10 +121,10 @@ class RepetitionElement(_BaseElement):
     increment: PositiveInt
     """Number of repetitions to add with each click of the button."""
     button_label: Optional[str] = None
-    """Label for the button which adds more repetitions, or None to use default provided by LMS."""
+    """Label for the button that adds more repetitions, or None to use default provided by LMS."""
 
     elements: list["FormElement"]
-    """Elements which will be repeated."""
+    """Elements that will be repeated."""
 
 
 FormElement: TypeAlias = Annotated[Union[
@@ -131,9 +137,9 @@ RepetitionElement.update_forward_refs()
 
 
 class FormSection(BaseModel):
-    """Form section which can be expanded and collapsed."""
+    """Form section that can be expanded and collapsed."""
     name: str
-    """Name which will later identify the element in submitted form data."""
+    """Name that will later identify the element in submitted form data."""
     header: str
     """Header to be shown at the top of the section."""
     elements: List[FormElement] = []
