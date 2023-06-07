@@ -62,26 +62,6 @@ paths:
                 $ref: "#/components/schemas/PackageInfo"
         404:
           description: Not Found
-    post:
-      summary: Get package information
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                package:
-                  type: string
-                  format: binary
-                  description: QuestionPy Package
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PackageInfo"
 
   /packages/{package_hash}/options:
     parameters:
@@ -465,7 +445,7 @@ paths:
         schema:
           type: string
     post:
-      summary: Post a new package to the server and extract package info.
+      summary: Post a new package to the server and extract package information.
       requestBody:
         required: true
         content:
@@ -480,13 +460,13 @@ paths:
               required: [ package ]
       responses:
         201:
-          description: Created
+          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PackageInfo"
         400:
-          description: Bad Request
+          description: Bad request (not a valid QuestionPy package).
 
 
 components:
