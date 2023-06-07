@@ -6,6 +6,19 @@ servers:
   - url: 'https://example.org/api/qppe/v0'
 paths:
   /packages:
+    parameters:
+      - name: User-Agent
+        in: header
+        description: Name and version of the QPPE client software.
+        example: moodle-qtype_questionpy/1.0
+        schema:
+          type: string
+      - name: Accept-Language
+        in: header
+        description: Request package information in these languages. This endpoint tries to deliver the content in all
+          given languages.
+        schema:
+          type: string
     get:
       summary: Get all available packages
       responses:
@@ -30,6 +43,12 @@ paths:
         in: header
         description: Name and version of the QPPE client software.
         example: moodle-qtype_questionpy/1.0
+        schema:
+          type: string
+      - name: Accept-Language
+        in: header
+        description: Request package information in these languages. This endpoint tries to deliver the content in all
+          given languages.
         schema:
           type: string
     get:
@@ -80,6 +99,8 @@ paths:
           type: string
       - name: Accept-Language
         in: header
+        description: Request messages in one of these languages. The server will indicate the chosen language in the
+          Content-Language response header field.
         schema:
           type: string
     post:
@@ -108,6 +129,10 @@ paths:
       responses:
         200:
           description: Definition that can be used in order to display a form.
+          headers:
+            Content-Language:
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -141,6 +166,8 @@ paths:
           type: string
       - name: Accept-Language
         in: header
+        description: Request messages in one of these languages. The server will indicate the chosen language in the
+          Content-Language response header field.
         schema:
           type: string
     post:
@@ -168,12 +195,20 @@ paths:
       responses:
         201:
           description: Successful
+          headers:
+            Content-Language:
+              schema:
+                type: string
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Question"
         400:
           description: Validation error
+          headers:
+            Content-Language:
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -201,6 +236,8 @@ paths:
           type: string
       - name: Accept-Language
         in: header
+        description: Request messages in one of these languages. The server will indicate the chosen language in the
+          Content-Language response header field.
         schema:
           type: string
     post:
@@ -233,6 +270,10 @@ paths:
                 $ref: "#/components/schemas/Question"
         400:
           description: Question state migration error
+          headers:
+            Content-Language:
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -260,6 +301,8 @@ paths:
           type: string
       - name: Accept-Language
         in: header
+        description: Request messages in one of these languages. The server will indicate the chosen language in the
+          Content-Language response header field.
         schema:
           type: string
     post:
@@ -285,7 +328,11 @@ paths:
               required: [ main ]
       responses:
         201:
-          description: Created
+          description: Attempt started data
+          headers:
+            Content-Language:
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -313,6 +360,8 @@ paths:
           type: string
       - name: Accept-Language
         in: header
+        description: Request messages in one of these languages. The server will indicate the chosen language in the
+          Content-Language response header field.
         schema:
           type: string
     post:
@@ -338,7 +387,11 @@ paths:
               required: [ main ]
       responses:
         201:
-          description: Created
+          description: Attempt view data
+          headers:
+            Content-Language:
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -360,6 +413,8 @@ paths:
           type: string
       - name: Accept-Language
         in: header
+        description: Request messages in one of these languages. The server will indicate the chosen language in the
+          Content-Language response header field.
         schema:
           type: string
     post:
@@ -385,7 +440,11 @@ paths:
               required: [ main ]
       responses:
         201:
-          description: Created
+          description: Scored attempt data
+          headers:
+            Content-Language:
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -397,6 +456,12 @@ paths:
         in: header
         description: Name and version of the QPPE client software.
         example: moodle-qtype_questionpy/1.0
+        schema:
+          type: string
+      - name: Accept-Language
+        in: header
+        description: Request package information in these languages. This endpoint tries to deliver the content in all
+          given languages.
         schema:
           type: string
     post:
