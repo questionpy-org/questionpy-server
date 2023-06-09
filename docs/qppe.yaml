@@ -7,18 +7,8 @@ servers:
 paths:
   /packages:
     parameters:
-      - name: User-Agent
-        in: header
-        description: Name and version of the QPPE client software.
-        example: moodle-qtype_questionpy/1.0
-        schema:
-          type: string
-      - name: Accept-Language
-        in: header
-        description: Request package information in these languages. This endpoint tries to deliver the content in all
-          given languages.
-        schema:
-          type: string
+      - $ref: '#/components/parameters/UserAgent'
+      - $ref: '#/components/parameters/AcceptLanguageAll'
     get:
       summary: Get all available packages
       responses:
@@ -33,24 +23,9 @@ paths:
 
   /packages/{package_hash}:
     parameters:
-      - name: package_hash
-        in: path
-        required: true
-        description: SHA256 hash of package
-        schema:
-          type: string
-      - name: User-Agent
-        in: header
-        description: Name and version of the QPPE client software.
-        example: moodle-qtype_questionpy/1.0
-        schema:
-          type: string
-      - name: Accept-Language
-        in: header
-        description: Request package information in these languages. This endpoint tries to deliver the content in all
-          given languages.
-        schema:
-          type: string
+      - $ref: '#/components/parameters/PackageHash'
+      - $ref: '#/components/parameters/UserAgent'
+      - $ref: '#/components/parameters/AcceptLanguageAll'
     get:
       summary: Get a specific package by its hash
       responses:
@@ -65,24 +40,9 @@ paths:
 
   /packages/{package_hash}/options:
     parameters:
-      - name: package_hash
-        in: path
-        required: true
-        description: SHA256 hash of package
-        schema:
-          type: string
-      - name: User-Agent
-        in: header
-        description: Name and version of the QPPE client software.
-        example: moodle-qtype_questionpy/1.0
-        schema:
-          type: string
-      - name: Accept-Language
-        in: header
-        description: Request messages in one of these languages. The server will indicate the chosen language in the
-          Content-Language response header field.
-        schema:
-          type: string
+      - $ref: '#/components/parameters/PackageHash'
+      - $ref: '#/components/parameters/UserAgent'
+      - $ref: '#/components/parameters/AcceptLanguageOne'
     post:
       summary: Get the options form definition that allow a question creator to customize a question.
       requestBody:
@@ -111,8 +71,7 @@ paths:
           description: Definition that can be used in order to display a form.
           headers:
             Content-Language:
-              schema:
-                type: string
+              $ref: '#/components/headers/ContentLanguage'
           content:
             application/json:
               schema:
@@ -132,24 +91,9 @@ paths:
 
   /packages/{package_hash}/question:
     parameters:
-      - name: package_hash
-        in: path
-        required: true
-        description: SHA256 hash of package
-        schema:
-          type: string
-      - name: User-Agent
-        in: header
-        description: Name and version of the QPPE client software.
-        example: moodle-qtype_questionpy/1.0
-        schema:
-          type: string
-      - name: Accept-Language
-        in: header
-        description: Request messages in one of these languages. The server will indicate the chosen language in the
-          Content-Language response header field.
-        schema:
-          type: string
+      - $ref: '#/components/parameters/PackageHash'
+      - $ref: '#/components/parameters/UserAgent'
+      - $ref: '#/components/parameters/AcceptLanguageOne'
     post:
       summary: Create a new question (validate the options as set by a question creator and export to a question state).
       requestBody:
@@ -177,8 +121,7 @@ paths:
           description: Successful
           headers:
             Content-Language:
-              schema:
-                type: string
+              $ref: '#/components/headers/ContentLanguage'
           content:
             application/json:
               schema:
@@ -187,8 +130,7 @@ paths:
           description: Validation error
           headers:
             Content-Language:
-              schema:
-                type: string
+              $ref: '#/components/headers/ContentLanguage'
           content:
             application/json:
               schema:
@@ -202,24 +144,9 @@ paths:
 
   /packages/{package_hash}/question/migrate:
     parameters:
-      - name: package_hash
-        in: path
-        required: true
-        description: SHA256 hash of package
-        schema:
-          type: string
-      - name: User-Agent
-        in: header
-        description: Name and version of the QPPE client software.
-        example: moodle-qtype_questionpy/1.0
-        schema:
-          type: string
-      - name: Accept-Language
-        in: header
-        description: Request messages in one of these languages. The server will indicate the chosen language in the
-          Content-Language response header field.
-        schema:
-          type: string
+      - $ref: '#/components/parameters/PackageHash'
+      - $ref: '#/components/parameters/UserAgent'
+      - $ref: '#/components/parameters/AcceptLanguageOne'
     post:
       summary: Migrate/update question state that was created by another package or another version.
       requestBody:
@@ -252,8 +179,7 @@ paths:
           description: Question state migration error
           headers:
             Content-Language:
-              schema:
-                type: string
+              $ref: '#/components/headers/ContentLanguage'
           content:
             application/json:
               schema:
@@ -267,24 +193,9 @@ paths:
 
   /packages/{package_hash}/attempt/start:
     parameters:
-      - name: package_hash
-        in: path
-        required: true
-        description: SHA256 hash of package
-        schema:
-          type: string
-      - name: User-Agent
-        in: header
-        description: Name and version of the QPPE client software.
-        example: moodle-qtype_questionpy/1.0
-        schema:
-          type: string
-      - name: Accept-Language
-        in: header
-        description: Request messages in one of these languages. The server will indicate the chosen language in the
-          Content-Language response header field.
-        schema:
-          type: string
+      - $ref: '#/components/parameters/PackageHash'
+      - $ref: '#/components/parameters/UserAgent'
+      - $ref: '#/components/parameters/AcceptLanguageOne'
     post:
       summary: Start an attempt
       requestBody:
@@ -311,8 +222,7 @@ paths:
           description: Attempt started data
           headers:
             Content-Language:
-              schema:
-                type: string
+              $ref: '#/components/headers/ContentLanguage'
           content:
             application/json:
               schema:
@@ -326,24 +236,9 @@ paths:
 
   /packages/{package_hash}/attempt/view:
     parameters:
-      - name: package_hash
-        in: path
-        required: true
-        description: SHA256 hash of package
-        schema:
-          type: string
-      - name: User-Agent
-        in: header
-        description: Name and version of the QPPE client software.
-        example: moodle-qtype_questionpy/1.0
-        schema:
-          type: string
-      - name: Accept-Language
-        in: header
-        description: Request messages in one of these languages. The server will indicate the chosen language in the
-          Content-Language response header field.
-        schema:
-          type: string
+      - $ref: '#/components/parameters/PackageHash'
+      - $ref: '#/components/parameters/UserAgent'
+      - $ref: '#/components/parameters/AcceptLanguageOne'
     post:
       summary: View an attempt
       requestBody:
@@ -370,8 +265,7 @@ paths:
           description: Attempt view data
           headers:
             Content-Language:
-              schema:
-                type: string
+              $ref: '#/components/headers/ContentLanguage'
           content:
             application/json:
               schema:
@@ -379,24 +273,9 @@ paths:
 
   /packages/{package_hash}/attempt/score:
     parameters:
-      - name: package_hash
-        in: path
-        required: true
-        description: SHA256 hash of package
-        schema:
-          type: string
-      - name: User-Agent
-        in: header
-        description: Name and version of the QPPE client software.
-        example: moodle-qtype_questionpy/1.0
-        schema:
-          type: string
-      - name: Accept-Language
-        in: header
-        description: Request messages in one of these languages. The server will indicate the chosen language in the
-          Content-Language response header field.
-        schema:
-          type: string
+      - $ref: '#/components/parameters/PackageHash'
+      - $ref: '#/components/parameters/UserAgent'
+      - $ref: '#/components/parameters/AcceptLanguageOne'
     post:
       summary: Score an attempt
       requestBody:
@@ -423,8 +302,7 @@ paths:
           description: Scored attempt data
           headers:
             Content-Language:
-              schema:
-                type: string
+              $ref: '#/components/headers/ContentLanguage'
           content:
             application/json:
               schema:
@@ -432,18 +310,8 @@ paths:
 
   /package-extract-info:
     parameters:
-      - name: User-Agent
-        in: header
-        description: Name and version of the QPPE client software.
-        example: moodle-qtype_questionpy/1.0
-        schema:
-          type: string
-      - name: Accept-Language
-        in: header
-        description: Request package information in these languages. This endpoint tries to deliver the content in all
-          given languages.
-        schema:
-          type: string
+      - $ref: '#/components/parameters/UserAgent'
+      - $ref: '#/components/parameters/AcceptLanguageAll'
     post:
       summary: Post a new package to the server and extract package information.
       requestBody:
@@ -470,6 +338,47 @@ paths:
 
 
 components:
+  parameters:
+    PackageHash:
+      name: package_hash
+      in: path
+      required: true
+      description: SHA256 hash of package
+      schema:
+        type: string
+
+    UserAgent:
+      name: User-Agent
+      in: header
+      description: Name and version of the QPPE client software.
+      example: moodle-qtype_questionpy/1.0
+      schema:
+        type: string
+
+    AcceptLanguageAll:
+      name: Accept-Language
+      in: header
+      required: true
+      description: Request package information in these languages. This endpoint tries to deliver the content in all
+        given languages.
+      schema:
+        type: string
+
+    AcceptLanguageOne:
+      name: Accept-Language
+      in: header
+      required: true
+      description: Request messages in one of these languages. The server will indicate the chosen language in the
+        Content-Language response header field.
+      schema:
+        type: string
+
+  headers:
+    ContentLanguage:
+      required: true
+      schema:
+        type: string
+
   schemas:
     PackageInfo:
       type: object
