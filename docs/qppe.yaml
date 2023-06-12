@@ -420,10 +420,10 @@ components:
           type: array
           items:
             type: string
-          default: []
+          default: [ ]
         description:
           type: object
-          default: {}
+          default: { }
           example:
             en: Multiple Choice
             de: Mehrfachauswahl
@@ -439,7 +439,7 @@ components:
           default: null
         tags:
           type: array
-          default: []
+          default: [ ]
       required: [ package_hash, short_name, namespace, name, version, type, author ]
 
     OptionsFormDefinition:
@@ -448,28 +448,20 @@ components:
         general:
           type: array
           description: Elements to add to the general settings section
-          default: []
+          default: [ ]
           items:
             $ref: "#/components/schemas/FormElement"
         sections:
           type: array
           description: Custom sections
-          default: []
+          default: [ ]
           items:
-            type: object
-            properties:
-              header:
-                type: string
-              elements:
-                type: array
-                items:
-                  $ref: "#/components/schemas/FormElement"
-            required: [ header, elements ]
+            $ref: "#/components/schemas/FormSection"
 
     FormData:
       type: object
       description: Mapping of element names to their current values. The value of containers of elements, such as
-        sections and groups, is a nested mapping of their contained element values. Some elements such as repetitions 
+        sections and groups, is a nested mapping of their contained element values. Some elements such as repetitions
         and multi-selects may also produce arrays as their values.
       additionalProperties: true
       example:
@@ -675,12 +667,12 @@ components:
               nullable: true
             include_javascript_modules:
               type: array
-              default: []
+              default: [ ]
               items:
                 type: string
             call_javascript:
               type: array
-              default: []
+              default: [ ]
               items:
                 type: object
                 properties:
@@ -693,7 +685,7 @@ components:
                 required: [ module, function, args ]
             files:
               type: array
-              default: []
+              default: [ ]
               items:
                 type: object
                 properties:
@@ -887,11 +879,61 @@ components:
     FormLabel:
       type: string
       description: The displayed label for this form element
-
     FormName:
       type: string
-      pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$
+      pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$'
       description: The key of the form data field produced by this form element
+    FormHelp:
+      type: string
+      description: Help text to be shown when a help button is clicked
+      nullable: true
+
+    FormReference:
+      type: string
+      pattern: '^([a-zA-Z_][a-zA-Z0-9_]*|\.\.)(\[([a-zA-Z_][a-zA-Z0-9_]*|\.\.)\])*$'
+      description: Relative reference to a form element, where '..' refers to the parent element
+    FormCondition:
+      description: Hide or disable this element depending on the state of another element
+      oneOf:
+        - type: object
+          description: Condition on a checkbox being (un)checked
+          properties:
+            kind:
+              type: string
+              enum: [ is_checked, is_not_checked ]
+            name:
+              $ref: "#/components/schemas/FormReference"
+          required: [ kind, name ]
+        - type: object
+          description: Condition on the value of another field (not) being equal to some static value
+          properties:
+            kind:
+              type: string
+              enum: [ equals, does_not_equal ]
+            name:
+              $ref: "#/components/schemas/FormReference"
+            value:
+              oneOf:
+                - type: string
+                - type: integer
+                - type: boolean
+          required: [ kind, name, value ]
+        - type: object
+          description: Condition on the value of another field being one of a number of static values
+          properties:
+            kind:
+              type: string
+              enum: [ in ]
+            name:
+              $ref: "#/components/schemas/FormReference"
+            value:
+              type: array
+              items:
+                oneOf:
+                  - type: string
+                  - type: integer
+                  - type: boolean
+          required: [ kind, name, value ]
 
     StaticTextElement:
       type: object
@@ -904,6 +946,18 @@ components:
         text:
           type: string
           description: Static text to display
+        disable_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
+        hide_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
+        help:
+          $ref: "#/components/schemas/FormHelp"
       required: [ kind, label, text ]
 
     TextInputElement:
@@ -929,6 +983,18 @@ components:
           description: Text to show while no value is entered
           nullable: true
           default: null
+        disable_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
+        hide_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
+        help:
+          $ref: "#/components/schemas/FormHelp"
       required: [ kind, label, name ]
 
     CheckboxElement:
@@ -956,6 +1022,18 @@ components:
           type: boolean
           description: Whether this checkbox is initially selected
           default: false
+        disable_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
+        hide_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
+        help:
+          $ref: "#/components/schemas/FormHelp"
       required: [ kind, name ]
 
     CheckboxGroupElement:
@@ -964,6 +1042,8 @@ components:
         kind:
           type: string
           enum: [ checkbox_group ]
+        name:
+          $ref: "#/components/schemas/FormName"
         checkboxes:
           type: array
           items:
@@ -999,6 +1079,18 @@ components:
         required:
           type: boolean
           default: false
+        disable_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
+        hide_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
+        help:
+          $ref: "#/components/schemas/FormHelp"
       required: [ kind, label, name, options ]
 
     SelectElement:
@@ -1032,6 +1124,18 @@ components:
         required:
           type: boolean
           default: false
+        disable_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
+        hide_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
+        help:
+          $ref: "#/components/schemas/FormHelp"
       required: [ kind, label, name, options ]
 
     HiddenElement:
@@ -1045,6 +1149,16 @@ components:
           $ref: "#/components/schemas/FormName"
         value:
           type: string
+        disable_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
+        hide_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
       required: [ kind, name, value ]
 
     GroupElement:
@@ -1061,7 +1175,49 @@ components:
           items:
             $ref: "#/components/schemas/FormElement"
           minItems: 1
+        disable_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
+        hide_if:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormCondition"
+          default: [ ]
+        help:
+          $ref: "#/components/schemas/FormHelp"
       required: [ kind, label, elements ]
+
+    RepetitionElement:
+      type: object
+      description: Repeats one or more elements a variable number of times, with a button to add more repetitions
+      properties:
+        kind:
+          type: string
+          enum: [ repetition ]
+        name:
+          $ref: "#/components/schemas/FormName"
+        initial_elements:
+          type: integer
+          description: Number of repetitions to show when the form is first loaded
+          minimum: 0
+        increment:
+          type: integer
+          description: Number of repetitions to add with each click of the button
+          minimum: 1
+        button_label:
+          type: string
+          description: Label for the button that adds more repetitions. Omit to use default provided by LMS
+          default: null
+          nullable: true
+        elements:
+          type: array
+          description: Elements to repeat
+          items:
+            $ref: "#/components/schemas/FormElement"
+          minItems: 1
+      required: [ kind, name, initial_elements, increment, elements ]
 
     FormElement:
       oneOf:
@@ -1073,3 +1229,17 @@ components:
         - $ref: "#/components/schemas/SelectElement"
         - $ref: "#/components/schemas/HiddenElement"
         - $ref: "#/components/schemas/GroupElement"
+        - $ref: "#/components/schemas/RepetitionElement"
+
+    FormSection:
+      type: object
+      properties:
+        name:
+          $ref: "#/components/schemas/FormName"
+        header:
+          type: string
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormElement"
+      required: [ name, header, elements ]
