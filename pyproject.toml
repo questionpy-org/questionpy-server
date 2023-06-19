@@ -13,7 +13,7 @@ version = "0.1.1"
 python = "^3.9"
 aiohttp = "^3.8.1"
 pydantic = "^1.10.6"
-questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "b6ead24058dba49a427cf4516d6a2cf6789bbe4d" }
+questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "9b3bedd711b2b699b26882ba187002a97bf8a057" }
 watchdog = "^3.0.0"
 semver = "^3.0.0"
 psutil = "^5.9.4"
