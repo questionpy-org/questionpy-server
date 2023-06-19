@@ -116,8 +116,10 @@ class RepetitionElement(_BaseElement):
     """Repeats a number of elements, allowing the user to add new repetitions with the click of a button."""
     kind: Literal["repetition"] = "repetition"
 
-    initial_elements: PositiveInt
+    initial_repetitions: PositiveInt
     """Number of repetitions to show when the form is first loaded."""
+    minimum_repetitions: PositiveInt = 1
+    """Minimum number of repetitions, at or below which removal is not possible."""
     increment: PositiveInt
     """Number of repetitions to add with each click of the button."""
     button_label: Optional[str] = None
