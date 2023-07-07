@@ -7,7 +7,6 @@ import contextlib
 import json
 import logging
 from abc import ABC
-from hashlib import sha256
 from pathlib import Path
 from typing import Optional, Type, TypeVar, Sequence
 
@@ -136,23 +135,23 @@ class BaseWorker(Worker, ABC):
         ret = await self._send_and_wait_response(msg, GetQPyPackageManifest.Response)
         return ComparableManifest(**ret.manifest.dict())
 
-    async def get_options_form(self, question_state: Optional[Path]) \
+    async def get_options_form(self, question_state: Optional[bytes]) \
             -> tuple[OptionsFormDefinition, dict[str, object]]:
-        msg = GetOptionsForm(state=question_state)
+        question_state_str = None if question_state is None else question_state.decode()
+        msg = GetOptionsForm(question_state=question_state_str)
         ret = await self._send_and_wait_response(msg, GetOptionsForm.Response)
         return ret.definition, ret.form_data
 
-    async def create_question_from_options(self, old_state: Optional[Path], form_data: dict[str, object]) \
+    async def create_question_from_options(self, old_state: Optional[bytes], form_data: dict[str, object]) \
             -> Question:
-        msg = CreateQuestionFromOptions(state=old_state, form_data=form_data)
+        question_state_str = None if old_state is None else old_state.decode()
+        msg = CreateQuestionFromOptions(state=question_state_str, form_data=form_data)
         ret = await self._send_and_wait_response(msg, CreateQuestionFromOptions.Response)
 
         new_state_str = json.dumps(ret.state)
-        new_state_hash = sha256(new_state_str.encode()).hexdigest()
 
         return Question(
             question_state=new_state_str,
-            question_state_hash=new_state_hash,
             scoring_method=ScoringMethod.ALWAYS_MANUAL_SCORING_REQUIRED,
             response_analysis_by_variant=False
         )

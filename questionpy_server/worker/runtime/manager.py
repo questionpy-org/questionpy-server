@@ -74,9 +74,8 @@ class WorkerManager:
             raise MainPackageNotLoadedError()
 
         state_data: Optional[dict[str, object]] = None
-        if msg.state:
-            with msg.state.open("rb") as state_file:
-                state_data = json.load(state_file)
+        if msg.question_state:
+            state_data = json.loads(msg.question_state)
 
         definition, form_data = self.main_package.qtype_instance.get_options_form(state_data)
         return GetOptionsForm.Response(definition=definition, form_data=form_data)
@@ -86,9 +85,8 @@ class WorkerManager:
             raise MainPackageNotLoadedError()
 
         state_data: Optional[dict[str, object]] = None
-        if msg.state:
-            with msg.state.open("rb") as state_file:
-                state_data = json.load(state_file)
+        if msg.question_state:
+            state_data = json.loads(msg.question_state)
 
         question = self.main_package.qtype_instance.create_question_from_options(state_data, msg.form_data)
 

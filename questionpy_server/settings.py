@@ -92,16 +92,6 @@ class PackageCacheSettings(BaseModel):
         return value.resolve()
 
 
-class QuestionStateCacheSettings(BaseModel):
-    size: ByteSize = ByteSize(20 * MiB)
-    directory: DirectoryPath = Path('cache/question_state').resolve()
-
-    @validator('directory')
-    # pylint: disable=no-self-argument
-    def resolve_path(cls, value: Path) -> Path:
-        return value.resolve()
-
-
 class RepoIndexCacheSettings(BaseModel):
     size: ByteSize = ByteSize(200 * MiB)
     directory: DirectoryPath = Path('cache/repo_index').resolve()
@@ -207,7 +197,6 @@ class Settings(BaseSettings):
     webservice: WebserviceSettings
     worker: WorkerSettings
     cache_package: PackageCacheSettings
-    cache_question_state: QuestionStateCacheSettings
     cache_repo_index: RepoIndexCacheSettings
     collector: CollectorSettings
 

@@ -50,13 +50,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/QuestionStateHash"
+              $ref: "#/components/schemas/RequestBaseData"
           multipart/form-data:
             schema:
               type: object
               properties:
                 main:
-                  $ref: "#/components/schemas/QuestionStateHash"
+                  $ref: "#/components/schemas/RequestBaseData"
                 package:
                   type: string
                   format: binary
@@ -87,7 +87,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PackageQuestionStateNotFound"
+                $ref: "#/components/schemas/PackageNotFound"
 
   /packages/{package_hash}/question:
     parameters:
@@ -140,7 +140,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PackageQuestionStateNotFound"
+                $ref: "#/components/schemas/PackageNotFound"
 
   /packages/{package_hash}/question/migrate:
     parameters:
@@ -152,10 +152,6 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
-            schema:
-              type: string
-              description: Question state that was created by another package or another version.
           multipart/form-data:
             schema:
               type: object
@@ -189,7 +185,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PackageQuestionStateNotFound"
+                $ref: "#/components/schemas/PackageNotFound"
 
   /packages/{package_hash}/attempt/start:
     parameters:
@@ -200,9 +196,6 @@ paths:
       summary: Start an attempt
       requestBody:
         content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AttemptStartArguments"
           multipart/form-data:
             schema:
               type: object
@@ -216,7 +209,7 @@ paths:
                 question_state:
                   type: string
                   description: Question state that was previously returned by the question endpoint.
-              required: [ main ]
+              required: [ main, question_state ]
       responses:
         201:
           description: Attempt started data
@@ -232,7 +225,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PackageQuestionStateNotFound"
+                $ref: "#/components/schemas/PackageNotFound"
 
   /packages/{package_hash}/attempt/view:
     parameters:
@@ -243,9 +236,6 @@ paths:
       summary: View an attempt
       requestBody:
         content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AttemptViewArguments"
           multipart/form-data:
             schema:
               type: object
@@ -259,7 +249,7 @@ paths:
                 question_state:
                   type: string
                   description: Question state that was previously returned by the question endpoint.
-              required: [ main ]
+              required: [ main, question_state ]
       responses:
         201:
           description: Attempt view data
@@ -280,9 +270,6 @@ paths:
       summary: Score an attempt
       requestBody:
         content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AttemptScoreArguments"
           multipart/form-data:
             schema:
               type: object
@@ -296,7 +283,7 @@ paths:
                 question_state:
                   type: string
                   description: Question state that was previously returned by the question endpoint.
-              required: [ main ]
+              required: [ main, question_state ]
       responses:
         201:
           description: Scored attempt data
@@ -473,36 +460,20 @@ components:
             - OPT_1
             - OPT_2
 
-    QuestionStateHash:
+    RequestBaseData:
       type: object
       properties:
-        question_state_hash:
-          type: string
-          description: SHA256 hash of question state JSON data
         context:
           type: integer
           description: Some context information where the question is located (e.g. course or quiz/test id).
           nullable: true
           default: null
-      required: [ question_state_hash ]
-
-    OptionalQuestionStateHash:
-      type: object
-      properties:
-        question_state_hash:
-          type: string
-          description: SHA256 hash of question state JSON data
-          nullable: true
-        context:
-          type: integer
-          description: Some context information where the question is located (e.g. course or quiz/test id).
-          nullable: true
-          default: null
+      required: [ ]
 
     QuestionCreateArguments:
       description: Information that is needed to create a new question.
       allOf:
-        - $ref: "#/components/schemas/OptionalQuestionStateHash"
+        - $ref: "#/components/schemas/RequestBaseData"
         - type: object
           properties:
             form_data:
@@ -515,9 +486,6 @@ components:
         question_state:
           type: string
           description: Arbitrary values set by the question package code (LMS must store this data unmodified)
-        question_state_hash:
-          type: string
-          description: SHA256 hash of question state JSON data
         num_variants:
           type: integer
           minimum: 1
@@ -595,13 +563,13 @@ components:
           type: string
           nullable: true
           description: General feedback that is shown to everyone after scoring.
-      required: [ question_state, question_state_hash, num_variants, num_subquestions, score_min,
+      required: [ question_state, num_variants, num_subquestions, score_min,
                   score_max, scoring_method, penalty, random_guess_score, subquestions,
                   response_analysis_by_variant, render_every_view, general_feedback ]
 
     AttemptStartArguments:
       allOf:
-        - $ref: "#/components/schemas/QuestionStateHash"
+        - $ref: "#/components/schemas/RequestBaseData"
         - type: object
           properties:
             variant:
@@ -716,7 +684,7 @@ components:
 
     AttemptViewArguments:
       allOf:
-        - $ref: "#/components/schemas/QuestionStateHash"
+        - $ref: "#/components/schemas/RequestBaseData"
         - type: object
           properties:
             attempt_state:
@@ -736,7 +704,7 @@ components:
     AttemptScoreArguments:
       # nested subquestions
       allOf:
-        - $ref: "#/components/schemas/QuestionStateHash"
+        - $ref: "#/components/schemas/RequestBaseData"
         - $ref: "#/components/schemas/AttemptViewArguments"
         - type: object
           properties:
@@ -848,14 +816,12 @@ components:
           required: [ scoring_state, scoring_code, score ]
         - $ref: "#/components/schemas/Attempt"
 
-    PackageQuestionStateNotFound:
+    PackageNotFound:
       type: object
       properties:
         package_not_found:
           type: boolean
-        question_state_not_found:
-          type: boolean
-      required: [ package_not_found, question_state_not_found ]
+      required: [ package_not_found ]
 
     QuestionStateMigrationError:
       type: object

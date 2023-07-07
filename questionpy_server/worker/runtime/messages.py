@@ -3,7 +3,6 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from enum import IntEnum, unique
-from pathlib import Path
 from struct import Struct
 from typing import ClassVar, Type, Optional, Any
 
@@ -109,7 +108,7 @@ class GetQPyPackageManifest(MessageToWorker):
 class GetOptionsForm(MessageToWorker):
     """Execute a QuestionPy package."""
     message_id = MessageIds.GET_OPTIONS_FORM_DEFINITION
-    state: Optional[Path]
+    question_state: Optional[str]
     """Old question state or ``None`` if the question is new."""
 
     class Response(MessageToServer):
@@ -121,7 +120,7 @@ class GetOptionsForm(MessageToWorker):
 
 class CreateQuestionFromOptions(MessageToWorker):
     message_id = MessageIds.CREATE_QUESTION
-    state: Optional[Path]
+    question_state: Optional[str]
     """Old question state or ``None`` if the question is new."""
     form_data: dict[str, object]
 

@@ -4,11 +4,11 @@
 
 from .package import PackageInfoFactory
 from .attempt import AttemptFactory, AttemptScoredFactory, AttemptStartedFactory
-from .question_state import QuestionStateHash
+from .question_state import RequestBaseDataFactory
 
 
 __all__ = [
     'PackageInfoFactory',
     'AttemptFactory', 'AttemptScoredFactory', 'AttemptStartedFactory',
-    'QuestionStateHash'
+    'RequestBaseDataFactory'
 ]

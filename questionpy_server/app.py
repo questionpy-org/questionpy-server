@@ -27,8 +27,6 @@ class QPyServer:
 
         self.package_cache = FileLimitLRU(settings.cache_package.directory, settings.cache_package.size,
                                           extension='.qpy', name='PackageCache')
-        self.question_state_cache = FileLimitLRU(settings.cache_question_state.directory,
-                                                 settings.cache_question_state.size, name='QuestionStateCache')
         self.repo_index_cache = FileLimitLRU(settings.cache_repo_index.directory, settings.cache_repo_index.size,
                                              name='RepoIndexCache')
 

@@ -4,8 +4,8 @@
 
 from pydantic_factories import ModelFactory
 
-from questionpy_server.api.models import QuestionStateHash
+from questionpy_server.api.models import RequestBaseData
 
 
-class QuestionStateHashFactory(ModelFactory):
-    __model__ = QuestionStateHash
+class RequestBaseDataFactory(ModelFactory):
+    __model__ = RequestBaseData

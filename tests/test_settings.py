@@ -24,7 +24,6 @@ def path_with_empty_config_file(tmp_path: Path) -> Path:
         [webservice]
         [worker]
         [cache_package]
-        [cache_question_state]
         [cache_repo_index]
         [collector]
     """)
