@@ -20,7 +20,7 @@ from questionpy_common.constants import KiB
 
 from questionpy_server.app import QPyServer
 from questionpy_server.settings import Settings, GeneralSettings, WebserviceSettings, PackageCacheSettings, \
-    CollectorSettings, QuestionStateCacheSettings, WorkerSettings, RepoIndexCacheSettings
+    CollectorSettings, WorkerSettings, RepoIndexCacheSettings
 from questionpy_server.utils.manfiest import ComparableManifest
 
 
@@ -59,7 +59,6 @@ def qpy_server(tmp_path_factory: TempPathFactory) -> QPyServer:
         webservice=WebserviceSettings(listen_address="127.0.0.1", listen_port=0),
         worker=WorkerSettings(),
         cache_package=PackageCacheSettings(directory=tmp_path_factory.mktemp('qpy_package_cache')),
-        cache_question_state=QuestionStateCacheSettings(directory=tmp_path_factory.mktemp('qpy_question_state_cache')),
         cache_repo_index=RepoIndexCacheSettings(directory=tmp_path_factory.mktemp('qpy_repo_index_cache')),
         collector=CollectorSettings()
     ))

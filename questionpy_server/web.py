@@ -6,8 +6,8 @@ import functools
 from hashlib import sha256
 from io import BytesIO
 from json import loads, JSONDecodeError
-from pathlib import Path
-from typing import Optional, Union, Callable, Any, cast, Type, TYPE_CHECKING, overload, Literal, NamedTuple, Sequence
+from typing import Optional, Union, Callable, Any, cast, Type, TYPE_CHECKING, overload, Literal, NamedTuple, Sequence, \
+    get_type_hints
 
 from aiohttp import BodyPartReader
 from aiohttp.abc import Request
@@ -18,10 +18,9 @@ from pydantic import BaseModel, ValidationError
 from questionpy_common import constants
 from questionpy_common.constants import KiB
 
-from questionpy_server.api.models import PackageQuestionStateNotFound, QuestionStateHash, OptionalQuestionStateHash
-from questionpy_server.cache import SizeError, FileLimitLRU
+from questionpy_server.api.models import PackageNotFound, MainBaseModel
+from questionpy_server.cache import SizeError
 from questionpy_server.collector import PackageCollection
-from questionpy_server.misc import get_route_model_param
 from questionpy_server.package import Package
 from questionpy_server.types import RouteHandler, M
 
@@ -123,7 +122,7 @@ async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = 
 
 
 async def parse_form_data(request: Request) \
-        -> tuple[bytes, Optional[HashContainer], Optional[HashContainer]]:
+        -> tuple[Optional[bytes], Optional[HashContainer], Optional[bytes]]:
     """Parses a multipart/form-data request.
 
     Args:
@@ -146,58 +145,9 @@ async def parse_form_data(request: Request) \
         elif part.name == 'package':
             package = await read_part(part, server.settings.webservice.max_package_size, calculate_hash=True)
         elif part.name == 'question_state':
-            question_state = await read_part(part, constants.MAX_QUESTION_STATE_SIZE, calculate_hash=True)
-
-    if main is None:
-        msg = "Multipart/form field 'main' is not set"
-        web_logger.warning(msg)
-        raise HTTPBadRequest(text=msg)
+            question_state = await read_part(part, constants.MAX_QUESTION_STATE_SIZE, calculate_hash=False)
 
     return main, package, question_state
-
-
-async def get_or_save_with_cache(cache: FileLimitLRU, hash_value: str, container: Optional[HashContainer]) \
-        -> Optional[Path]:
-    """Gets a file from the cache or saves it if it is not in the cache.
-
-    Args:
-        cache (FileLimitLRU): The cache.
-        hash_value (str): The hash of the file.
-        container (Optional[HashContainer]): container with the file data and its hash
-
-    Returns:
-        The path to the file.
-    """
-
-    try:
-        if not container:
-            path = cache.get(hash_value)
-        else:
-            path = await cache.put(container.hash, container.data)
-    except SizeError as error:
-        raise HTTPRequestEntityTooLarge(max_size=error.max_size, actual_size=error.actual_size,
-                                        text=str(error)) from error
-    except FileNotFoundError:
-        return None
-    return path
-
-
-def get_from_cache(cache: FileLimitLRU, hash_value: str) -> Optional[Path]:
-    """Gets a file from the cache.
-
-    Args:
-        cache (FileLimitLRU): The cache.
-        hash_value (str): The hash of the file.
-
-    Returns:
-        The path to the file.
-    """
-
-    try:
-        path = cache.get(hash_value)
-    except FileNotFoundError:
-        return None
-    return path
 
 
 async def get_or_save_package(collection: PackageCollection, hash_value: str, container: Optional[HashContainer]) \
@@ -226,33 +176,15 @@ async def get_or_save_package(collection: PackageCollection, hash_value: str, co
     return package
 
 
-async def get_data_package(collection: PackageCollection, hash_value: str) -> Optional[Package]:
-    """Gets a package from the collection.
-
-    Args:
-        collection (PackageCollection): package collection
-        hash_value (str): The hash of the package.
-
-    Returns:
-        package
-    """
-
-    try:
-        return collection.get(hash_value)
-    except FileNotFoundError:
-        return None
-
-
-class BodyContents(NamedTuple):
-    main: bytes
-    package: HashContainer
-    question_state: Optional[HashContainer]
-
-
-def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = None) \
+def ensure_package_and_question_state_exist(_func: Optional[RouteHandler] = None) \
         -> Union[RouteHandler, Callable[[RouteHandler], RouteHandler]]:
-    """Decorator function used to ensure that the package and question type exists and that the json
+    """Decorator function used to ensure that the package and question state exist (if needed by func) and that the json
     corresponds to the model given as a type annotation in func.
+
+    This decorator assumes that:
+      * func may want an argument named 'data' (with a subclass of MainBaseModel)
+      * func may want an argument named 'question_state' (bytes or Optional[bytes])
+      * every func wants a package with an argument named 'package'
 
     Args:
         _func (Optional[RouteHandler]): Control parameter; allows using the decorator with or without arguments.
@@ -262,113 +194,69 @@ def ensure_package_and_question_state_exists(_func: Optional[RouteHandler] = Non
 
     def decorator(function: RouteHandler) -> RouteHandler:
         """Internal decorator function."""
-        param_name, param_class = get_route_model_param(function, OptionalQuestionStateHash)
-        require_question_state = issubclass(param_class, QuestionStateHash)
+
+        type_hints = get_type_hints(function)
+        question_state_type = type_hints.get('question_state')
+        takes_question_state = question_state_type is not None
+        require_question_state = question_state_type is bytes
+        main_part_json_model: Optional[Type[MainBaseModel]] = type_hints.get('data')
+
+        if main_part_json_model:
+            assert issubclass(main_part_json_model, MainBaseModel),\
+                f"Parameter 'data' of function {function.__name__} has unexpected type."
 
         @functools.wraps(function)
         async def wrapper(request: Request, *args: Any, **kwargs: Any) -> Any:
             """Wrapper around the actual function call."""
 
             server: 'QPyServer' = request.app['qpy_server_app']
-            package_hash: str = request.match_info['package_hash']
+            package_hash: str = request.match_info.get('package_hash', '')
 
             if request.content_type == 'multipart/form-data':
                 main, sent_package, sent_question_state = await parse_form_data(request)
             elif request.content_type == 'application/json':
                 main, sent_package, sent_question_state = await request.read(), None, None
             else:
-                web_logger.info('Wrong content type, json or multipart/form-data expected, got %s',
+                web_logger.info('Wrong content type, multipart/form-data expected, got %s',
                                 request.content_type)
                 raise HTTPUnsupportedMediaType
 
-            model = create_model_from_json(main.decode(), param_class)
+            if main_part_json_model:
+                if main is None:
+                    msg = "Multipart/form-data field 'main' is not set"
+                    web_logger.warning(msg)
+                    raise HTTPBadRequest(text=msg)
 
-            # Check if package hash matches.
-            if sent_package and package_hash != sent_package.hash:
+                model = create_model_from_json(main.decode(), main_part_json_model)
+                kwargs['data'] = model
+
+            # Check if func wants a question state and if it is provided.
+            if takes_question_state:
+                if require_question_state and sent_question_state is None:
+                    msg = "Multipart/form-data field 'question_state' is not set"
+                    web_logger.warning(msg)
+                    raise HTTPBadRequest(text=msg)
+                kwargs['question_state'] = sent_question_state
+
+            # Check if a package is provided and if it matches the optional hash given in the URL.
+            if sent_package and package_hash and package_hash != sent_package.hash:
                 msg = f'Package hash does not match: {package_hash} != {sent_package.hash}'
                 web_logger.warning(msg)
                 raise HTTPBadRequest(text=msg)
 
-            # Check if required question state was not provided
-            if require_question_state and not model.question_state_hash:
-                raise HTTPBadRequest(text="Question state is required")
-
-            # Check if question state hash matches.
-            if sent_question_state and model.question_state_hash != sent_question_state.hash:
-                msg = f'Question state hash does not match: {model.question_state_hash} != {sent_question_state.hash}'
-                web_logger.warning(msg)
-                raise HTTPBadRequest(text=msg)
-
             package = await get_or_save_package(server.package_collection, package_hash, sent_package)
-            question_state_path = None
-            if model.question_state_hash:
-                question_state_path = await get_or_save_with_cache(server.question_state_cache,
-                                                                   model.question_state_hash, sent_question_state)
+            if package is None:
+                if package_hash:
+                    raise HTTPNotFound(
+                        text=PackageNotFound(package_not_found=True).json(),
+                        content_type='application/json'
+                    )
 
-            package_not_found = package is None
-            question_state_not_found = question_state_path is None and model.question_state_hash is not None
-            if package_not_found or question_state_not_found:
-                raise HTTPNotFound(
-                    text=PackageQuestionStateNotFound(package_not_found=package_not_found,
-                                                      question_state_not_found=question_state_not_found).json(),
-                    content_type='application/json'
-                )
-
-            kwargs[param_name] = model
-            kwargs['package'] = package
-            kwargs['question_state'] = question_state_path
-
-            return await function(request, *args, **kwargs)
-
-        return cast(RouteHandler, wrapper)
-
-    if _func is None:
-        return decorator
-    return decorator(_func)
-
-
-def ensure_package_exists(_func: Optional[RouteHandler] = None, required_hash: bool = True) \
-        -> Union[RouteHandler, Callable[[RouteHandler], RouteHandler]]:
-    def decorator(function: RouteHandler) -> RouteHandler:
-        """Internal decorator function."""
-
-        @functools.wraps(function)
-        async def wrapper(request: Request, *args: Any, **kwargs: Any) -> Any:
-            """Wrapper around the actual function call."""
-
-            if request.content_type != 'multipart/form-data':
-                web_logger.info('Wrong content type, json or multipart/form-data expected, got %s',
-                                request.content_type)
-                raise HTTPBadRequest
-
-            server: 'QPyServer' = request.app['qpy_server_app']
-            package_container: Optional[HashContainer] = None
-
-            reader = await request.multipart()
-            while part := await reader.next():
-                if not isinstance(part, BodyPartReader):
-                    continue
-                if part.name == 'package':
-                    package_container = await read_part(part, server.settings.webservice.max_package_size,
-                                                        calculate_hash=True)
-                    break
-
-            if not package_container:
                 msg = 'No package found in multipart/form-data'
                 web_logger.warning(msg)
                 raise HTTPBadRequest(text=msg)
 
-            package_hash: str = ""
-            if required_hash:
-                package_hash = request.match_info['package_hash']
-                if package_hash != package_container.hash:
-                    msg = f'Package hash does not match: {package_hash} != {package_container.hash}'
-                    web_logger.warning(msg)
-                    raise HTTPBadRequest(text=msg)
-
-            package = await get_or_save_package(server.package_collection, package_hash, package_container)
             kwargs['package'] = package
-
             return await function(request, *args, **kwargs)
 
         return cast(RouteHandler, wrapper)

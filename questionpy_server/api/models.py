@@ -40,13 +40,12 @@ class PackageInfo(BaseModel):
     tags: Optional[List[str]]
 
 
-class OptionalQuestionStateHash(BaseModel):
-    question_state_hash: Optional[str]
+class MainBaseModel(BaseModel):
+    pass
+
+
+class RequestBaseData(MainBaseModel):
     context: Optional[int] = None
-
-
-class QuestionStateHash(OptionalQuestionStateHash):
-    question_state_hash: str
 
 
 class QuestionEditFormResponse(BaseModel):
@@ -54,7 +53,7 @@ class QuestionEditFormResponse(BaseModel):
     form_data: dict[str, object]
 
 
-class QuestionCreateArguments(OptionalQuestionStateHash):
+class QuestionCreateArguments(RequestBaseData):
     form_data: dict[str, object]
 
 
@@ -80,7 +79,6 @@ class Question(BaseModel):
         use_enum_values = True
 
     question_state: str
-    question_state_hash: str
     num_variants: Annotated[int, Field(ge=1, strict=True)] = 1
     num_subquestions: Annotated[int, Field(ge=1, strict=True)] = 1
     score_min: float = 0
@@ -94,7 +92,7 @@ class Question(BaseModel):
     general_feedback: Optional[str]
 
 
-class AttemptStartArguments(QuestionStateHash):
+class AttemptStartArguments(RequestBaseData):
     variant: Annotated[int, Field(ge=1, strict=True)]
 
 
@@ -140,7 +138,7 @@ class AttemptStarted(Attempt):
     attempt_state: str
 
 
-class AttemptViewArguments(QuestionStateHash):
+class AttemptViewArguments(RequestBaseData):
     attempt_state: Json
     scoring_state: Optional[Json]
     response: Optional[Dict[str, Any]]
@@ -189,9 +187,8 @@ class AttemptScored(Attempt):
     scored_fields: Optional[List[ScoredField]]
 
 
-class PackageQuestionStateNotFound(BaseModel):
+class PackageNotFound(BaseModel):
     package_not_found: bool
-    question_state_not_found: bool
 
 
 class QuestionStateMigrationErrorCode(Enum):
