@@ -5,7 +5,8 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "questionpy-common"
 description = "Common classes and functions for QuestionPy"
-authors = ["innoCampus <info@isis.tu-berlin.de>"]
+authors = ["Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>"]
+license = "MIT"
 homepage = "https://questionpy.org"
 version = "0.2.0"
 
