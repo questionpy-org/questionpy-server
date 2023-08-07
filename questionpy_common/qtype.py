@@ -6,20 +6,66 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from .elements import OptionsFormDefinition
-from .manifest import Manifest
+from .models import QuestionModel, AttemptModel
+
+
+class BaseAttempt(ABC):
+    @abstractmethod
+    def export_attempt_state(self) -> str:
+        """Serialize this attempt's relevant data.
+
+        A future call to :meth:`BaseQuestion.view_attempt` should result in an attempt object identical to the one which
+        exported the state.
+        """
+
+    @abstractmethod
+    def export(self) -> AttemptModel:
+        """Get metadata about this attempt."""
 
 
 class BaseQuestion(ABC):
-    question_state: dict[str, object]
+    @abstractmethod
+    def start_attempt(self, variant: int) -> BaseAttempt:
+        """Start an attempt at this question with the given variant.
+
+        Args:
+            variant: Not implemented.
+
+        Returns:
+            A :class:`BaseAttempt` object representing the attempt.
+        """
+
+    @abstractmethod
+    def view_attempt(self, attempt_state: str, scoring_state: Optional[str] = None,
+                     response: Optional[dict] = None) -> BaseAttempt:
+        """Create an attempt object for a previously started attempt.
+
+        Args:
+            attempt_state: The `attempt_state` attribute of an attempt which was previously returned by
+                           :meth:`start_attempt`.
+            scoring_state: Not implemented.
+            response: The response currently entered by the student.
+
+        Returns:
+            A :class:`BaseAttempt` object which should be identical to the one which generated the given state(s).
+        """
+
+    @abstractmethod
+    def export_question_state(self) -> str:
+        """Serialize this question's relevant data.
+
+        A future call to :meth:`BaseQuestionType.create_question_from_state` should result in a question object
+        identical to the one which exported the state.
+        """
+
+    @abstractmethod
+    def export(self) -> QuestionModel:
+        """Get metadata about this question."""
 
 
 class BaseQuestionType(ABC):
-    def __init__(self, manifest: Manifest):
-        self.manifest = manifest
-
     @abstractmethod
-    def get_options_form(self, question_state: Optional[dict[str, object]]) \
-            -> tuple[OptionsFormDefinition, dict[str, object]]:
+    def get_options_form(self, question_state: Optional[str]) -> tuple[OptionsFormDefinition, dict[str, object]]:
         """Get the form used to create a new or edit an existing question.
 
         Args:
@@ -30,8 +76,7 @@ class BaseQuestionType(ABC):
         """
 
     @abstractmethod
-    def create_question_from_options(self, old_state: Optional[dict[str, object]],
-                                     form_data: dict[str, object]) -> BaseQuestion:
+    def create_question_from_options(self, old_state: Optional[str], form_data: dict[str, object]) -> BaseQuestion:
         """Create or update the question (state) with the form data from a submitted question edit form.
 
         Args:
@@ -39,15 +84,15 @@ class BaseQuestionType(ABC):
             form_data: Form data from a submitted question edit form.
 
         Returns:
-            New question.
+            New or updated question object.
 
         Raises:
             OptionsFormValidationError: When `form_data` is invalid.
         """
 
     @abstractmethod
-    def create_question_from_state(self, question_state: dict[str, object]) -> BaseQuestion:
-        pass
+    def create_question_from_state(self, question_state: str) -> BaseQuestion:
+        """Deserialize the given question state, returning a question object equivalent to the one which exported it."""
 
 
 class OptionsFormValidationError(Exception):
