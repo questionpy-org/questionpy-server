@@ -39,7 +39,7 @@ class QPyMainPackage(QPyPackage):
                                                      f"{self.manifest.entrypoint}")
         if self.main_module.QuestionType.implementation is None:
             raise QuestionTypeImplementationNotFoundError(self.manifest.short_name)
-        self.qtype_instance: BaseQuestionType = self.main_module.QuestionType.implementation(manifest=self.manifest)
+        self.qtype_instance: BaseQuestionType = self.main_module.QuestionType.implementation()
 
 
 class QuestionTypeImplementationNotFoundError(Exception):

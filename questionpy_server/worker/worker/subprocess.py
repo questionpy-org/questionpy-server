@@ -79,8 +79,11 @@ class SubprocessWorker(BaseWorker):
 
     async def start(self) -> None:
         """Start the worker process."""
+        # Turn off the worker's __debug__ flag unless ours is set as well.
+        python_flags = [] if __debug__ else ["-O"]
+
         self._proc = await asyncio.create_subprocess_exec(
-            sys.executable,
+            sys.executable, *python_flags,
             '-m', 'questionpy_server.worker.runtime',
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,

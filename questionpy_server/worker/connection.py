@@ -2,7 +2,6 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-import json
 from typing import AsyncIterator
 
 from questionpy_server.utils.streams import SupportsAsyncRead, SupportsWrite
@@ -38,8 +37,7 @@ class ServerToWorkerConnection(AsyncIterator[MessageToServer]):
 
         if length:
             json_data = await self.stream_in.readexactly(length)
-            json_obj = json.loads(json_data)
-            return message_type.parse_obj(json_obj)
+            return message_type.model_validate_json(json_data)
 
         return message_type()
 

@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Optional, TypeVar
 
 from questionpy_common.elements import OptionsFormDefinition
+from questionpy_common.models import AttemptModel
 
-from questionpy_server.api.models import Question
+from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import WorkerResources, WorkerResourceLimits
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer
@@ -78,7 +79,8 @@ class Worker(ABC):
         """
 
     @abstractmethod
-    async def create_question_from_options(self, old_state: Optional[bytes], form_data: dict[str, object]) -> Question:
+    async def create_question_from_options(self, old_state: Optional[bytes],
+                                           form_data: dict[str, object]) -> QuestionCreated:
         """Create or update the question (state) with the form data from a submitted question edit form.
 
         Args:
@@ -87,4 +89,32 @@ class Worker(ABC):
 
         Returns:
             New question.
+        """
+
+    @abstractmethod
+    async def start_attempt(self, question_state: str, variant: int) -> AttemptStarted:
+        """Start an attempt at this question with the given variant.
+
+        Args:
+            question_state: The question that is to be attempted.
+            variant: Not implemented.
+
+        Returns:
+            The started attempt consisting of opaque attempt state and metadata.
+        """
+
+    @abstractmethod
+    async def get_attempt(self, question_state: str, attempt_state: str, scoring_state: Optional[str] = None,
+                          response: Optional[dict] = None) -> AttemptModel:
+        """Create an attempt object for a previously started attempt.
+
+        Args:
+            question_state: The question the attempt belongs to.
+            attempt_state: The `attempt_state` attribute of an attempt which was previously returned by
+                           :meth:`start_attempt`.
+            scoring_state: Not implemented.
+            response: The response currently entered by the student.
+
+        Returns:
+            Metadata of the attempt.
         """

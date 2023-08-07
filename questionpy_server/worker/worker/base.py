@@ -4,21 +4,22 @@
 
 import asyncio
 import contextlib
-import json
 import logging
 from abc import ABC
 from pathlib import Path
 from typing import Optional, Type, TypeVar, Sequence
 
 from questionpy_common.elements import OptionsFormDefinition
+from questionpy_common.models import AttemptModel
 
-from questionpy_server.api.models import Question, ScoringMethod
+from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer, MessageIds, WorkerError, \
-    InitWorker, LoadQPyPackage, Exit, GetQPyPackageManifest, GetOptionsForm, CreateQuestionFromOptions
+    InitWorker, LoadQPyPackage, Exit, GetQPyPackageManifest, GetOptionsForm, CreateQuestionFromOptions, StartAttempt, \
+    ViewAttempt
 from questionpy_server.worker.worker import WorkerState, Worker
 
 log = logging.getLogger(__name__)
@@ -133,7 +134,7 @@ class BaseWorker(Worker, ABC):
     async def get_manifest(self) -> ComparableManifest:
         msg = GetQPyPackageManifest(path=str(self.package))
         ret = await self._send_and_wait_response(msg, GetQPyPackageManifest.Response)
-        return ComparableManifest(**ret.manifest.dict())
+        return ComparableManifest(**ret.manifest.model_dump())
 
     async def get_options_form(self, question_state: Optional[bytes]) \
             -> tuple[OptionsFormDefinition, dict[str, object]]:
@@ -143,15 +144,29 @@ class BaseWorker(Worker, ABC):
         return ret.definition, ret.form_data
 
     async def create_question_from_options(self, old_state: Optional[bytes], form_data: dict[str, object]) \
-            -> Question:
+            -> QuestionCreated:
         question_state_str = None if old_state is None else old_state.decode()
         msg = CreateQuestionFromOptions(question_state=question_state_str, form_data=form_data)
         ret = await self._send_and_wait_response(msg, CreateQuestionFromOptions.Response)
 
-        new_state_str = json.dumps(ret.state)
-
-        return Question(
-            question_state=new_state_str,
-            scoring_method=ScoringMethod.ALWAYS_MANUAL_SCORING_REQUIRED,
-            response_analysis_by_variant=False
+        return QuestionCreated(
+            question_state=ret.question_state,
+            **ret.question_model.model_dump()
         )
+
+    async def start_attempt(self, question_state: str, variant: int) -> AttemptStarted:
+        msg = StartAttempt(question_state=question_state, variant=variant)
+        ret = await self._send_and_wait_response(msg, StartAttempt.Response)
+
+        return AttemptStarted(
+            attempt_state=ret.attempt_state,
+            **ret.attempt_model.model_dump()
+        )
+
+    async def get_attempt(self, question_state: str, attempt_state: str, scoring_state: Optional[str] = None,
+                          response: Optional[dict] = None) -> AttemptModel:
+        msg = ViewAttempt(question_state=question_state, attempt_state=attempt_state, scoring_state=scoring_state,
+                          response=response)
+        ret = await self._send_and_wait_response(msg, ViewAttempt.Response)
+
+        return ret.attempt_model

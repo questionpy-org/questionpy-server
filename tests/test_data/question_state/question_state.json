@@ -1,3 +1,11 @@
 {
+  "package_name": "example",
+  "package_version": "0.1.0",
+  "options": {
+    "input": "",
+    "my_hidden": "foo",
+    "my_repetition": [],
+    "name_group": {}
+  },
   "example": "question_state"
 }
