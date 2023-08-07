@@ -2,15 +2,17 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-import json
-import resource
+import warnings
 from pathlib import Path
 from typing import TypeVar, Optional, Callable, Any
+
+import resource
 
 from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageIds, LoadQPyPackage, \
-    GetQPyPackageManifest, GetOptionsForm, CreateQuestionFromOptions, InitWorker, Exit, WorkerError
+    GetQPyPackageManifest, GetOptionsForm, CreateQuestionFromOptions, InitWorker, Exit, WorkerError, StartAttempt, \
+    ViewAttempt
 from questionpy_server.worker.runtime.package import QPyPackage, QPyMainPackage
 
 _M = TypeVar('_M', bound=MessageToServer)
@@ -26,7 +28,9 @@ class WorkerManager:
             LoadQPyPackage.message_id: self.on_msg_load_qpy_package,
             GetQPyPackageManifest.message_id: self.on_msg_get_qpy_package_manifest,
             GetOptionsForm.message_id: self.on_msg_get_options_form_definition,
-            CreateQuestionFromOptions.message_id: self.on_msg_create_question_from_options
+            CreateQuestionFromOptions.message_id: self.on_msg_create_question_from_options,
+            StartAttempt.message_id: self.on_msg_start_attempt,
+            ViewAttempt.message_id: self.on_msg_view_attempt,
         }
 
     def bootstrap(self) -> None:
@@ -73,24 +77,37 @@ class WorkerManager:
         if self.main_package is None:
             raise MainPackageNotLoadedError()
 
-        state_data: Optional[dict[str, object]] = None
-        if msg.question_state:
-            state_data = json.loads(msg.question_state)
-
-        definition, form_data = self.main_package.qtype_instance.get_options_form(state_data)
+        definition, form_data = self.main_package.qtype_instance.get_options_form(msg.question_state)
         return GetOptionsForm.Response(definition=definition, form_data=form_data)
 
     def on_msg_create_question_from_options(self, msg: CreateQuestionFromOptions) -> CreateQuestionFromOptions.Response:
         if self.main_package is None:
             raise MainPackageNotLoadedError()
 
-        state_data: Optional[dict[str, object]] = None
-        if msg.question_state:
-            state_data = json.loads(msg.question_state)
+        question = self.main_package.qtype_instance.create_question_from_options(msg.question_state, msg.form_data)
 
-        question = self.main_package.qtype_instance.create_question_from_options(state_data, msg.form_data)
+        return CreateQuestionFromOptions.Response(question_state=question.export_question_state(),
+                                                  question_model=question.export())
 
-        return CreateQuestionFromOptions.Response(state=question.question_state)
+    def on_msg_start_attempt(self, msg: StartAttempt) -> StartAttempt.Response:
+        if self.main_package is None:
+            raise MainPackageNotLoadedError()
+
+        question = self.main_package.qtype_instance.create_question_from_state(msg.question_state)
+        attempt = question.start_attempt(msg.variant)
+        return StartAttempt.Response(attempt_state=attempt.export_attempt_state(), attempt_model=attempt.export())
+
+    def on_msg_view_attempt(self, msg: ViewAttempt) -> ViewAttempt.Response:
+        if self.main_package is None:
+            raise MainPackageNotLoadedError()
+
+        question = self.main_package.qtype_instance.create_question_from_state(msg.question_state)
+        attempt = question.view_attempt(msg.attempt_state)
+        if __debug__ and msg.attempt_state != attempt.export_attempt_state():
+            warnings.warn("The attempt state has been changed by viewing the attempt, which has no effect and should "
+                          "not happen.")
+
+        return ViewAttempt.Response(attempt_model=attempt.export())
 
 
 class BootstrapError(Exception):

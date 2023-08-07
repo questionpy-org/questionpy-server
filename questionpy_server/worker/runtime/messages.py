@@ -7,9 +7,9 @@ from struct import Struct
 from typing import ClassVar, Type, Optional, Any
 
 from pydantic import BaseModel
-
-from questionpy_common.qtype import OptionsFormDefinition
 from questionpy_common.manifest import Manifest
+from questionpy_common.models import AttemptModel, QuestionModel
+from questionpy_common.qtype import OptionsFormDefinition
 
 from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.exception import WorkerMemoryLimitExceededError, WorkerUnknownError
@@ -31,6 +31,9 @@ class MessageIds(IntEnum):
     GET_OPTIONS_FORM_DEFINITION = 30
     CREATE_QUESTION = 40
 
+    START_ATTEMPT = 50
+    VIEW_ATTEMPT = 51
+
     # Worker to server.
     WORKER_STARTED = 1000
     SANDBOX_ENABLED = 1001
@@ -39,6 +42,9 @@ class MessageIds(IntEnum):
     RETURN_QPY_PACKAGE_MANIFEST = 1020
     RETURN_OPTIONS_FORM_DEFINITION = 1030
     RETURN_CREATE_QUESTION = 1040
+
+    RETURN_START_ATTEMPT = 1050
+    RETURN_VIEW_ATTEMPT = 1051
 
     ERROR = 1100
 
@@ -126,8 +132,32 @@ class CreateQuestionFromOptions(MessageToWorker):
 
     class Response(MessageToServer):
         message_id: ClassVar[MessageIds] = MessageIds.RETURN_CREATE_QUESTION
-        state: dict[str, object]
+        question_state: str
         """New question state."""
+        question_model: QuestionModel
+
+
+class StartAttempt(MessageToWorker):
+    message_id: ClassVar[MessageIds] = MessageIds.START_ATTEMPT
+    question_state: str
+    variant: int
+
+    class Response(MessageToServer):
+        message_id: ClassVar[MessageIds] = MessageIds.RETURN_START_ATTEMPT
+        attempt_state: str
+        attempt_model: AttemptModel
+
+
+class ViewAttempt(MessageToWorker):
+    message_id: ClassVar[MessageIds] = MessageIds.VIEW_ATTEMPT
+    question_state: str
+    attempt_state: str
+    scoring_state: Optional[str]
+    response: Optional[dict]
+
+    class Response(MessageToServer):
+        message_id: ClassVar[MessageIds] = MessageIds.RETURN_VIEW_ATTEMPT
+        attempt_model: AttemptModel
 
 
 class WorkerError(MessageToServer):
@@ -160,7 +190,7 @@ class WorkerError(MessageToServer):
 
 
 def get_message_bytes(message: Message) -> tuple[bytes, Optional[bytes]]:
-    json_str = message.json()
+    json_str = message.model_dump_json()
     json_bytes = None
     message_length = 0
     if len(json_str) > 2:

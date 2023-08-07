@@ -4,15 +4,7 @@
 
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from questionpy_server.api.models import Attempt, AttemptScored, AttemptStarted
-
-
-class AttemptStartedFactory(ModelFactory):
-    __model__ = AttemptStarted
-
-
-class AttemptFactory(ModelFactory):
-    __model__ = Attempt
+from questionpy_server.api.models import AttemptScored
 
 
 class AttemptScoredFactory(ModelFactory):

@@ -59,7 +59,7 @@ def create_model_from_json(json: Union[object, str], param_class: Type[M]) -> M:
     try:
         if isinstance(json, str):
             json = loads(json)
-        model = param_class.parse_obj(json)
+        model = param_class.model_validate(json)
     except ValidationError as error:
         web_logger.warning('JSON does not match model: %s', error)
         raise HTTPBadRequest from error

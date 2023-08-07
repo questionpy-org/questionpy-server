@@ -7,11 +7,12 @@ from typing import TYPE_CHECKING, Optional
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPMethodNotAllowed, HTTPNotFound
 
-from questionpy_server.factories import AttemptFactory, AttemptScoredFactory, AttemptStartedFactory
+from questionpy_server.factories import AttemptScoredFactory
 from questionpy_server.web import ensure_package_and_question_state_exist, json_response
 from .models import AttemptStartArguments, AttemptScoreArguments, AttemptViewArguments, \
     QuestionCreateArguments, QuestionEditFormResponse, RequestBaseData
 from ..package import Package
+from ..worker.worker import Worker
 
 if TYPE_CHECKING:
     from questionpy_server.app import QPyServer
@@ -49,6 +50,7 @@ async def post_options(request: web.Request, package: Package, question_state: O
     qpyserver: 'QPyServer' = request.app['qpy_server_app']
 
     package_path = await package.get_path()
+    worker: Worker
     async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
         definition, form_data = await worker.get_options_form(question_state)
 
@@ -58,17 +60,32 @@ async def post_options(request: web.Request, package: Package, question_state: O
 @routes.post(r'/packages/{package_hash:\w+}/attempt/start')  # type: ignore[arg-type]
 @ensure_package_and_question_state_exist
 # pylint: disable=unused-argument
-async def post_attempt_start(_request: web.Request, package: Package, question_state: bytes,
+async def post_attempt_start(request: web.Request, package: Package, question_state: bytes,
                              data: AttemptStartArguments) -> web.Response:
-    return json_response(data=AttemptStartedFactory.build(), status=201)
+    qpyserver: 'QPyServer' = request.app['qpy_server_app']
+
+    package_path = await package.get_path()
+    worker: Worker
+    async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
+        attempt = await worker.start_attempt(question_state.decode(), data.variant)
+
+    return json_response(data=attempt, status=201)
 
 
 @routes.post(r'/packages/{package_hash:\w+}/attempt/view')  # type: ignore[arg-type]
 @ensure_package_and_question_state_exist
 # pylint: disable=unused-argument
-async def post_attempt_view(_request: web.Request, package: Package, question_state: bytes,
+async def post_attempt_view(request: web.Request, package: Package, question_state: bytes,
                             data: AttemptViewArguments) -> web.Response:
-    return json_response(data=AttemptFactory.build(), status=201)
+    qpyserver: 'QPyServer' = request.app['qpy_server_app']
+
+    package_path = await package.get_path()
+    worker: Worker
+    async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
+        attempt = await worker.get_attempt(question_state.decode(), data.attempt_state,
+                                           data.scoring_state, data.response)
+
+    return json_response(data=attempt, status=201)
 
 
 @routes.post(r'/packages/{package_hash:\w+}/attempt/score')  # type: ignore[arg-type]
@@ -86,6 +103,7 @@ async def post_question(request: web.Request, data: QuestionCreateArguments,
     qpyserver: 'QPyServer' = request.app['qpy_server_app']
 
     package_path = await package.get_path()
+    worker: Worker
     async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
         question = await worker.create_question_from_options(question_state, data.form_data)
 

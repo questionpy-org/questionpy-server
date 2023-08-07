@@ -15,7 +15,6 @@ import pytest
 from _pytest.tmpdir import TempPathFactory
 from aiohttp.pytest_plugin import AiohttpClient
 from aiohttp.test_utils import TestClient
-
 from questionpy_common.constants import KiB
 
 from questionpy_server.app import QPyServer
