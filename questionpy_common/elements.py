@@ -138,9 +138,6 @@ FormElement: TypeAlias = Annotated[Union[
     RadioGroupElement, SelectElement, HiddenElement, GroupElement, RepetitionElement
 ], Field(discriminator="kind")]
 
-GroupElement.update_forward_refs()
-RepetitionElement.update_forward_refs()
-
 
 class FormSection(BaseModel):
     """Form section that can be expanded and collapsed."""

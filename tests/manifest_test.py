@@ -97,7 +97,7 @@ def test_valid_name(field: str, name: str) -> None:
     ['_', 'can not be a Python keyword']
 ))
 def test_not_valid_name(field: str, name: str, error_message: str) -> None:
-    error = f'1 validation error for Manifest\n{field}\n  {error_message}'
+    error = f'1 validation error for Manifest\n{field}\n  Value error, {error_message}'
     manifest = minimal_manifest.copy()
     manifest[field] = name
     with pytest.raises(ValidationError, match=error):
