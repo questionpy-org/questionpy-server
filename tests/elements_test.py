@@ -5,8 +5,8 @@
 from typing import Type
 
 import pytest
+from polyfactory.factories.pydantic_factory import ModelFactory
 from pydantic import BaseModel
-from pydantic_factories import ModelFactory
 
 from questionpy_common.dev.factories import StaticTextElementFactory, TextInputElementFactory, CheckboxElementFactory, \
     CheckboxGroupElementFactory, OptionFactory, RadioGroupElementFactory, SelectElementFactory, HiddenElementFactory, \
