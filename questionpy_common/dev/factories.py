@@ -2,7 +2,7 @@
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from pydantic_factories import ModelFactory as _ModelFactory
+from polyfactory.factories.pydantic_factory import ModelFactory as _ModelFactory
 
 import questionpy_common.elements as _elements
 
