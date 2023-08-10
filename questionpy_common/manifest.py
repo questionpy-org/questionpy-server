@@ -7,8 +7,7 @@ from enum import Enum
 from keyword import iskeyword, issoftkeyword
 from typing import Optional, Union, Annotated
 
-from pydantic import BaseModel
-from pydantic.class_validators import validator
+from pydantic import BaseModel, field_validator
 from pydantic.fields import Field
 
 
@@ -24,9 +23,11 @@ DEFAULT_NAMESPACE = 'local'
 DEFAULT_PACKAGETYPE = PackageType.QUESTIONTYPE
 
 # Regular expressions.
-RE_SEMVER = re.compile(r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'
-                       r'(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$')
-RE_API = re.compile(r'^(0|[1-9]\d*)\.(0|[1-9]\d*)$')
+RE_SEMVER = (r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'
+             r'(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$')
+RE_API = r'^(0|[1-9]\d*)\.(0|[1-9]\d*)$'
+# The SemVer and Api version patterns are used on pydantic fields, which uses Rust regexes, so re.compiling them makes
+# no sense. We match RE_VALID_CHARS_NAME in Python though, so here it does.
 RE_VALID_CHARS_NAME = re.compile(r"^[a-z\d_]+$")
 
 
@@ -67,8 +68,8 @@ def ensure_is_valid_name(name: str) -> str:
 class Manifest(BaseModel):
     short_name: str
     namespace: str = DEFAULT_NAMESPACE
-    version: Annotated[str, Field(regex=RE_SEMVER.pattern)]
-    api_version: Annotated[str, Field(regex=RE_API.pattern)]
+    version: Annotated[str, Field(pattern=RE_SEMVER)]
+    api_version: Annotated[str, Field(pattern=RE_API)]
     author: str
     name: dict[str, str] = {}
     entrypoint: str = DEFAULT_ENTRYPOINT
@@ -82,8 +83,8 @@ class Manifest(BaseModel):
     tags: set[str] = set()
     requirements: Optional[Union[str, list[str]]] = None
 
-    @validator('short_name', 'namespace')
-    # pylint: disable=no-self-argument
+    @field_validator('short_name', 'namespace')
+    @classmethod
     def ensure_is_valid_name(cls, value: str) -> str:
         return ensure_is_valid_name(value)
 

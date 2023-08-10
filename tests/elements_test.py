@@ -27,7 +27,7 @@ from questionpy_common.elements import StaticTextElement, TextInputElement, Chec
     [HiddenElementFactory, HiddenElement],
     [GroupElementFactory, GroupElement],
     [FormSectionFactory, FormSection],
-    [OptionsFormDefinitionFactory, OptionsFormDefinition]
+    [OptionsFormDefinitionFactory, OptionsFormDefinition],
 ))
 def test_factory_builds_valid_model(factory: ModelFactory, model: Type[BaseModel]) -> None:
     fake_model = factory.build()
