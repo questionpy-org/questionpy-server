@@ -5,10 +5,9 @@
 from typing import Dict, List
 
 from faker import Faker
-from pydantic_factories import ModelFactory
+from polyfactory.factories.pydantic_factory import ModelFactory
 
 from questionpy_server.api.models import PackageInfo
-
 
 languages = ['en', 'de']
 fake = Faker()

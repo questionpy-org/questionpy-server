@@ -2,20 +2,25 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from typing import Any
+from typing import Any, Callable
 
-from pydantic_factories import ModelFactory
+from polyfactory.factories.pydantic_factory import ModelFactory
+from semver import Version
 
 from questionpy_server.repository.models import RepoMeta, RepoPackageVersions
-from questionpy_server.utils.manfiest import ComparableManifest, SemVer
+from questionpy_server.utils.manifest import ComparableManifest
 
 
 class CustomFactory(ModelFactory[Any]):
+    """Custom factory base class adding support for :class:`Version` fields."""
+    __is_base_factory__ = True
+
     @classmethod
-    def get_mock_value(cls, field_type: Any) -> Any:
-        if field_type is SemVer:
-            return cls.get_faker().numerify(text='#.#.#')
-        return super().get_mock_value(field_type)
+    def get_provider_map(cls) -> dict[Any, Callable[[], Any]]:
+        return {
+            **super().get_provider_map(),
+            Version: lambda: cls.__faker__.numerify(text='#.#.#')
+        }
 
 
 class RepoMetaFactory(ModelFactory):

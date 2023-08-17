@@ -18,7 +18,7 @@ from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.package import PackageSources
-from questionpy_server.utils.manfiest import ComparableManifest
+from questionpy_server.utils.manifest import ComparableManifest
 from tests.conftest import PACKAGE
 
 

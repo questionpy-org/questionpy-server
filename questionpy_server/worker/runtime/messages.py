@@ -69,63 +69,63 @@ class MessageToServer(Message):
 
 class InitWorker(MessageToWorker):
     """Give worker some basic information."""
-    message_id = MessageIds.INIT_WORKER
+    message_id: ClassVar[MessageIds] = MessageIds.INIT_WORKER
     limits: Optional[WorkerResourceLimits] = None
 
     class Response(MessageToServer):
         """Success message in return to InitWorker."""
-        message_id = MessageIds.WORKER_STARTED
+        message_id: ClassVar[MessageIds] = MessageIds.WORKER_STARTED
 
 
 class Exit(MessageToWorker):
     """Command from server to gracefully exit the worker process."""
-    message_id = MessageIds.EXIT
+    message_id: ClassVar[MessageIds] = MessageIds.EXIT
 
 
 class LoadQPyPackage(MessageToWorker):
     """Load/import a QuestionPy package."""
-    message_id = MessageIds.LOAD_QPY_PACKAGE
+    message_id: ClassVar[MessageIds] = MessageIds.LOAD_QPY_PACKAGE
     path: str
     main: bool
     """Set this package as the main package and execute its entry point."""
 
     class Response(MessageToServer):
         """Success message in return to LoadQPyPackage."""
-        message_id = MessageIds.LOADED_QPY_PACKAGE
+        message_id: ClassVar[MessageIds] = MessageIds.LOADED_QPY_PACKAGE
 
 
 class GetQPyPackageManifest(MessageToWorker):
     """Get the manifest data of a QPy package."""
-    message_id = MessageIds.GET_QPY_PACKAGE_MANIFEST
+    message_id: ClassVar[MessageIds] = MessageIds.GET_QPY_PACKAGE_MANIFEST
     path: str
 
     class Response(MessageToServer):
         """Execute a QuestionPy package."""
-        message_id = MessageIds.RETURN_QPY_PACKAGE_MANIFEST
+        message_id: ClassVar[MessageIds] = MessageIds.RETURN_QPY_PACKAGE_MANIFEST
         manifest: Manifest
 
 
 class GetOptionsForm(MessageToWorker):
     """Execute a QuestionPy package."""
-    message_id = MessageIds.GET_OPTIONS_FORM_DEFINITION
+    message_id: ClassVar[MessageIds] = MessageIds.GET_OPTIONS_FORM_DEFINITION
     question_state: Optional[str]
     """Old question state or ``None`` if the question is new."""
 
     class Response(MessageToServer):
         """Execute a QuestionPy package."""
-        message_id = MessageIds.RETURN_OPTIONS_FORM_DEFINITION
+        message_id: ClassVar[MessageIds] = MessageIds.RETURN_OPTIONS_FORM_DEFINITION
         definition: OptionsFormDefinition
         form_data: dict[str, object]
 
 
 class CreateQuestionFromOptions(MessageToWorker):
-    message_id = MessageIds.CREATE_QUESTION
+    message_id: ClassVar[MessageIds] = MessageIds.CREATE_QUESTION
     question_state: Optional[str]
     """Old question state or ``None`` if the question is new."""
     form_data: dict[str, object]
 
     class Response(MessageToServer):
-        message_id = MessageIds.RETURN_CREATE_QUESTION
+        message_id: ClassVar[MessageIds] = MessageIds.RETURN_CREATE_QUESTION
         state: dict[str, object]
         """New question state."""
 
@@ -138,7 +138,7 @@ class WorkerError(MessageToServer):
         UNKNOWN = 0
         MEMORY_EXCEEDED = 1
 
-    message_id = MessageIds.ERROR
+    message_id: ClassVar[MessageIds] = MessageIds.ERROR
     expected_response_id: MessageIds
     type: ErrorType
     message: Optional[str]

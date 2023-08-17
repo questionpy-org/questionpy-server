@@ -13,7 +13,7 @@ from typing import Optional, Type, TypeVar, Sequence
 from questionpy_common.elements import OptionsFormDefinition
 
 from questionpy_server.api.models import Question, ScoringMethod
-from questionpy_server.utils.manfiest import ComparableManifest
+from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
@@ -145,7 +145,7 @@ class BaseWorker(Worker, ABC):
     async def create_question_from_options(self, old_state: Optional[bytes], form_data: dict[str, object]) \
             -> Question:
         question_state_str = None if old_state is None else old_state.decode()
-        msg = CreateQuestionFromOptions(state=question_state_str, form_data=form_data)
+        msg = CreateQuestionFromOptions(question_state=question_state_str, form_data=form_data)
         ret = await self._send_and_wait_response(msg, CreateQuestionFromOptions.Response)
 
         new_state_str = json.dumps(ret.state)

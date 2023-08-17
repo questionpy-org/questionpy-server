@@ -10,7 +10,7 @@ from typing import Optional, TypeVar
 from questionpy_common.elements import OptionsFormDefinition
 
 from questionpy_server.api.models import Question
-from questionpy_server.utils.manfiest import ComparableManifest
+from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import WorkerResources, WorkerResourceLimits
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer
 

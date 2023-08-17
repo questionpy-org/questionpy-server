@@ -24,7 +24,7 @@ class QPyPackage(ZipFile):
     def manifest(self) -> Manifest:
         """Load QuestionPy manifest from package."""
         data = json.loads(self.read("qpy_manifest.json"))
-        return Manifest.parse_obj(data)
+        return Manifest.model_validate(data)
 
     def setup_import(self) -> None:
         """Set up the import system that it is able to import the python code of the package."""

@@ -21,7 +21,7 @@ from questionpy_common.constants import KiB
 from questionpy_server.app import QPyServer
 from questionpy_server.settings import Settings, GeneralSettings, WebserviceSettings, PackageCacheSettings, \
     CollectorSettings, WorkerSettings, RepoIndexCacheSettings
-from questionpy_server.utils.manfiest import ComparableManifest
+from questionpy_server.utils.manifest import ComparableManifest
 
 
 def get_file_hash(path: Path) -> str:

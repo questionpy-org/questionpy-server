@@ -16,7 +16,7 @@ from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
-from questionpy_server.utils.manfiest import SemVer
+from questionpy_server.utils.manifest import SemVer
 
 if TYPE_CHECKING:
     from questionpy_server.web import HashContainer
@@ -36,7 +36,7 @@ class PackageCollection:
             self._collectors.append(local_collector)
 
         for url, update_interval in repos.items():
-            repo_collector = RepoCollector(url, update_interval, package_cache, repo_index_cache, self._indexer)
+            repo_collector = RepoCollector(str(url), update_interval, package_cache, repo_index_cache, self._indexer)
             self._collectors.append(repo_collector)
 
         self._lms_collector = LMSCollector(package_cache, self._indexer)

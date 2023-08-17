@@ -7,7 +7,7 @@ from typing import List
 
 from aiohttp import FormData
 from aiohttp.test_utils import TestClient
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 
 from questionpy_server.api.models import PackageInfo
 from tests.conftest import PACKAGE
@@ -18,7 +18,7 @@ async def test_packages(client: TestClient) -> None:
 
     assert res.status == 200
     data = await res.json()
-    parse_obj_as(List[PackageInfo], data)
+    TypeAdapter(List[PackageInfo]).validate_python(data)
 
 
 async def test_extract_info(client: TestClient) -> None:
@@ -30,7 +30,7 @@ async def test_extract_info(client: TestClient) -> None:
 
     assert res.status == 201
     data = await res.json()
-    parse_obj_as(PackageInfo, data)
+    PackageInfo.model_validate(data)
 
 
 async def test_extract_info_faulty(client: TestClient) -> None:
