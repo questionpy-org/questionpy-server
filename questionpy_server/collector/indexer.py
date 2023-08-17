@@ -12,7 +12,7 @@ from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.package import Package
-from questionpy_server.utils.manfiest import ComparableManifest, SemVer
+from questionpy_server.utils.manifest import ComparableManifest, SemVer
 
 
 class Indexer:

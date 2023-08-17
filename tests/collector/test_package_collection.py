@@ -7,15 +7,14 @@ from unittest.mock import patch, Mock
 
 import pytest
 from _pytest.tmpdir import TempPathFactory
+from semver import VersionInfo
 
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector import PackageCollection
 from questionpy_server.collector.indexer import Indexer
-from questionpy_server.utils.manfiest import SemVer
-from questionpy_server.web import HashContainer
-
-from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.lms_collector import LMSCollector
+from questionpy_server.collector.local_collector import LocalCollector
+from questionpy_server.web import HashContainer
 
 
 async def test_start() -> None:
@@ -72,14 +71,14 @@ def test_get_package_by_identifier_and_version() -> None:
 
     # Package does exist.
     with patch.object(Indexer, 'get_by_identifier_and_version') as get_by_identifier_and_version:
-        version = SemVer.parse('0.1.0')
+        version = VersionInfo.parse('0.1.0')
         package_collection.get_by_identifier_and_version('@default/name', version)
         get_by_identifier_and_version.assert_called_once_with('@default/name', version)
 
     # Package does not exist.
     with patch.object(Indexer, 'get_by_identifier_and_version', return_value=None) as get_by_identifier_and_version:
         with pytest.raises(FileNotFoundError):
-            version = SemVer.parse('0.1.0')
+            version = VersionInfo.parse('0.1.0')
             package_collection.get_by_identifier_and_version('@default/name', version)
         get_by_identifier_and_version.assert_called_once_with('@default/name', version)
 

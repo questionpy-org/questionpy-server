@@ -7,8 +7,6 @@ from asyncio import to_thread
 from gzip import decompress
 from urllib.parse import urljoin
 
-from pydantic import parse_raw_as
-
 from questionpy_server.cache import FileLimitLRU, SizeError
 from questionpy_server.repository.helper import download
 from questionpy_server.repository.models import RepoMeta, RepoPackage, RepoPackageIndex
@@ -34,7 +32,7 @@ class Repository:
         """
         meta = await download(self._url_meta)
         # TODO: verify downloaded data
-        return parse_raw_as(RepoMeta, meta)
+        return RepoMeta.model_validate_json(meta)
 
     async def get_packages(self, meta: RepoMeta) -> dict[str, RepoPackage]:
         """

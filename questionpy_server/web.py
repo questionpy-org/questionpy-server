@@ -202,7 +202,7 @@ def ensure_package_and_question_state_exist(_func: Optional[RouteHandler] = None
         main_part_json_model: Optional[Type[MainBaseModel]] = type_hints.get('data')
 
         if main_part_json_model:
-            assert issubclass(main_part_json_model, MainBaseModel),\
+            assert issubclass(main_part_json_model, MainBaseModel), \
                 f"Parameter 'data' of function {function.__name__} has unexpected type."
 
         @functools.wraps(function)

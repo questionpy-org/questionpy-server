@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, FilePath, HttpUrl, Json
+from pydantic import ConfigDict, BaseModel, Field, FilePath, HttpUrl, Json
 
 from questionpy_common.elements import OptionsFormDefinition
 
@@ -19,17 +19,16 @@ class PackageType(Enum):
 
 
 class PackageInfo(BaseModel):
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
     package_hash: str
     short_name: str
     namespace: str
     name: Dict[str, str]
-    version: Annotated[str, Field(regex=r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)'
-                                        r'(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'
-                                        r'(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?'
-                                        r'(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$')]
+    version: Annotated[str, Field(pattern=r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)'
+                                          r'(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'
+                                          r'(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?'
+                                          r'(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$')]
     type: PackageType
     author: Optional[str]
     url: Optional[HttpUrl]
@@ -70,13 +69,12 @@ class ResponseClass(BaseModel):
 
 class Subquestion(BaseModel):
     subquestion_id: Annotated[str, Field(max_length=30, strict=True)]
-    score_max: Optional[float]
-    response_classes: Optional[List[ResponseClass]]
+    score_max: Optional[float] = None
+    response_classes: Optional[List[ResponseClass]] = None
 
 
 class Question(BaseModel):
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
     question_state: str
     num_variants: Annotated[int, Field(ge=1, strict=True)] = 1
@@ -84,12 +82,12 @@ class Question(BaseModel):
     score_min: float = 0
     score_max: float = 1
     scoring_method: ScoringMethod
-    penalty: Optional[float]
-    random_guess_score: Optional[float]
-    subquestions: Optional[List[Subquestion]]
+    penalty: Optional[float] = None
+    random_guess_score: Optional[float] = None
+    subquestions: Optional[List[Subquestion]] = None
     response_analysis_by_variant: bool
     render_every_view: bool = False
-    general_feedback: Optional[str]
+    general_feedback: Optional[str] = None
 
 
 class AttemptStartArguments(RequestBaseData):
@@ -99,10 +97,10 @@ class AttemptStartArguments(RequestBaseData):
 class UiField(BaseModel):
     name: str
     type: str
-    default: Optional[str]
-    validation_regex: Optional[str]
+    default: Optional[str] = None
+    validation_regex: Optional[str] = None
     required: bool
-    correct_response: Optional[str]
+    correct_response: Optional[str] = None
 
 
 class UiCallJavascriptItem(BaseModel):
@@ -114,7 +112,7 @@ class UiCallJavascriptItem(BaseModel):
 class UiFile(BaseModel):
     name: str
     data: str
-    mime_type: Optional[str]
+    mime_type: Optional[str] = None
 
 
 class Ui(BaseModel):
@@ -140,12 +138,12 @@ class AttemptStarted(Attempt):
 
 class AttemptViewArguments(RequestBaseData):
     attempt_state: Json
-    scoring_state: Optional[Json]
-    response: Optional[Dict[str, Any]]
+    scoring_state: Optional[Json] = None
+    response: Optional[Dict[str, Any]] = None
 
 
 class Response(BaseModel):
-    response: Optional[Dict[str, Any]]
+    response: Optional[Dict[str, Any]] = None
 
 
 class AttemptScoreArguments(AttemptViewArguments):
@@ -169,22 +167,22 @@ class ClassificationItem(BaseModel):
 
 class ScoredField(BaseModel):
     name: str
-    correct: Optional[bool]
-    score: Optional[float]
-    max_score: Optional[float]
-    feedback: Optional[str]
+    correct: Optional[bool] = None
+    score: Optional[float] = None
+    max_score: Optional[float] = None
+    feedback: Optional[str] = None
 
 
 class AttemptScored(Attempt):
-    scoring_state: Optional[Json]
+    scoring_state: Optional[Json] = None
     scoring_code: ScoringCode
-    score: Optional[float]
+    score: Optional[float] = None
     specific_feedback: Optional[str] = None
     hint: Optional[str] = None
     more_hints_available: Optional[bool] = None
     response_summary: Optional[str] = None
     classification: Optional[List[ClassificationItem]] = None
-    scored_fields: Optional[List[ScoredField]]
+    scored_fields: Optional[List[ScoredField]] = None
 
 
 class PackageNotFound(BaseModel):
@@ -201,8 +199,7 @@ class QuestionStateMigrationErrorCode(Enum):
 
 
 class QuestionStateMigrationError(BaseModel):
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
     code: QuestionStateMigrationErrorCode
     reason: Optional[str] = None

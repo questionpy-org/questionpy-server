@@ -4,21 +4,18 @@
 
 # pylint: disable=redefined-outer-name
 import logging
-from json import dumps
-from unittest.mock import patch, Mock, ANY
 from gzip import compress
+from unittest.mock import patch, Mock, ANY
 from urllib.parse import urljoin
 
 import pytest
 from _pytest.tmpdir import TempPathFactory
-
 from questionpy_common.constants import KiB
 
 from questionpy_server.cache import FileLimitLRU, SizeError
 from questionpy_server.repository import Repository, RepoMeta, RepoPackage, RepoPackageIndex
-from questionpy_server.utils.manfiest import ComparableManifest, semver_encoder
+from questionpy_server.utils.manifest import ComparableManifest
 from tests.test_data.factories import RepoMetaFactory, RepoPackageVersionsFactory, ManifestFactory
-
 
 REPO_URL = 'https://example.com/repo/'
 REPO_PACKAGE_VERSIONS_0 = RepoPackageVersionsFactory.build(
@@ -60,8 +57,8 @@ async def test_get_packages(tmp_path_factory: TempPathFactory) -> None:
     package_index = RepoPackageIndex(packages=[REPO_PACKAGE_VERSIONS_0, REPO_PACKAGE_VERSIONS_1])
 
     with patch('questionpy_server.repository.download') as mock:
-        parsed = dumps(package_index, default=semver_encoder)
-        mock.return_value = compress(parsed.encode())
+        index_json = package_index.model_dump_json()
+        mock.return_value = compress(index_json.encode())
 
         # Get packages.
         meta: RepoMeta = RepoMetaFactory.build()
@@ -94,7 +91,7 @@ async def test_get_packages_cached(tmp_path_factory: TempPathFactory) -> None:
 
     with patch('questionpy_server.repository.download') as mock_download, \
             patch.object(cache, 'put', wraps=cache.put) as mock_put:
-        parsed = dumps(package_index, default=semver_encoder)
+        parsed = package_index.model_dump_json()
         mock_download.return_value = compress(parsed.encode())
 
         # Get packages.
@@ -118,7 +115,7 @@ async def test_log_warning_when_package_index_is_too_big_for_cache(tmp_path_fact
 
     with patch('questionpy_server.repository.download') as mock_download, \
             patch.object(cache, 'put', side_effect=SizeError):
-        parsed = dumps(package_index, default=semver_encoder)
+        parsed = package_index.model_dump_json()
         mock_download.return_value = compress(parsed.encode())
 
         # Get packages.

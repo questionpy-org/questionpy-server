@@ -7,7 +7,7 @@ from datetime import datetime
 from functools import total_ordering
 
 from pydantic import BaseModel, PositiveInt
-from questionpy_server.utils.manfiest import ComparableManifest, SemVer
+from questionpy_server.utils.manifest import ComparableManifest, SemVer
 
 
 class RepoMeta(BaseModel):
