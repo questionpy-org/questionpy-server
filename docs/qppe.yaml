@@ -125,7 +125,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Question"
+                $ref: "#/components/schemas/QuestionCreated"
         400:
           description: Validation error
           headers:
@@ -170,7 +170,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Question"
+                $ref: "#/components/schemas/QuestionCreated"
         400:
           description: Question state migration error
           headers:
@@ -180,6 +180,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/QuestionStateMigrationError"
+        404:
+          description: Package not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageNotFound"
+
+  /packages/{package_hash}/question/view:
+    parameters:
+      - $ref: '#/components/parameters/PackageHash'
+      - $ref: '#/components/parameters/UserAgent'
+      - $ref: '#/components/parameters/AcceptLanguageOne'
+    get:
+      summary: View a question.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionViewArguments"
+      responses:
+        200:
+          description: OK
+          headers:
+            Content-Language:
+              $ref: '#/components/headers/ContentLanguage'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
         404:
           description: Package not found
           content:
@@ -480,12 +510,20 @@ components:
               $ref: "#/components/schemas/FormData"
           required: [ form_data ]
 
+    QuestionViewArguments:
+      description: Information that is needed to view a question.
+      allOf:
+        - $ref: "#/components/schemas/RequestBaseData"
+        - type: object
+          properties:
+            question_state:
+              type: string
+              description: Question state that was previously returned by the question endpoint.
+          required: [ question_state ]
+
     Question:
       type: object
       properties:
-        question_state:
-          type: string
-          description: Arbitrary values set by the question package code (LMS must store this data unmodified)
         num_variants:
           type: integer
           minimum: 1
@@ -563,9 +601,19 @@ components:
           type: string
           nullable: true
           description: General feedback that is shown to everyone after scoring.
-      required: [ question_state, num_variants, num_subquestions, score_min,
+      required: [ num_variants, num_subquestions, score_min,
                   score_max, scoring_method, penalty, random_guess_score, subquestions,
                   response_analysis_by_variant, render_every_view, general_feedback ]
+
+    QuestionCreated:
+      allOf:
+        - $ref: '#/components/schemas/Question'
+        - type: object
+          properties:
+            question_state:
+              type: string
+              description: Arbitrary values set by the question package code (LMS must store this data unmodified)
+          required: [ question_state ]
 
     AttemptStartArguments:
       allOf:
