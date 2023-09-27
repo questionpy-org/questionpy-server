@@ -134,7 +134,7 @@ class Package:
         """
 
         if not self._info:
-            tmp = self.manifest.dict()
+            tmp = self.manifest.model_dump()
             tmp['version'] = str(tmp['version'])
             self._info = PackageInfo(**tmp, package_hash=self.hash)
         return self._info

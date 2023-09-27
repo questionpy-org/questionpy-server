@@ -85,7 +85,7 @@ class RepoPackage:
             repo_package_version: version of the package
         """
         # Replace package version and api version with actual versions.
-        modified_manifest = manifest.copy(deep=True)
+        modified_manifest = manifest.model_copy(deep=True)
         modified_manifest.version = repo_package_version.version
         modified_manifest.api_version = repo_package_version.api_version
 

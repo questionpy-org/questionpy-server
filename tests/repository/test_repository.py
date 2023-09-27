@@ -39,7 +39,7 @@ async def test_get_meta() -> None:
     repository = Repository(REPO_URL, Mock())
     with patch('questionpy_server.repository.download') as mock:
         expected = RepoMetaFactory.build()
-        mock.return_value = expected.json().encode()
+        mock.return_value = expected.model_dump_json().encode()
 
         # Get meta.
         meta = await repository.get_meta()
@@ -76,7 +76,7 @@ async def test_get_packages(tmp_path_factory: TempPathFactory) -> None:
                 package = index[versions.sha256]
 
                 # Combine manifest with version and api_version.
-                expected_manifest = packages.manifest.dict()
+                expected_manifest = packages.manifest.model_dump()
                 expected_manifest['version'] = str(versions.version)
                 expected_manifest['api_version'] = versions.api_version
 
