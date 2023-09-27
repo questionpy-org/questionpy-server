@@ -54,7 +54,7 @@ class Repository:
                 self._log.warning('Package index is too big to be cached.')
 
         raw_index = decompress(raw_index_zip)
-        index = RepoPackageIndex.parse_raw(raw_index)
+        index = RepoPackageIndex.model_validate_json(raw_index)
 
         # Combine general manifest of a package with correct (api-)version.
         packages_dict: dict[str, RepoPackage] = {}

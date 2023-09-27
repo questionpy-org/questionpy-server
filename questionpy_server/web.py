@@ -42,7 +42,7 @@ def json_response(data: Union[Sequence[BaseModel], BaseModel], status: int = 200
     if isinstance(data, Sequence):
         json_list = f'[{",".join(x.json() for x in data)}]'
         return Response(text=json_list, status=status, content_type='application/json')
-    return Response(text=data.json(), status=status, content_type='application/json')
+    return Response(text=data.model_dump_json(), status=status, content_type='application/json')
 
 
 def create_model_from_json(json: Union[object, str], param_class: Type[M]) -> M:
@@ -248,7 +248,7 @@ def ensure_package_and_question_state_exist(_func: Optional[RouteHandler] = None
             if package is None:
                 if package_hash:
                     raise HTTPNotFound(
-                        text=PackageNotFound(package_not_found=True).json(),
+                        text=PackageNotFound(package_not_found=True).model_dump_json(),
                         content_type='application/json'
                     )
 
