@@ -48,8 +48,8 @@ class UiFile(BaseModel):
 class AttemptUi(BaseModel):
     content: str
     """X(H)ML markup of the question UI."""
-    parameters: dict[str, str] = {}
-    """Values that ``<?p`` placeholders in the content will be replaced with during rendering."""
+    placeholders: dict[str, str] = {}
+    """Names and values of the ``<?p`` placeholders that appear in content."""
     include_inline_css: Optional[str] = None
     include_css_file: Optional[str] = None
     cache_control: CacheControl = CacheControl.PRIVATE_CACHE
