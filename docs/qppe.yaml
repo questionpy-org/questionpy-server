@@ -88,6 +88,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PackageNotFound"
+        500:
+          description: Error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestError"
 
   /packages/{package_hash}/question:
     parameters:
@@ -141,6 +147,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PackageNotFound"
+        500:
+          description: Error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestError"
 
   /packages/{package_hash}/question/migrate:
     parameters:
@@ -186,6 +198,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PackageNotFound"
+        500:
+          description: Error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestError"
 
   /packages/{package_hash}/question/view:
     parameters:
@@ -216,6 +234,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PackageNotFound"
+        500:
+          description: Error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestError"
 
   /packages/{package_hash}/attempt/start:
     parameters:
@@ -256,6 +280,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PackageNotFound"
+        500:
+          description: Error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestError"
 
   /packages/{package_hash}/attempt/view:
     parameters:
@@ -290,6 +320,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Attempt"
+        500:
+          description: Error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestError"
 
   /packages/{package_hash}/attempt/score:
     parameters:
@@ -324,6 +360,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AttemptScored"
+        500:
+          description: Error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestError"
 
   /package-extract-info:
     parameters:
@@ -352,6 +394,12 @@ paths:
                 $ref: "#/components/schemas/PackageInfo"
         400:
           description: Bad request (not a valid QuestionPy package).
+        500:
+          description: Error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestError"
 
 
 components:
@@ -864,6 +912,35 @@ components:
           required: [ scoring_state, scoring_code, score ]
         - $ref: "#/components/schemas/Attempt"
 
+    RequestError:
+      type: object
+      properties:
+        error_code:
+          type: string
+          enum:
+            - QUEUE_WAITING_TIMEOUT
+            - WORKER_TIMEOUT
+            - OUT_OF_MEMORY
+            - INVALID_PACKAGE
+            - PACKAGE_ERROR
+            - SERVER_ERROR
+          description: >
+            * `QUEUE_WAITING_TIMEOUT` - The request has been waiting too long in a job queue. Try again later.
+            * `WORKER_TIMEOUT` - Question package did not answer in a reasonable amount of time.
+            * `OUT_OF_MEMORY` - Question package reached its memory limit.
+            * `INVALID_PACKAGE` - The package file is corrupt, the manifest is invalid or there is a checksum mismatch.
+            * `PACKAGE_ERROR` - An error occurred within the package.
+            * `SERVER_ERROR` - Some other server error has occurred.
+        temporary:
+          type: boolean
+          description: Tells if this is a temporary error and if the LMS should try the request later again.
+        reason:
+          type: string
+          nullable: true
+          default: null
+          description: Optional human-readable reason for the error.
+      required: [ error_code, temporary ]
+
     PackageNotFound:
       type: object
       properties:
@@ -874,7 +951,7 @@ components:
     QuestionStateMigrationError:
       type: object
       properties:
-        code:
+        error_code:
           type: string
           enum:
             - NOT_IMPLEMENTED
@@ -888,7 +965,7 @@ components:
           nullable: true
           default: null
           description: Human-readable reason why the error occurred.
-      required: [ code ]
+      required: [ error_code ]
 
     FormLabel:
       type: string
