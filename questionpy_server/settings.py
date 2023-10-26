@@ -9,7 +9,7 @@ from pathlib import Path
 from pydoc import locate
 from typing import Any, Optional, Type, Literal, Union, Final, ClassVar
 
-from pydantic import field_validator, BaseModel, DirectoryPath, ByteSize, HttpUrl, FieldValidationInfo
+from pydantic import field_validator, BaseModel, DirectoryPath, ByteSize, HttpUrl, ValidationInfo
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, InitSettingsSource, EnvSettingsSource, PydanticBaseSettingsSource, \
     SettingsConfigDict
@@ -134,7 +134,7 @@ class CollectorSettings(BaseModel):
     @field_validator('repositories', mode="before")
     @classmethod
     def transform_to_set_of_repositories(cls, value: str,
-                                         info: FieldValidationInfo) -> dict[str, Union[str, timedelta]]:
+                                         info: ValidationInfo) -> dict[str, Union[str, timedelta]]:
         repositories: dict[str, Union[str, timedelta]] = {}
 
         for line in value.splitlines():
