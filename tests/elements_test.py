@@ -48,7 +48,7 @@ def test_factory_builds_valid_model(factory: ModelFactory, model: Type[BaseModel
     [OptionsFormDefinitionFactory, OptionsFormDefinition]
 ))
 def test_ignore_additional_properties(factory: ModelFactory, model: Type[BaseModel]) -> None:
-    data = factory.build().dict()
+    data = factory.build().model_dump()
     created_model = model(**data, additional_property='test')
     assert not hasattr(created_model, 'additional_property')
 
