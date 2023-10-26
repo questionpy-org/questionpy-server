@@ -13,8 +13,8 @@ version = "0.1.1"
 [tool.poetry.dependencies]
 python = "^3.9"
 aiohttp = "^3.8.1"
-pydantic = "2.3"
-questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "c0e9417eccf4d99595ebfab957e3e631d9ea1c65" }
+pydantic = "^2.4"
+questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "57483e4935e1c91d42c581f058624426b8d0348f" }
 polyfactory = "^2.7.2"
 pydantic-settings = "^2.0.2"
 watchdog = "^3.0.0"
