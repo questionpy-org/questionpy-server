@@ -18,7 +18,6 @@ class PackageType(str, Enum):
 
 
 # Defaults.
-DEFAULT_ENTRYPOINT = '__main__'
 DEFAULT_NAMESPACE = 'local'
 DEFAULT_PACKAGETYPE = PackageType.QUESTIONTYPE
 
@@ -72,7 +71,7 @@ class Manifest(BaseModel):
     api_version: Annotated[str, Field(pattern=RE_API)]
     author: str
     name: dict[str, str] = {}
-    entrypoint: str = DEFAULT_ENTRYPOINT
+    entrypoint: Optional[str] = None
     url: Optional[str] = None
     languages: set[str] = set()
     description: dict[str, str] = {}
