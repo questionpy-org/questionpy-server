@@ -2,16 +2,7 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from dataclasses import dataclass
-
 from pydantic import BaseModel
-
-
-@dataclass
-class WorkerResourceLimits:
-    """Maximum resources that a worker process is allowed to consume."""
-    max_memory: int
-    max_cpu_time_seconds_per_call: float
 
 
 class WorkerResources(BaseModel):

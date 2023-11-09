@@ -7,11 +7,11 @@ from struct import Struct
 from typing import ClassVar, Type, Optional, Any
 
 from pydantic import BaseModel
+from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_common.manifest import Manifest
 from questionpy_common.models import AttemptModel, QuestionModel
 from questionpy_common.qtype import OptionsFormDefinition
 
-from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.exception import WorkerMemoryLimitExceededError, WorkerUnknownError
 
 messages_header_struct: Struct = Struct('=LL')
@@ -77,6 +77,7 @@ class InitWorker(MessageToWorker):
     """Give worker some basic information."""
     message_id: ClassVar[MessageIds] = MessageIds.INIT_WORKER
     limits: Optional[WorkerResourceLimits] = None
+    worker_type: str
 
     class Response(MessageToServer):
         """Success message in return to InitWorker."""
@@ -114,6 +115,7 @@ class GetQPyPackageManifest(MessageToWorker):
 class GetOptionsForm(MessageToWorker):
     """Execute a QuestionPy package."""
     message_id: ClassVar[MessageIds] = MessageIds.GET_OPTIONS_FORM_DEFINITION
+    request_user: RequestUser
     question_state: Optional[str]
     """Old question state or ``None`` if the question is new."""
 
@@ -126,6 +128,7 @@ class GetOptionsForm(MessageToWorker):
 
 class CreateQuestionFromOptions(MessageToWorker):
     message_id: ClassVar[MessageIds] = MessageIds.CREATE_QUESTION
+    request_user: RequestUser
     question_state: Optional[str]
     """Old question state or ``None`` if the question is new."""
     form_data: dict[str, object]
@@ -139,6 +142,7 @@ class CreateQuestionFromOptions(MessageToWorker):
 
 class StartAttempt(MessageToWorker):
     message_id: ClassVar[MessageIds] = MessageIds.START_ATTEMPT
+    request_user: RequestUser
     question_state: str
     variant: int
 
@@ -150,6 +154,7 @@ class StartAttempt(MessageToWorker):
 
 class ViewAttempt(MessageToWorker):
     message_id: ClassVar[MessageIds] = MessageIds.VIEW_ATTEMPT
+    request_user: RequestUser
     question_state: str
     attempt_state: str
     scoring_state: Optional[str]

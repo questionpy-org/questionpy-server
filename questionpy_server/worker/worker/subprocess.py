@@ -13,8 +13,9 @@ from typing import Optional, Sequence, TypeVar, Type
 import psutil
 from pydantic import ByteSize
 from questionpy_common.constants import KiB
+from questionpy_common.environment import WorkerResourceLimits
 
-from questionpy_server.worker import WorkerResources, WorkerResourceLimits
+from questionpy_server.worker import WorkerResources
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
@@ -70,6 +71,8 @@ class _StderrBuffer:
 
 class SubprocessWorker(BaseWorker):
     """Worker implementation running in a non-sandboxed subprocess."""
+
+    _worker_type = "process"
 
     def __init__(self, package: Path, limits: Optional[WorkerResourceLimits]):
         super().__init__(package, limits)

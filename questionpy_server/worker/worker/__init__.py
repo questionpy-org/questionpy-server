@@ -8,11 +8,12 @@ from pathlib import Path
 from typing import Optional, TypeVar
 
 from questionpy_common.elements import OptionsFormDefinition
+from questionpy_common.environment import WorkerResourceLimits, RequestUser
 from questionpy_common.models import AttemptModel
 
 from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
-from questionpy_server.worker import WorkerResources, WorkerResourceLimits
+from questionpy_server.worker import WorkerResources
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer
 
 _T = TypeVar("_T", bound=MessageToServer)
@@ -67,11 +68,12 @@ class Worker(ABC):
         """Get manifest of the main package in the worker."""
 
     @abstractmethod
-    async def get_options_form(self, question_state: Optional[bytes]) ->\
+    async def get_options_form(self, request_user: RequestUser, question_state: Optional[bytes]) -> \
             tuple[OptionsFormDefinition, dict[str, object]]:
         """Get the form used to create a new or edit an existing question.
 
         Args:
+            request_user: Information on the user this request is for.
             question_state: The current question state if editing, or ``None`` if creating a new question.
 
         Returns:
@@ -79,11 +81,12 @@ class Worker(ABC):
         """
 
     @abstractmethod
-    async def create_question_from_options(self, old_state: Optional[bytes],
+    async def create_question_from_options(self, request_user: RequestUser, old_state: Optional[bytes],
                                            form_data: dict[str, object]) -> QuestionCreated:
         """Create or update the question (state) with the form data from a submitted question edit form.
 
         Args:
+            request_user: Information on the user this request is for.
             old_state: The current question state if editing, or ``None`` if creating a new question.
             form_data: Form data from a submitted question edit form.
 
@@ -92,10 +95,11 @@ class Worker(ABC):
         """
 
     @abstractmethod
-    async def start_attempt(self, question_state: str, variant: int) -> AttemptStarted:
+    async def start_attempt(self, request_user: RequestUser, question_state: str, variant: int) -> AttemptStarted:
         """Start an attempt at this question with the given variant.
 
         Args:
+            request_user: Information on the user this request is for.
             question_state: The question that is to be attempted.
             variant: Not implemented.
 
@@ -104,11 +108,12 @@ class Worker(ABC):
         """
 
     @abstractmethod
-    async def get_attempt(self, question_state: str, attempt_state: str, scoring_state: Optional[str] = None,
-                          response: Optional[dict] = None) -> AttemptModel:
+    async def get_attempt(self, *, request_user: RequestUser, question_state: str, attempt_state: str,
+                          scoring_state: Optional[str] = None, response: Optional[dict] = None) -> AttemptModel:
         """Create an attempt object for a previously started attempt.
 
         Args:
+            request_user: Information on the user this request is for.
             question_state: The question the attempt belongs to.
             attempt_state: The `attempt_state` attribute of an attempt which was previously returned by
                            :meth:`start_attempt`.
