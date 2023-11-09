@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Optional, Type
 
 from questionpy_common.constants import MiB
+from questionpy_common.environment import WorkerResourceLimits
 
-from . import WorkerResourceLimits
 from .exception import WorkerStartError
 from .worker import Worker
 from .worker.subprocess import SubprocessWorker

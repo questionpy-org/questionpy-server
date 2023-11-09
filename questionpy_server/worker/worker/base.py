@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import Optional, Type, TypeVar, Sequence
 
 from questionpy_common.elements import OptionsFormDefinition
+from questionpy_common.environment import WorkerResourceLimits, RequestUser
 from questionpy_common.models import AttemptModel
 
 from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
-from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer, MessageIds, WorkerError, \
@@ -28,6 +28,8 @@ _T = TypeVar("_T", bound=MessageToServer)
 
 class BaseWorker(Worker, ABC):
     """Base class implementing some common functionality of workers."""
+
+    _worker_type = "unknown"
 
     def __init__(self, package: Path, limits: Optional[WorkerResourceLimits]):
         super().__init__(package, limits)
@@ -45,7 +47,10 @@ class BaseWorker(Worker, ABC):
         self._observe_task = asyncio.create_task(self._observe(), name='observe worker task')
 
         try:
-            await self._send_and_wait_response(InitWorker(limits=self.limits), InitWorker.Response)
+            await self._send_and_wait_response(InitWorker(
+                limits=self.limits,
+                worker_type=self._worker_type,
+            ), InitWorker.Response)
             await self._send_and_wait_response(LoadQPyPackage(path=str(self.package), main=True),
                                                LoadQPyPackage.Response)
         except WorkerNotRunningError as e:
@@ -136,17 +141,18 @@ class BaseWorker(Worker, ABC):
         ret = await self._send_and_wait_response(msg, GetQPyPackageManifest.Response)
         return ComparableManifest(**ret.manifest.model_dump())
 
-    async def get_options_form(self, question_state: Optional[bytes]) \
+    async def get_options_form(self, request_user: RequestUser, question_state: Optional[bytes]) \
             -> tuple[OptionsFormDefinition, dict[str, object]]:
         question_state_str = None if question_state is None else question_state.decode()
-        msg = GetOptionsForm(question_state=question_state_str)
+        msg = GetOptionsForm(question_state=question_state_str, request_user=request_user)
         ret = await self._send_and_wait_response(msg, GetOptionsForm.Response)
         return ret.definition, ret.form_data
 
-    async def create_question_from_options(self, old_state: Optional[bytes], form_data: dict[str, object]) \
-            -> QuestionCreated:
+    async def create_question_from_options(self, request_user: RequestUser, old_state: Optional[bytes],
+                                           form_data: dict[str, object]) -> QuestionCreated:
         question_state_str = None if old_state is None else old_state.decode()
-        msg = CreateQuestionFromOptions(question_state=question_state_str, form_data=form_data)
+        msg = CreateQuestionFromOptions(question_state=question_state_str, form_data=form_data,
+                                        request_user=request_user)
         ret = await self._send_and_wait_response(msg, CreateQuestionFromOptions.Response)
 
         return QuestionCreated(
@@ -154,8 +160,8 @@ class BaseWorker(Worker, ABC):
             **ret.question_model.model_dump()
         )
 
-    async def start_attempt(self, question_state: str, variant: int) -> AttemptStarted:
-        msg = StartAttempt(question_state=question_state, variant=variant)
+    async def start_attempt(self, request_user: RequestUser, question_state: str, variant: int) -> AttemptStarted:
+        msg = StartAttempt(question_state=question_state, variant=variant, request_user=request_user)
         ret = await self._send_and_wait_response(msg, StartAttempt.Response)
 
         return AttemptStarted(
@@ -163,10 +169,10 @@ class BaseWorker(Worker, ABC):
             **ret.attempt_model.model_dump()
         )
 
-    async def get_attempt(self, question_state: str, attempt_state: str, scoring_state: Optional[str] = None,
-                          response: Optional[dict] = None) -> AttemptModel:
+    async def get_attempt(self, *, request_user: RequestUser, question_state: str, attempt_state: str,
+                          scoring_state: Optional[str] = None, response: Optional[dict] = None) -> AttemptModel:
         msg = ViewAttempt(question_state=question_state, attempt_state=attempt_state, scoring_state=scoring_state,
-                          response=response)
+                          response=response, request_user=request_user)
         ret = await self._send_and_wait_response(msg, ViewAttempt.Response)
 
         return ret.attempt_model

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Optional
 
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPMethodNotAllowed, HTTPNotFound
+from questionpy_common.environment import RequestUser
 
 from questionpy_server.factories import AttemptScoredFactory
 from questionpy_server.web import ensure_package_and_question_state_exist, json_response
@@ -52,7 +53,7 @@ async def post_options(request: web.Request, package: Package, question_state: O
     package_path = await package.get_path()
     worker: Worker
     async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
-        definition, form_data = await worker.get_options_form(question_state)
+        definition, form_data = await worker.get_options_form(RequestUser(["de", "en"]), question_state)
 
     return json_response(data=QuestionEditFormResponse(definition=definition, form_data=form_data))
 
@@ -67,7 +68,7 @@ async def post_attempt_start(request: web.Request, package: Package, question_st
     package_path = await package.get_path()
     worker: Worker
     async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
-        attempt = await worker.start_attempt(question_state.decode(), data.variant)
+        attempt = await worker.start_attempt(RequestUser(["de", "en"]), question_state.decode(), data.variant)
 
     return json_response(data=attempt, status=201)
 
@@ -82,8 +83,9 @@ async def post_attempt_view(request: web.Request, package: Package, question_sta
     package_path = await package.get_path()
     worker: Worker
     async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
-        attempt = await worker.get_attempt(question_state.decode(), data.attempt_state,
-                                           data.scoring_state, data.response)
+        attempt = await worker.get_attempt(request_user=RequestUser(["de", "en"]),
+                                           question_state=question_state.decode(), attempt_state=data.attempt_state,
+                                           scoring_state=data.scoring_state, response=data.response)
 
     return json_response(data=attempt, status=201)
 
@@ -105,7 +107,7 @@ async def post_question(request: web.Request, data: QuestionCreateArguments,
     package_path = await package.get_path()
     worker: Worker
     async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
-        question = await worker.create_question_from_options(question_state, data.form_data)
+        question = await worker.create_question_from_options(RequestUser(["de", "en"]), question_state, data.form_data)
 
     return json_response(data=question)
 

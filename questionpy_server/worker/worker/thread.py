@@ -10,8 +10,9 @@ from asyncio import Task
 from pathlib import Path
 from typing import Optional, Sequence
 
+from questionpy_common.environment import WorkerResourceLimits
+
 from questionpy_server.utils.streams import DuplexPipe, AsyncReadAdapter
-from questionpy_server.worker import WorkerResourceLimits
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
@@ -51,7 +52,9 @@ class _WorkerThread(threading.Thread):
 class ThreadWorker(BaseWorker):
     """Worker implementation using a thread withing the server process for simpler debugging of package code."""
 
-    def __init__(self, package: Path, limits: Optional[WorkerResourceLimits] = None) -> None:
+    _worker_type = "thread"
+
+    def __init__(self, package: Path, limits: Optional[WorkerResourceLimits]) -> None:
         super().__init__(package, limits)
 
         self._pipe: Optional[DuplexPipe] = None

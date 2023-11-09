@@ -14,7 +14,7 @@ version = "0.1.1"
 python = "^3.9"
 aiohttp = "^3.8.1"
 pydantic = "^2.4"
-questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "9c6540e2b06bcfc6643a6b6c0331787d400920c2" }
+questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "885f7a2b3333eb3c7143c270873b79810eb410d6" }
 polyfactory = "^2.7.2"
 pydantic-settings = "^2.0.2"
 watchdog = "^3.0.0"
