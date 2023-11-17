@@ -13,6 +13,9 @@ from typing_extensions import TypeAlias
 from questionpy_common.api.qtype import BaseQuestionType
 from questionpy_common.manifest import Manifest
 
+__all__ = ["RequestUser", "WorkerResourceLimits", "Package", "OnRequestCallback", "Environment", "PackageInitFunction",
+           "get_qpy_environment", "set_qpy_environment", "NoEnvironmentError"]
+
 
 @dataclass
 class RequestUser:
