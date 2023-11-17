@@ -10,8 +10,8 @@ from typing import Union, Literal, Callable, Optional, Protocol
 
 from typing_extensions import TypeAlias
 
+from questionpy_common.api.qtype import BaseQuestionType
 from questionpy_common.manifest import Manifest
-from questionpy_common.qtype import BaseQuestionType
 
 
 @dataclass
