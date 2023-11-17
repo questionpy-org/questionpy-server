@@ -1,7 +1,6 @@
 #  This file is part of QuestionPy. (https://questionpy.org)
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Optional, Annotated
@@ -9,6 +8,8 @@ from typing import Optional, Annotated
 from pydantic import BaseModel, Field
 
 from .attempt import BaseAttempt
+
+__all__ = ["ScoringMethod", "PossibleResponse", "SubquestionModel", "QuestionModel", "BaseQuestion"]
 
 
 class ScoringMethod(Enum):
@@ -31,7 +32,9 @@ class SubquestionModel(BaseModel):
 class QuestionModel(BaseModel):
     num_variants: Annotated[int, Field(ge=1, strict=True)] = 1
     score_min: float = 0
+    """Lowest score used by this question, as a fraction of the default mark set by the LMS."""
     score_max: float = 1
+    """Highest score used by this question, as a fraction of the default mark set by the LMS."""
     scoring_method: ScoringMethod
     penalty: Optional[float] = None
     random_guess_score: Optional[float] = None
@@ -53,8 +56,9 @@ class BaseQuestion(ABC):
         """
 
     @abstractmethod
-    def view_attempt(self, attempt_state: str, scoring_state: Optional[str] = None,
-                     response: Optional[dict] = None) -> BaseAttempt:
+    def get_attempt(self, attempt_state: str, scoring_state: Optional[str] = None,
+                    response: Optional[dict] = None, compute_score: bool = False,
+                    generate_hint: bool = False) -> BaseAttempt:
         """Create an attempt object for a previously started attempt.
 
         Args:
@@ -62,6 +66,8 @@ class BaseQuestion(ABC):
                            :meth:`start_attempt`.
             scoring_state: Not implemented.
             response: The response currently entered by the student.
+            compute_score: Whether the attempt is retrieved to be scored.
+            generate_hint: Whether the package should generate a hint for the student.
 
         Returns:
             A :class:`BaseAttempt` object which should be identical to the one which generated the given state(s).
