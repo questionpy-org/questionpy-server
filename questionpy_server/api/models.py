@@ -5,11 +5,12 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Any, Dict, List, Optional, Union
+from typing import Annotated, Any, Optional, Union
 
-from pydantic import ConfigDict, BaseModel, Field, FilePath, HttpUrl, Json, ByteSize
+from pydantic import ConfigDict, BaseModel, Field, FilePath, HttpUrl, ByteSize
+from questionpy_common.api.attempt import AttemptModel
+from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.models import AttemptModel, QuestionModel
 
 
 class PackageType(Enum):
@@ -24,7 +25,7 @@ class PackageInfo(BaseModel):
     package_hash: str
     short_name: str
     namespace: str
-    name: Dict[str, str]
+    name: dict[str, str]
     version: Annotated[str, Field(pattern=r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)'
                                           r'(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'
                                           r'(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?'
@@ -32,11 +33,11 @@ class PackageInfo(BaseModel):
     type: PackageType
     author: Optional[str]
     url: Optional[HttpUrl]
-    languages: Optional[List[str]]
-    description: Optional[Dict[str, str]]
+    languages: Optional[list[str]]
+    description: Optional[dict[str, str]]
     icon: Optional[Union[FilePath, HttpUrl]]
     license: Optional[str]
-    tags: Optional[List[str]]
+    tags: Optional[list[str]]
 
 
 class MainBaseModel(BaseModel):
@@ -75,50 +76,13 @@ class AttemptStarted(AttemptModel):
 class AttemptViewArguments(RequestBaseData):
     attempt_state: str
     scoring_state: Optional[str] = None
-    response: Optional[Dict[str, Any]] = None
-
-
-class Response(BaseModel):
-    response: Optional[Dict[str, Any]] = None
+    response: Optional[dict[str, Any]] = None
 
 
 class AttemptScoreArguments(AttemptViewArguments):
-    responses: Optional[List[Response]] = None
+    response: dict[str, Any]
+    responses: Optional[list[dict[str, object]]] = None
     generate_hint: bool
-
-
-class ScoringCode(Enum):
-    AUTOMATICALLY_SCORED = 'AUTOMATICALLY_SCORED'
-    NEEDS_MANUAL_SCORING = 'NEEDS_MANUAL_SCORING'
-    RESPONSE_NOT_SCORABLE = 'RESPONSE_NOT_SCORABLE'
-    INVALID_RESPONSE = 'INVALID_RESPONSE'
-
-
-class ClassificationItem(BaseModel):
-    subquestion_id: Annotated[str, Field(max_length=30, strict=True)]
-    response_class: Annotated[str, Field(max_length=30, strict=True)]
-    response: str
-    score: float
-
-
-class ScoredField(BaseModel):
-    name: str
-    correct: Optional[bool] = None
-    score: Optional[float] = None
-    max_score: Optional[float] = None
-    feedback: Optional[str] = None
-
-
-class AttemptScored(AttemptModel):
-    scoring_state: Optional[Json] = None
-    scoring_code: ScoringCode
-    score: Optional[float] = None
-    specific_feedback: Optional[str] = None
-    hint: Optional[str] = None
-    more_hints_available: Optional[bool] = None
-    response_summary: Optional[str] = None
-    classification: Optional[List[ClassificationItem]] = None
-    scored_fields: Optional[List[ScoredField]] = None
 
 
 class NotFoundStatusWhat(Enum):

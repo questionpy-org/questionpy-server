@@ -10,7 +10,7 @@ from typing import Optional, Type, TypeVar, Sequence
 
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import WorkerResourceLimits, RequestUser
-from questionpy_common.models import AttemptModel
+from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
 
 from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
@@ -19,7 +19,7 @@ from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer, MessageIds, WorkerError, \
     InitWorker, LoadQPyPackage, Exit, GetQPyPackageManifest, GetOptionsForm, CreateQuestionFromOptions, StartAttempt, \
-    ViewAttempt
+    ViewAttempt, ScoreAttempt
 from questionpy_server.worker.worker import WorkerState, Worker
 
 log = logging.getLogger(__name__)
@@ -177,3 +177,12 @@ class BaseWorker(Worker, ABC):
         ret = await self._send_and_wait_response(msg, ViewAttempt.Response)
 
         return ret.attempt_model
+
+    async def score_attempt(self, *, request_user: RequestUser,
+                            question_state: str, attempt_state: str, scoring_state: Optional[str] = None,
+                            response: dict) -> AttemptScoredModel:
+        msg = ScoreAttempt(question_state=question_state, attempt_state=attempt_state, scoring_state=scoring_state,
+                           response=response, request_user=request_user)
+        ret = await self._send_and_wait_response(msg, ScoreAttempt.Response)
+
+        return ret.attempt_scored_model
