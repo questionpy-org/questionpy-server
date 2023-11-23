@@ -14,10 +14,10 @@ from types import ModuleType
 from typing import cast
 from zipfile import ZipFile
 
+from questionpy_common.api.qtype import BaseQuestionType
 from questionpy_common.constants import MANIFEST_FILENAME
 from questionpy_common.environment import Environment, Package, set_qpy_environment
 from questionpy_common.manifest import Manifest
-from questionpy_common.qtype import BaseQuestionType
 
 from questionpy_server.worker.runtime.package_location import PackageLocation, ZipPackageLocation, DirPackageLocation, \
     FunctionPackageLocation

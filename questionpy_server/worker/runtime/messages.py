@@ -9,8 +9,9 @@ from typing import ClassVar, Type, Optional, Any
 from pydantic import BaseModel
 from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_common.manifest import Manifest
-from questionpy_common.models import AttemptModel, QuestionModel
-from questionpy_common.qtype import OptionsFormDefinition
+from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
+from questionpy_common.api.question import QuestionModel
+from questionpy_common.api.qtype import OptionsFormDefinition
 
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
@@ -33,6 +34,7 @@ class MessageIds(IntEnum):
 
     START_ATTEMPT = 50
     VIEW_ATTEMPT = 51
+    SCORE_ATTEMPT = 52
 
     # Worker to server.
     WORKER_STARTED = 1000
@@ -45,6 +47,7 @@ class MessageIds(IntEnum):
 
     RETURN_START_ATTEMPT = 1050
     RETURN_VIEW_ATTEMPT = 1051
+    RETURN_SCORE_ATTEMPT = 1052
 
     ERROR = 1100
 
@@ -163,6 +166,19 @@ class ViewAttempt(MessageToWorker):
     class Response(MessageToServer):
         message_id: ClassVar[MessageIds] = MessageIds.RETURN_VIEW_ATTEMPT
         attempt_model: AttemptModel
+
+
+class ScoreAttempt(MessageToWorker):
+    message_id: ClassVar[MessageIds] = MessageIds.SCORE_ATTEMPT
+    request_user: RequestUser
+    question_state: str
+    attempt_state: str
+    scoring_state: Optional[str]
+    response: dict
+
+    class Response(MessageToServer):
+        message_id: ClassVar[MessageIds] = MessageIds.RETURN_SCORE_ATTEMPT
+        attempt_scored_model: AttemptScoredModel
 
 
 class WorkerError(MessageToServer):

@@ -2,20 +2,20 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
+import resource
 import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Optional, Callable, Union, Literal, Any, Generator
 
-import resource
+from questionpy_common.api.qtype import BaseQuestionType
 from questionpy_common.environment import Environment, RequestUser, WorkerResourceLimits, OnRequestCallback, \
     get_qpy_environment
-from questionpy_common.qtype import BaseQuestionType
 
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageIds, LoadQPyPackage, \
     GetQPyPackageManifest, GetOptionsForm, CreateQuestionFromOptions, InitWorker, Exit, WorkerError, StartAttempt, \
-    ViewAttempt, MessageToWorker
+    ViewAttempt, MessageToWorker, ScoreAttempt
 from questionpy_server.worker.runtime.package import ImportablePackage, load_package
 
 
@@ -47,6 +47,7 @@ class WorkerManager:
             CreateQuestionFromOptions.message_id: self.on_msg_create_question_from_options,
             StartAttempt.message_id: self.on_msg_start_attempt,
             ViewAttempt.message_id: self.on_msg_view_attempt,
+            ScoreAttempt.message_id: self.on_msg_score_attempt
         }
         self._on_request_callbacks: list[OnRequestCallback] = []
 
@@ -145,12 +146,25 @@ class WorkerManager:
 
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_state(msg.question_state)
-            attempt = question.view_attempt(msg.attempt_state)
+            attempt = question.get_attempt(msg.attempt_state, msg.scoring_state, msg.response,
+                                           compute_score=False, generate_hint=False)
             if __debug__ and msg.attempt_state != attempt.export_attempt_state():
                 warnings.warn("The attempt state has been changed by viewing the attempt, which has no effect and "
                               "should not happen.")
 
             return ViewAttempt.Response(attempt_model=attempt.export())
+
+    def on_msg_score_attempt(self, msg: ScoreAttempt) -> ScoreAttempt.Response:
+        self._require_init(msg)
+        self._require_main_package_loaded(msg)
+        assert self.question_type
+
+        with self._with_request_user(msg.request_user):
+            question = self.question_type.create_question_from_state(msg.question_state)
+            attempt = question.get_attempt(msg.attempt_state, msg.scoring_state, msg.response,
+                                           compute_score=True, generate_hint=False)
+            scored_model = attempt.export_scored_attempt()
+            return ScoreAttempt.Response(attempt_scored_model=scored_model)
 
     def _require_init(self, msg: MessageToWorker) -> None:
         if not self.worker_type:

@@ -3,9 +3,8 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from polyfactory.factories.pydantic_factory import ModelFactory
-
-from questionpy_server.api.models import AttemptScored
+from questionpy_common.api.attempt import AttemptScoredModel
 
 
 class AttemptScoredFactory(ModelFactory):
-    __model__ = AttemptScored
+    __model__ = AttemptScoredModel

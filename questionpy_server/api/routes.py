@@ -7,14 +7,13 @@ from typing import TYPE_CHECKING, Optional
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPMethodNotAllowed, HTTPNotFound
 from questionpy_common.environment import RequestUser
-
-from questionpy_server.factories import AttemptScoredFactory
-from questionpy_server.web import ensure_package_and_question_state_exist, json_response
 from questionpy_server import __version__
+from questionpy_server.web import ensure_package_and_question_state_exist, json_response
+from questionpy_server.worker.runtime.package_location import ZipPackageLocation
+
 from .models import AttemptStartArguments, AttemptScoreArguments, AttemptViewArguments, \
     QuestionCreateArguments, QuestionEditFormResponse, RequestBaseData, ServerStatus, Usage
 from ..package import Package
-from questionpy_server.worker.runtime.package_location import ZipPackageLocation
 from ..worker.worker import Worker
 
 if TYPE_CHECKING:
@@ -95,9 +94,20 @@ async def post_attempt_view(request: web.Request, package: Package, question_sta
 @routes.post(r'/packages/{package_hash:\w+}/attempt/score')  # type: ignore[arg-type]
 @ensure_package_and_question_state_exist
 # pylint: disable=unused-argument
-async def post_attempt_score(_request: web.Request, package: Package, question_state: bytes,
+async def post_attempt_score(request: web.Request, package: Package, question_state: bytes,
                              data: AttemptScoreArguments) -> web.Response:
-    return json_response(data=AttemptScoredFactory.build(), status=201)
+    qpyserver: 'QPyServer' = request.app['qpy_server_app']
+
+    package_path = await package.get_path()
+    worker: Worker
+    async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
+        attempt_scored = await worker.score_attempt(
+            request_user=RequestUser(["de", "en"]),
+            question_state=question_state.decode(), attempt_state=data.attempt_state, scoring_state=data.scoring_state,
+            response=data.response,
+        )
+
+    return json_response(data=attempt_scored, status=201)
 
 
 @routes.post(r'/packages/{package_hash:\w+}/question')  # type: ignore[arg-type]
