@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: QPPE API
+  title: Question Provider and Package Execution (QPPE) Server API
   version: 0.1.0
 servers:
   - url: 'https://example.org/api/qppe/v0'
@@ -27,7 +27,7 @@ paths:
       - $ref: '#/components/parameters/UserAgent'
       - $ref: '#/components/parameters/AcceptLanguageAll'
     get:
-      summary: Get a specific package by its hash
+      summary: Get a specific package info by its hash
       responses:
         200:
           description: OK
@@ -45,27 +45,15 @@ paths:
       - $ref: '#/components/parameters/AcceptLanguageOne'
     post:
       summary: Get the options form definition that allow a question creator to customize a question.
+      description: "Within the request data, `question_ref` should be null in order to show default option values.
+        `lms_auth_token` should provide access to the following QPPE LMS Callback API security schemes:
+        AuthPackageAccess and AuthQuestionAccess (if `question_ref` is not null)."
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/RequestBaseData"
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                main:
-                  $ref: "#/components/schemas/RequestBaseData"
-                package:
-                  type: string
-                  format: binary
-                  description: question package
-                question_state:
-                  type: string
-                  description: Question state that was previously returned by the question endpoint or empty
-                    in order to show default option values.
-              required: [ main ]
       responses:
         200:
           description: Definition that can be used in order to display a form.
@@ -102,26 +90,16 @@ paths:
       - $ref: '#/components/parameters/AcceptLanguageOne'
     post:
       summary: Create a new question (validate the options as set by a question creator and export to a question state).
+      description: "Within the request data, `old_question_ref` should refer to the old question version when the teacher
+        modifies an existing question (otherwise null) and `question_ref` should refer to the new question (version).
+        `lms_auth_token` should provide access to the following QPPE LMS Callback API security schemes:
+        AuthPackageAccess, AuthNewQuestionCreate and AuthQuestionAccess (if `old_question_ref` is not null)."
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/QuestionCreateArguments"
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                package:
-                  type: string
-                  format: binary
-                  description: question package
-                question_state:
-                  type: string
-                  description: Question state that was previously returned by the question endpoint.
-                main:
-                  $ref: "#/components/schemas/QuestionCreateArguments"
-              required: [ main ]
       responses:
         201:
           description: Successful
@@ -161,21 +139,14 @@ paths:
       - $ref: '#/components/parameters/AcceptLanguageOne'
     post:
       summary: Migrate/update question state that was created by another package or another version.
+      description: "Within the request data, `lms_auth_token` should provide access to the following
+        QPPE LMS Callback API security schemes: AuthPackageAccess, AuthQuestionAccess and AuthNewQuestionCreate."
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/json:
             schema:
-              type: object
-              properties:
-                package:
-                  type: string
-                  format: binary
-                  description: question package
-                question_state:
-                  type: string
-                  description: Question state that was created by another package or another version.
-              required: [ question_state ]
+              $ref: "#/components/schemas/QuestionMigrateArguments"
       responses:
         200:
           description: Successfully updated data
@@ -210,14 +181,16 @@ paths:
       - $ref: '#/components/parameters/PackageHash'
       - $ref: '#/components/parameters/UserAgent'
       - $ref: '#/components/parameters/AcceptLanguageOne'
-    get:
+    post:
       summary: View a question.
+      description: "Within the request data, `lms_auth_token` should provide access to the following
+        QPPE LMS Callback API security schemes: AuthPackageAccess and AuthQuestionAccess."
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/QuestionViewArguments"
+              $ref: "#/components/schemas/RequestBaseData"
       responses:
         200:
           description: OK
@@ -248,22 +221,13 @@ paths:
       - $ref: '#/components/parameters/AcceptLanguageOne'
     post:
       summary: Start an attempt
+      description: "Within the request data, `lms_auth_token` should provide access to the following
+        QPPE LMS Callback API security schemes: AuthPackageAccess, AuthQuestionAccess and AuthQuestionAttemptAccess."
       requestBody:
         content:
-          multipart/form-data:
+          application/json:
             schema:
-              type: object
-              properties:
-                main:
-                  $ref: "#/components/schemas/AttemptStartArguments"
-                package:
-                  type: string
-                  format: binary
-                  description: question package
-                question_state:
-                  type: string
-                  description: Question state that was previously returned by the question endpoint.
-              required: [ main, question_state ]
+              $ref: "#/components/schemas/AttemptStartArguments"
       responses:
         201:
           description: Attempt started data
@@ -294,24 +258,15 @@ paths:
       - $ref: '#/components/parameters/AcceptLanguageOne'
     post:
       summary: View an attempt
+      description: "Within the request data, `lms_auth_token` should provide access to the following
+        QPPE LMS Callback API security schemes: AuthPackageAccess, AuthQuestionAccess and AuthQuestionAttemptAccess."
       requestBody:
         content:
-          multipart/form-data:
+          application/json:
             schema:
-              type: object
-              properties:
-                main:
-                  $ref: "#/components/schemas/AttemptViewArguments"
-                package:
-                  type: string
-                  format: binary
-                  description: question package
-                question_state:
-                  type: string
-                  description: Question state that was previously returned by the question endpoint.
-              required: [ main, question_state ]
+              $ref: "#/components/schemas/AttemptViewArguments"
       responses:
-        201:
+        200:
           description: Attempt view data
           headers:
             Content-Language:
@@ -333,25 +288,17 @@ paths:
       - $ref: '#/components/parameters/UserAgent'
       - $ref: '#/components/parameters/AcceptLanguageOne'
     post:
-      summary: Score an attempt
+      summary: Score an attempt synchronously/asynchronously.
+      description: "Within the request data, `lms_auth_token` should provide access to the following
+        QPPE LMS Callback API security schemes: AuthPackageAccess, AuthQuestionAccess, AuthQuestionAttemptAccess and
+        AuthResponseScoreWrite."
       requestBody:
         content:
-          multipart/form-data:
+          application/json:
             schema:
-              type: object
-              properties:
-                main:
-                  $ref: "#/components/schemas/AttemptScoreArguments"
-                package:
-                  type: string
-                  format: binary
-                  description: question package
-                question_state:
-                  type: string
-                  description: Question state that was previously returned by the question endpoint.
-              required: [ main, question_state ]
+              $ref: "#/components/schemas/AttemptScoreArguments"
       responses:
-        201:
+        200:
           description: Scored attempt data
           headers:
             Content-Language:
@@ -360,12 +307,47 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AttemptScored"
+        202:
+          description: Attempt will be scored asynchronously.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scoring_job_uuid:
+                    type: string
+                    description: Async scoring job uuid.
+                required: [ scoring_job_uuid ]
         500:
           description: Error occurred.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RequestError"
+
+  /packages/{package_hash}/attempt/score/{scoring_job_uuid}:
+    parameters:
+      - $ref: '#/components/parameters/PackageHash'
+      - $ref: '#/components/parameters/ScoringUUID'
+      - $ref: '#/components/parameters/UserAgent'
+    get:
+      summary: Get status of an asynchronous scoring job.
+      responses:
+        200:
+          description: status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttemptAsyncScoringStatus'
+        404:
+          description: Job not found.
+    delete:
+      summary: Cancel an asynchronous scoring job.
+      responses:
+        204:
+          description: Job cancelled.
+        404:
+          description: Job not found.
 
   /package-extract-info:
     parameters:
@@ -423,6 +405,15 @@ components:
       description: SHA256 hash of package
       schema:
         type: string
+
+    ScoringUUID:
+      name: scoring_job_uuid
+      in: path
+      required: true
+      description: Scoring job UUID that was returned by the /attempt/score endpoint.
+      schema:
+        type: string
+        pattern: '^[a-zA-Z0-9\-_=]{1,64}$'
 
     UserAgent:
       name: User-Agent
@@ -553,12 +544,24 @@ components:
     RequestBaseData:
       type: object
       properties:
+        question_ref:
+          allOf:
+            - $ref: 'qppe-lms.yaml#/components/schemas/QuestionRef'
+            - nullable: true
         context:
           type: integer
           description: Some context information where the question is located (e.g. course or quiz/test id).
           nullable: true
           default: null
-      required: [ ]
+        callback_url:
+          type: string
+          format: uri
+          description: Base URL to LMS Callback API.
+        lms_auth_token:
+          type: string
+          description: Token that is needed to access the LMS Callback API.
+          nullable: true
+      required: [ question_ref, context, callback_url, lms_auth_token ]
 
     QuestionCreateArguments:
       description: Information that is needed to create a new question.
@@ -566,9 +569,23 @@ components:
         - $ref: "#/components/schemas/RequestBaseData"
         - type: object
           properties:
+            old_question_ref:
+              allOf:
+                - $ref: 'qppe-lms.yaml#/components/schemas/QuestionRef'
+                - nullable: true
             form_data:
               $ref: "#/components/schemas/FormData"
-          required: [ form_data ]
+          required: [ old_question_ref, form_data ]
+
+    QuestionMigrateArguments:
+      description: Information that is needed to migrate a question.
+      allOf:
+        - $ref: "#/components/schemas/RequestBaseData"
+        - type: object
+          properties:
+            old_question_ref:
+              $ref: 'qppe-lms.yaml#/components/schemas/QuestionRef'
+          required: [ old_question_ref ]
 
     QuestionViewArguments:
       description: Information that is needed to view a question.
@@ -576,9 +593,10 @@ components:
         - $ref: "#/components/schemas/RequestBaseData"
         - type: object
           properties:
-            question_state:
-              type: string
-              description: Question state that was previously returned by the question endpoint.
+            attempt_ref:
+              $ref: 'qppe-lms.yaml#/components/schemas/AttemptRef'
+            response_ref:
+              $ref: 'qppe-lms.yaml#/components/schemas/ResponseRef'
           required: [ question_state ]
 
     Question:
@@ -795,9 +813,13 @@ components:
         - $ref: "#/components/schemas/RequestBaseData"
         - type: object
           properties:
+            attempt_ref:
+              $ref: 'qppe-lms.yaml#/components/schemas/AttemptRef'
             attempt_state:
               type: string
               description: Arbitrary values set by the question package code.
+            response_ref:
+              $ref: 'qppe-lms.yaml#/components/schemas/ResponseRef'
             scoring_state:
               type: string
               nullable: true
@@ -807,30 +829,30 @@ components:
               type: object
               nullable: true
               description: Data from the question's input fields.
-          required: [ attempt_state, scoring_state, response ]
+          required: [ attempt_ref, attempt_state, response_ref, scoring_state, response ]
 
     AttemptScoreArguments:
-      # nested subquestions
       allOf:
         - $ref: "#/components/schemas/RequestBaseData"
         - $ref: "#/components/schemas/AttemptViewArguments"
         - type: object
           properties:
-            responses:
-              type: array
+            timeout:
+              type: number
+              minimum: 0
               nullable: true
-              default: null
-              items:
-                type: object
-                properties:
-                  response:
-                    type: object
-              description: All tries and their data from the question's input fields
+              description: Maximum time to wait in seconds for scoring the attempt synchronously. When the timeout is
+                reached, the server will score the attempt in background and push the score to the LMS (asynchronous
+                scoring). Null if there should be no timeout (only synchronous scoring) or
+                zero for asynchronous scoring only.
+            try_scoring_with_countback:
+              type: boolean
+              description: Try to compute a final score, taking into account previous submissions to this question
                 (only when question.scoring_method is AUTOMATICALLY_SCORABLE_WITH_COUNTBACK).
             generate_hint:
               type: boolean
               description: Try to give a hint on how to improve the response.
-          required: [ generate_hint ]
+          required: [ timeout, try_scoring_with_countback, generate_hint ]
 
     AttemptScored:
       allOf:
@@ -924,6 +946,35 @@ components:
           required: [ scoring_state, scoring_code, score ]
         - $ref: "#/components/schemas/Attempt"
 
+    AttemptAsyncScoringStatus:
+      type: object
+      properties:
+        job_status:
+          type: string
+          enum:
+            - WAITING
+            - RUNNING
+            - FINISHED
+            - ERROR
+          description: >
+            * `WAITING` - The job is still waiting for being executed.
+            * `RUNNING` - The job is now running.
+            * `FINISHED` - The job finished successfully.
+            * `ERROR` - An error occurred.
+      required: [ job_status ]
+
+    AttemptAsyncScoringStatusFinished:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/AttemptAsyncScoringStatus"
+        - $ref: "#/components/schemas/AttemptScored"
+
+    AttemptAsyncScoringStatusError:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/AttemptAsyncScoringStatus"
+        - $ref: "#/components/schemas/RequestError"
+
     RequestError:
       type: object
       properties:
@@ -935,6 +986,7 @@ components:
             - OUT_OF_MEMORY
             - INVALID_PACKAGE
             - PACKAGE_ERROR
+            - CALLBACK_API_ERROR
             - SERVER_ERROR
           description: >
             * `QUEUE_WAITING_TIMEOUT` - The request has been waiting too long in a job queue. Try again later.
@@ -942,6 +994,7 @@ components:
             * `OUT_OF_MEMORY` - Question package reached its memory limit.
             * `INVALID_PACKAGE` - The package file is corrupt, the manifest is invalid or there is a checksum mismatch.
             * `PACKAGE_ERROR` - An error occurred within the package.
+            * `CALLBACK_API_ERROR` - An error occurred while contacting the LMS Callback API.
             * `SERVER_ERROR` - Some other server error has occurred.
         temporary:
           type: boolean
