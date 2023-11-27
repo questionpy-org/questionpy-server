@@ -1,0 +1,365 @@
+openapi: 3.0.3
+info:
+  title: Question Provider and Package Execution (QPPE) LMS Callback API
+  version: 0.1.0
+servers:
+  - url: 'https://example.org/lms/api/qppe/callback/v0'
+paths:
+  /package/{package_hash}:
+    parameters:
+      - $ref: 'qppe-server.yaml#/components/parameters/PackageHash'
+    get:
+      summary: Get the package with the hash.
+      description: Retrieve a package from the LMS if it is a package that was uploaded by an LMS user.
+      security:
+        - AuthPackageAccess: [ ]
+      responses:
+        200:
+          description: OK
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        401:
+          description: Access token is missing or invalid.
+        404:
+          description: Not Found
+
+  /question/{question_ref}/attempt/{attempt_ref}/response/{response_ref}/fields/{field}/files/{file_ref}:
+    parameters:
+      - $ref: '#/components/parameters/QuestionRef'
+      - $ref: '#/components/parameters/AttemptRef'
+      - $ref: '#/components/parameters/ResponseRef'
+      - $ref: '#/components/parameters/FileRef'
+      - name: field
+        in: path
+        required: true
+        description: Field name as declared in the question UI.
+        schema:
+          $ref: 'qppe-server.yaml#/components/schemas/FormName'
+    get:
+      summary: Get a file that was submitted by the candidate in an upload field.
+      security:
+        - AuthQuestionAttemptAccess: [ ]
+      responses:
+        200:
+          description: OK
+        401:
+          description: Access token is missing or invalid.
+
+  /question/{question_ref}/attempt/{attempt_ref}/response/{response_ref}/previous-responses:
+    parameters:
+      - $ref: '#/components/parameters/QuestionRef'
+      - $ref: '#/components/parameters/AttemptRef'
+      - $ref: '#/components/parameters/ResponseRef'
+    get:
+      summary: Get all responses that were previously submitted within this attempt.
+      security:
+        - AuthQuestionAttemptAccess: [ ]
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponsesList"
+        401:
+          description: Access token is missing or invalid.
+
+  /question/{question_ref}/attempt/{attempt_ref}/response/{response_ref}/score/{scoring_job_uuid}:
+    parameters:
+      - $ref: '#/components/parameters/QuestionRef'
+      - $ref: '#/components/parameters/AttemptRef'
+      - $ref: '#/components/parameters/ResponseRef'
+      - $ref: 'qppe-server.yaml#/components/parameters/ScoringUUID'
+    post:
+      summary: Push a score to the LMS.
+      security:
+        - AuthResponseScoreWrite: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: 'qppe-server.yaml#/components/schemas/AttemptAsyncScoringStatusFinished'
+                - $ref: 'qppe-server.yaml#/components/schemas/AttemptAsyncScoringStatusError'
+              discriminator:
+                propertyName: job_status
+      responses:
+        204:
+          description: OK
+        401:
+          description: Access token is missing or invalid.
+        404:
+          description: Scoring job uuid is unknown.
+
+  /question/{question_ref}/attempt/{attempt_ref}/response/{response_ref}/scoring/files:
+    parameters:
+      - $ref: '#/components/parameters/QuestionRef'
+      - $ref: '#/components/parameters/AttemptRef'
+      - $ref: '#/components/parameters/ResponseRef'
+    get:
+      summary: Get a list of all scoring files stored in the LMS by the question package.
+      security:
+        - AuthQuestionAttemptAccess: [ ]
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                 $ref: "#/components/schemas/QuestionFilesList"
+
+  /question/{question_ref}/attempt/{attempt_ref}/response/{response_ref}/scoring/files/{file_name}:
+    parameters:
+      - $ref: '#/components/parameters/QuestionRef'
+      - $ref: '#/components/parameters/AttemptRef'
+      - $ref: '#/components/parameters/ResponseRef'
+      - $ref: '#/components/parameters/FileName'
+    get:
+      summary: Get a file that was created by a package during scoring.
+      security:
+        - AuthQuestionAttemptToken: [ ]
+      responses:
+        200:
+          description: OK
+        401:
+          description: Access token is missing or invalid.
+    put:
+      summary: Create a scoring file.
+      security:
+        - AuthResponseScoreWrite: [ ]
+      parameters:
+        - in: header
+          name: Content-Type
+          required: true
+          schema:
+            type: string
+      responses:
+        201:
+          description: File created successfully.
+        401:
+          description: Access token is missing or invalid.
+        413:
+          description: File is too large or not enough space for this file.
+
+
+  /question/{question_ref}/files:
+    parameters:
+      - $ref: '#/components/parameters/QuestionRef'
+    get:
+      summary: Get a list of all files stored in the LMS by the question package.
+      security:
+        - AuthQuestionAccess: [ ]
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                 $ref: "#/components/schemas/QuestionFilesList"
+        401:
+          description: Access token is missing or invalid.
+
+  /question/{question_ref}/files/{file_name}:
+    parameters:
+      - $ref: '#/components/parameters/QuestionRef'
+      - $ref: '#/components/parameters/FileName'
+    get:
+      summary: Get a file stored in the LMS by the question package.
+      security:
+        - AuthQuestionAccess: [ ]
+      responses:
+        200:
+          description: OK
+        401:
+          description: Access token is missing or invalid.
+    put:
+      summary: Create or update a file.
+      description: The modification should only take effect when the new question state is saved
+        by the LMS, `question_ref` refers to the new question (version).
+      security:
+        - AuthNewQuestionCreate: [ ]
+      parameters:
+        - in: header
+          name: Content-Type
+          required: true
+          schema:
+            type: string
+      responses:
+        201:
+          description: File created successfully.
+        401:
+          description: Access token is missing or invalid.
+        413:
+          description: File is too large or not enough space for this file.
+
+  /question/{question_ref}/options/files/{file_ref}:
+    parameters:
+      - $ref: '#/components/parameters/QuestionRef'
+      - $ref: '#/components/parameters/FileRef'
+    get:
+      summary: Get a file uploaded by a teacher in options.
+      security:
+        - AuthQuestionAccess: [ ]
+        - AuthNewQuestionCreate: [ ]
+      responses:
+        200:
+          description: OK
+        401:
+          description: Access token is missing or invalid.
+
+  /question/{question_ref}/state:
+    parameters:
+      - $ref: '#/components/parameters/QuestionRef'
+    get:
+      summary: Get the question state that was previously returned by the server's question endpoint.
+      security:
+        - AuthQuestionAccess: [ ]
+      responses:
+        200:
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+        401:
+          description: Access token is missing or invalid.
+        404:
+          description: Not Found
+
+components:
+  parameters:
+    QuestionRef:
+      name: question_ref
+      in: path
+      required: true
+      description: A question reference that is determined by the LMS. It uniquely identifies a question.
+        It might be a hash over the `question_state`, question files and question options files or some other
+        identifier that changes when one of the states/files is modified.
+      schema:
+        $ref: '#/components/schemas/QuestionRef'
+
+    AttemptRef:
+      name: attempt_ref
+      in: path
+      required: true
+      description: A question attempt reference that is determined by the LMS. It uniquely identifies an attempt
+        of a question.
+      schema:
+        $ref: '#/components/schemas/AttemptRef'
+
+    ResponseRef:
+      name: response_ref
+      in: path
+      required: true
+      description: An attempt response reference that is determined by the LMS. It uniquely identifies a response
+        within an attempt. The reference changes when the submitted data is modified or when there are new responses.
+      schema:
+        $ref: '#/components/schemas/ResponseRef'
+
+    FileRef:
+      name: file_ref
+      in: path
+      required: true
+      description: A unique file identifier that is determined by the LMS. It might be a file hash or some other
+        identifier that changes when the content is modified.
+      schema:
+        type: string
+        pattern: '^[a-zA-Z0-9\-_=]{1,64}$'
+
+    FileName:
+      name: file_name
+      in: path
+      required: true
+      description: Name for a file that was generated by the package.
+      schema:
+        $ref: '#/components/schemas/FileName'
+
+  schemas:
+    QuestionRef:
+      type: string
+      pattern: '^[a-zA-Z0-9\-_=]{1,64}$'
+      description: A question reference that is determined by the LMS. It uniquely identifies a question.
+        It might be a hash over the `question_state`, question files and question options files or some other
+        identifier that changes when one of the states/files is modified.
+
+    AttemptRef:
+      type: string
+      pattern: '^[a-zA-Z0-9\-_=]{1,64}$'
+      description: A question attempt reference that is determined by the LMS. It uniquely identifies an attempt
+        of a question.
+
+    ResponseRef:
+      type: string
+      pattern: '^[a-zA-Z0-9\-_=]{1,64}$'
+      description: An attempt response reference that is determined by the LMS. It uniquely identifies a response
+        within an attempt. The reference changes when the submitted data is modified or when there are new responses.
+
+    FileName:
+      type: string
+      pattern: '^[a-zA-Z0-9\-_.]{1,64}$'
+      description: Name for a file that was generated by the package.
+
+    ResponsesList:
+      type: array
+      description: All responses order by submission date.
+      items:
+        type: object
+        properties:
+          response_ref:
+            $ref: '#/components/schemas/ResponseRef'
+          response:
+            type: object
+            nullable: true
+            description: Data from the question's input fields.
+        required: [ response_ref, response ]
+
+    QuestionFilesList:
+      type: object
+      properties:
+        max_size:
+          type: integer
+          description: Maximum size in bytes that the package is allowed to upload (in total).
+        max_files:
+          type: integer
+          description: Maximum number of files that the package is allowed to upload.
+        files:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                $ref: '#/components/schemas/FileName'
+              size:
+                type: integer
+            required: [ name, size ]
+      required: [ max_size, max_files, files ]
+
+  securitySchemes:
+    AuthPackageAccess:
+      type: http
+      scheme: bearer
+      description: The token given in `qppe-server.yaml#/RequestBaseData.lms_auth_token`.
+
+    AuthQuestionAccess:
+      type: http
+      scheme: bearer
+      description: The token given in `qppe-server.yaml#/RequestBaseData.lms_auth_token`.
+
+    AuthNewQuestionCreate:
+      type: http
+      scheme: bearer
+      description: The token given in `qppe-server.yaml#/RequestBaseData.lms_auth_token`.
+
+    AuthQuestionAttemptAccess:
+      type: http
+      scheme: bearer
+      description: The token given in `qppe-server.yaml#/RequestBaseData.lms_auth_token`.
+
+    AuthResponseScoreWrite:
+      type: http
+      scheme: bearer
+      description: The token given in `qppe-server.yaml#/RequestBaseData.lms_auth_token`.
