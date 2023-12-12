@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Any, Dict, List, Optional, Union
 
-from pydantic import ConfigDict, BaseModel, Field, FilePath, HttpUrl, Json
+from pydantic import ConfigDict, BaseModel, Field, FilePath, HttpUrl, Json, ByteSize
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.models import AttemptModel, QuestionModel
 
@@ -139,3 +139,16 @@ class QuestionStateMigrationError(BaseModel):
 
     code: QuestionStateMigrationErrorCode
     reason: Optional[str] = None
+
+
+class Usage(BaseModel):
+    requests_in_process: int
+    requests_in_queue: int
+
+
+class ServerStatus(BaseModel):
+    name: str = 'questionpy-server'
+    version: str
+    allow_lms_packages: bool
+    max_package_size: ByteSize
+    usage: Usage
