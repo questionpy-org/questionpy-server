@@ -148,7 +148,10 @@ class Usage(BaseModel):
 
 class ServerStatus(BaseModel):
     name: str = 'questionpy-server'
-    version: str
+    version: Annotated[str, Field(pattern=r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)'
+                                          r'(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'
+                                          r'(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?'
+                                          r'(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$')]
     allow_lms_packages: bool
     max_package_size: ByteSize
-    usage: Usage
+    usage: Optional[Usage]

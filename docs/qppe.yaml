@@ -405,7 +405,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/UserAgent'
     get:
-      summary: asd
+      summary: Get information about the server status
       responses:
         200:
           description: OK
@@ -1367,7 +1367,7 @@ components:
           description: Maximum package size (in bytes)
         usage:
           $ref: "#/components/schemas/Usage"
-      required: [name, version, allow_lms_packages, max_package_size, usage]
+      required: [name, version, allow_lms_packages, max_package_size]
 
     Usage:
       type: object

@@ -60,7 +60,7 @@ class GeneralSettings(BaseModel):
 class WebserviceSettings(BaseModel):
     listen_address: str = '127.0.0.1'
     listen_port: int = 9020
-    allow_lms_packages: bool = False
+    allow_lms_packages: bool = True
 
     # Not configurable. Only here because it is analogous to max_package_size.
     max_main_size: ClassVar[ByteSize] = ByteSize(5 * MiB)
