@@ -10,8 +10,9 @@ from questionpy_common.environment import RequestUser
 
 from questionpy_server.factories import AttemptScoredFactory
 from questionpy_server.web import ensure_package_and_question_state_exist, json_response
+from questionpy_server import __version__
 from .models import AttemptStartArguments, AttemptScoreArguments, AttemptViewArguments, \
-    QuestionCreateArguments, QuestionEditFormResponse, RequestBaseData
+    QuestionCreateArguments, QuestionEditFormResponse, RequestBaseData, ServerStatus, Usage
 from ..package import Package
 from ..worker.worker import Worker
 
@@ -122,3 +123,18 @@ async def post_question_migrate(_request: web.Request) -> web.Response:
 async def package_extract_info(_request: web.Request, package: Package) -> web.Response:
     """Get package information."""
     return json_response(data=package.get_info(), status=201)
+
+
+@routes.get(r'/status')
+async def get_server_status(request: web.Request) -> web.Response:
+    """Get server status"""
+    qpyserver: 'QPyServer' = request.app['qpy_server_app']
+    status = ServerStatus(
+        version=__version__,
+        allow_lms_packages=qpyserver.settings.webservice.allow_lms_packages,
+        max_package_size=qpyserver.settings.webservice.max_package_size,
+        usage=Usage(
+            requests_in_process=await qpyserver.worker_pool.get_requests_in_process(),
+            requests_in_queue=await qpyserver.worker_pool.get_requests_in_queue()
+        ))
+    return json_response(data=status, status=200)
