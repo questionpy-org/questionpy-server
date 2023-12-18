@@ -2,7 +2,7 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from asyncio import Semaphore, Condition
+from asyncio import Semaphore, Condition, Lock
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -34,6 +34,10 @@ class WorkerPool:
         self._semaphore: Optional[Semaphore] = None
         self._condition: Optional[Condition] = None
 
+        self._lock: Lock = Lock()
+        self._running_workers: int = 0
+        self._requests: int = 0
+
         self._total_memory = 0
 
     def memory_available(self, size: int) -> bool:
@@ -59,8 +63,14 @@ class WorkerPool:
         if not self._condition:
             self._condition = Condition()
 
+        async with self._lock:
+            self._requests += 1
+
         # Limit the amount of running workers.
         async with self._semaphore:
+            async with self._lock:
+                self._running_workers += 1
+
             worker = None
             reserved_memory = False
             try:
@@ -89,3 +99,25 @@ class WorkerPool:
                     self._total_memory -= limits.max_memory
                     async with self._condition:
                         self._condition.notify_all()
+
+                async with self._lock:
+                    self._running_workers -= 1
+                    self._requests -= 1
+
+    async def get_requests_in_process(self) -> int:
+        """Get the number of workers currently running.
+
+        Returns:
+            int: The count of workers currently running.
+        """
+        async with self._lock:
+            return self._running_workers
+
+    async def get_requests_in_queue(self) -> int:
+        """Get the number of pending requests.
+
+        Returns:
+            int: The count of pending requests.
+        """
+        async with self._lock:
+            return self._requests - self._running_workers

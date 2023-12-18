@@ -133,9 +133,8 @@ async def get_server_status(request: web.Request) -> web.Response:
         version=__version__,
         allow_lms_packages=qpyserver.settings.webservice.allow_lms_packages,
         max_package_size=qpyserver.settings.webservice.max_package_size,
-        # TODO: include real usage data
         usage=Usage(
-            requests_in_process=0,
-            requests_in_queue=0
+            requests_in_process=await qpyserver.worker_pool.get_requests_in_process(),
+            requests_in_queue=await qpyserver.worker_pool.get_requests_in_queue()
         ))
     return json_response(data=status, status=200)
