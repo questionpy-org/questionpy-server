@@ -28,7 +28,8 @@ class Repository:
         """
         Downloads and verifies metadata.
 
-        :return: metadata
+        Returns:
+            RepoMeta: Metadata
         """
         meta = await download(self._url_meta)
         # TODO: verify downloaded data
@@ -38,8 +39,11 @@ class Repository:
         """
         Downloads and verifies package index.
 
-        :param meta: metadata
-        :return: package index, where keys are package hashes
+        Args:
+            meta (RepoMeta): Metadata
+
+        Returns:
+            dict[str, RepoPackage]: package index, where keys are package hashes
         """
         try:
             # Try to get the index from cache.
@@ -70,8 +74,11 @@ class Repository:
         """
         Download a specific package from the repository.
 
-        :param package: repository package
-        :return: raw package bytes
+        Args:
+            package (RepoPackage): repository package
+
+        Returns:
+            bytes: raw package bytes
         """
 
         url = urljoin(self._url_base, package.path)

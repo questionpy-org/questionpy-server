@@ -18,10 +18,13 @@ async def download(url: str, size: int = -1, expected_hash: Optional[str] = None
     Downloads data from the given `url` and validates it if `expected_hash` is not `None`.
     The download size can be limited by setting `size`.
 
-    :param url: url of the data
-    :param size: maximum amount of bytes to be downloaded
-    :param expected_hash: data must have this hash
-    :return:
+    Args:
+        url (str): url of the data
+        size (int): maximum amount of bytes to be downloaded
+        expected_hash (Optional[str]): data must have this hash. Defaults to None.
+
+    Returns:
+        bytes: data
     """
     async with ClientSession(auto_decompress=False, raise_for_status=True) as session:
         try:

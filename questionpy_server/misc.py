@@ -10,11 +10,13 @@ from questionpy_common.constants import MiB
 
 
 def calculate_hash(source: Union[bytes, Path]) -> str:
-    """
-    Calculates the sha256 of either bytes or a file.
+    """Calculates the sha256 of either bytes or a file.
 
-    :param source: bytes or path to file
-    :return: the sha256
+    Args:
+        source (Union[bytes, Path]) : bytes or path to file
+
+    Returns:
+        str: the sha256
     """
     sha = sha256()
 
