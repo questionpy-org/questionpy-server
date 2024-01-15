@@ -23,6 +23,6 @@ def pool(request: pytest.FixtureRequest) -> WorkerPool:
 
 
 async def test_should_get_manifest(pool: WorkerPool) -> None:
-    async with pool.get_worker(PACKAGE.path, 1, 1) as worker:
+    async with pool.get_worker(PACKAGE, 1, 1) as worker:
         manifest = await worker.get_manifest()
         assert manifest == PACKAGE.manifest

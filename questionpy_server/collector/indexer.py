@@ -13,6 +13,7 @@ from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.package import Package
 from questionpy_server.utils.manifest import ComparableManifest, SemVer
+from questionpy_server.worker.runtime.package_location import ZipPackageLocation
 
 
 class Indexer:
@@ -111,7 +112,7 @@ class Indexer:
                 # Create new package...
                 if isinstance(path_or_manifest, Path):
                     # ...from path.
-                    async with self._worker_pool.get_worker(path_or_manifest, 0, None) as worker:
+                    async with self._worker_pool.get_worker(ZipPackageLocation(path_or_manifest), 0, None) as worker:
                         manifest = await worker.get_manifest()
                     package = Package(package_hash, manifest, source, path_or_manifest)
                 else:

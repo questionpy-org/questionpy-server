@@ -5,7 +5,6 @@
 import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Optional, Callable, Union, Literal, Any, Generator
 
 import resource
@@ -17,14 +16,14 @@ from questionpy_server.worker.runtime.connection import WorkerToServerConnection
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageIds, LoadQPyPackage, \
     GetQPyPackageManifest, GetOptionsForm, CreateQuestionFromOptions, InitWorker, Exit, WorkerError, StartAttempt, \
     ViewAttempt, MessageToWorker
-from questionpy_server.worker.runtime.package import QPyPackage, QPyMainPackage
+from questionpy_server.worker.runtime.package import ImportablePackage, load_package
 
 
 @dataclass
 class EnvironmentImpl(Environment):
     type: Union[Literal["process", "thread", "container"], str]
-    main_package: QPyMainPackage
-    packages: dict[str, QPyPackage]
+    main_package: ImportablePackage
+    packages: dict[str, ImportablePackage]
     _on_request_callbacks: list[OnRequestCallback]
     request_user: Optional[RequestUser] = None
     limits: Optional[WorkerResourceLimits] = None
@@ -38,8 +37,8 @@ class WorkerManager:
         self.worker_type: Optional[str] = None
         self.server_connection: WorkerToServerConnection = server_connection
         self.limits: Optional[WorkerResourceLimits] = None
-        self.loaded_packages: dict[str, QPyPackage] = {}
-        self.main_package: Optional[QPyMainPackage] = None
+        self.loaded_packages: dict[str, ImportablePackage] = {}
+        self.main_package: Optional[ImportablePackage] = None
         self.question_type: Optional[BaseQuestionType] = None
         self.message_dispatch: dict[MessageIds, Callable[[Any], MessageToServer]] = {
             LoadQPyPackage.message_id: self.on_msg_load_qpy_package,
@@ -82,19 +81,23 @@ class WorkerManager:
         self._require_init(msg)
         assert self.worker_type
 
-        if msg.main:
-            self.main_package = self.loaded_packages[msg.path] = QPyMainPackage(Path(msg.path))
+        package = load_package(msg.location)
+        package.setup_imports()
+        self.loaded_packages[str(msg.location)] = package
 
-            environment = EnvironmentImpl(
+        if msg.main:
+            qtype = package.init_as_main(EnvironmentImpl(
                 type=self.worker_type,
                 limits=self.limits,
                 packages=self.loaded_packages,
-                main_package=self.main_package,
+                main_package=package,
                 _on_request_callbacks=self._on_request_callbacks
-            )
-            self.question_type = self.main_package.init(environment)
-        else:
-            self.loaded_packages[msg.path] = QPyPackage(Path(msg.path))
+            ))
+            if not isinstance(qtype, BaseQuestionType):
+                raise PackageInitFailedError(f"Package initialization returned '{qtype}', BaseQuestionType expected")
+
+            self.main_package = package
+            self.question_type = qtype
 
         return LoadQPyPackage.Response()
 
@@ -173,6 +176,10 @@ class WorkerManager:
             yield
         finally:
             env.request_user = None
+
+
+class PackageInitFailedError(Exception):
+    pass
 
 
 class WorkerNotInitializedError(Exception):

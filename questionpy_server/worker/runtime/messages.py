@@ -12,6 +12,7 @@ from questionpy_common.manifest import Manifest
 from questionpy_common.models import AttemptModel, QuestionModel
 from questionpy_common.qtype import OptionsFormDefinition
 
+from questionpy_server.worker.runtime.package_location import PackageLocation
 from questionpy_server.worker.exception import WorkerMemoryLimitExceededError, WorkerUnknownError
 
 messages_header_struct: Struct = Struct('=LL')
@@ -92,7 +93,7 @@ class Exit(MessageToWorker):
 class LoadQPyPackage(MessageToWorker):
     """Load/import a QuestionPy package."""
     message_id: ClassVar[MessageIds] = MessageIds.LOAD_QPY_PACKAGE
-    path: str
+    location: PackageLocation
     main: bool
     """Set this package as the main package and execute its entry point."""
 
@@ -102,7 +103,7 @@ class LoadQPyPackage(MessageToWorker):
 
 
 class GetQPyPackageManifest(MessageToWorker):
-    """Get the manifest data of a QPy package."""
+    """Get the manifest data of the main package, which must previously have been loaded."""
     message_id: ClassVar[MessageIds] = MessageIds.GET_QPY_PACKAGE_MANIFEST
     path: str
 

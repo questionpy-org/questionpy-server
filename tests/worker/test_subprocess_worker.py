@@ -27,7 +27,7 @@ def pool() -> WorkerPool:
 # TODO: Figure out how to provoke errors in the subprocess worker in order to test their handling.
 
 async def test_should_apply_limits(pool: WorkerPool) -> None:
-    async with pool.get_worker(PACKAGE.path, 1, 1) as worker:
+    async with pool.get_worker(PACKAGE, 1, 1) as worker:
         assert isinstance(worker, SubprocessWorker)
         assert worker._proc
         # Python's resource package can only get the rlimit of other processes on Linux, so we use psutil.

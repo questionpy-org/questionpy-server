@@ -4,7 +4,6 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from pathlib import Path
 from typing import Optional, TypeVar
 
 from questionpy_common.elements import OptionsFormDefinition
@@ -14,6 +13,7 @@ from questionpy_common.models import AttemptModel
 from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import WorkerResources
+from questionpy_server.worker.runtime.package_location import PackageLocation
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer
 
 _T = TypeVar("_T", bound=MessageToServer)
@@ -29,7 +29,7 @@ class WorkerState(Enum):
 class Worker(ABC):
     """Interface for worker implementations."""
 
-    def __init__(self, package: Path, limits: Optional[WorkerResourceLimits]) -> None:
+    def __init__(self, package: PackageLocation, limits: Optional[WorkerResourceLimits]) -> None:
         self.package = package
         self.limits = limits
         self.state = WorkerState.NOT_RUNNING
