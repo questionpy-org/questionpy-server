@@ -6,7 +6,6 @@ import asyncio
 import contextlib
 import logging
 from abc import ABC
-from pathlib import Path
 from typing import Optional, Type, TypeVar, Sequence
 
 from questionpy_common.elements import OptionsFormDefinition
@@ -15,6 +14,7 @@ from questionpy_common.models import AttemptModel
 
 from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.worker.runtime.package_location import PackageLocation
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer, MessageIds, WorkerError, \
@@ -31,7 +31,7 @@ class BaseWorker(Worker, ABC):
 
     _worker_type = "unknown"
 
-    def __init__(self, package: Path, limits: Optional[WorkerResourceLimits]):
+    def __init__(self, package: PackageLocation, limits: Optional[WorkerResourceLimits]) -> None:
         super().__init__(package, limits)
 
         self._observe_task: Optional[asyncio.Task] = None
@@ -42,7 +42,8 @@ class BaseWorker(Worker, ABC):
     async def _initialize(self) -> None:
         """Initializes an already running worker and starts the observe task.
 
-        Should be called by subclasses in :meth:`start` after they have started the worker itself."""
+        Should be called by subclasses in :meth:`start` after they have started the worker itself.
+        """
         self.state = WorkerState.IDLE
         self._observe_task = asyncio.create_task(self._observe(), name='observe worker task')
 
@@ -51,7 +52,7 @@ class BaseWorker(Worker, ABC):
                 limits=self.limits,
                 worker_type=self._worker_type,
             ), InitWorker.Response)
-            await self._send_and_wait_response(LoadQPyPackage(path=str(self.package), main=True),
+            await self._send_and_wait_response(LoadQPyPackage(location=self.package, main=True),
                                                LoadQPyPackage.Response)
         except WorkerNotRunningError as e:
             raise WorkerStartError("Worker has exited before or during initialization.") from e

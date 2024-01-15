@@ -14,6 +14,7 @@ from questionpy_server import __version__
 from .models import AttemptStartArguments, AttemptScoreArguments, AttemptViewArguments, \
     QuestionCreateArguments, QuestionEditFormResponse, RequestBaseData, ServerStatus, Usage
 from ..package import Package
+from questionpy_server.worker.runtime.package_location import ZipPackageLocation
 from ..worker.worker import Worker
 
 if TYPE_CHECKING:
@@ -53,7 +54,7 @@ async def post_options(request: web.Request, package: Package, question_state: O
 
     package_path = await package.get_path()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
         definition, form_data = await worker.get_options_form(RequestUser(["de", "en"]), question_state)
 
     return json_response(data=QuestionEditFormResponse(definition=definition, form_data=form_data))
@@ -68,7 +69,7 @@ async def post_attempt_start(request: web.Request, package: Package, question_st
 
     package_path = await package.get_path()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
         attempt = await worker.start_attempt(RequestUser(["de", "en"]), question_state.decode(), data.variant)
 
     return json_response(data=attempt, status=201)
@@ -83,7 +84,7 @@ async def post_attempt_view(request: web.Request, package: Package, question_sta
 
     package_path = await package.get_path()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
         attempt = await worker.get_attempt(request_user=RequestUser(["de", "en"]),
                                            question_state=question_state.decode(), attempt_state=data.attempt_state,
                                            scoring_state=data.scoring_state, response=data.response)
@@ -107,7 +108,7 @@ async def post_question(request: web.Request, data: QuestionCreateArguments,
 
     package_path = await package.get_path()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(package_path, 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
         question = await worker.create_question_from_options(RequestUser(["de", "en"]), question_state, data.form_data)
 
     return json_response(data=question)

@@ -7,7 +7,6 @@ import logging
 import sys
 from asyncio import StreamReader
 from asyncio.subprocess import Process
-from pathlib import Path
 from typing import Optional, Sequence, TypeVar, Type
 
 import psutil
@@ -16,6 +15,7 @@ from questionpy_common.constants import KiB
 from questionpy_common.environment import WorkerResourceLimits
 
 from questionpy_server.worker import WorkerResources
+from questionpy_server.worker.runtime.package_location import PackageLocation
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
@@ -74,7 +74,7 @@ class SubprocessWorker(BaseWorker):
 
     _worker_type = "process"
 
-    def __init__(self, package: Path, limits: Optional[WorkerResourceLimits]):
+    def __init__(self, package: PackageLocation, limits: Optional[WorkerResourceLimits]):
         super().__init__(package, limits)
 
         self._proc: Optional[Process] = None

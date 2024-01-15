@@ -21,6 +21,8 @@ from questionpy_server.app import QPyServer
 from questionpy_server.settings import Settings, GeneralSettings, WebserviceSettings, PackageCacheSettings, \
     CollectorSettings, WorkerSettings, RepoIndexCacheSettings
 from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.worker.runtime.package_location import ZipPackageLocation
+from questionpy_server.worker.worker.thread import ThreadWorker
 
 
 def get_file_hash(path: Path) -> str:
@@ -32,11 +34,9 @@ def get_file_hash(path: Path) -> str:
 
 
 @dataclass
-class TestPackage:
-    __test__ = False
-    path: Path
-
-    def __post_init__(self) -> None:
+class TestPackage(ZipPackageLocation):
+    def __init__(self, path: Path):
+        super().__init__(path)
         self.hash = get_file_hash(self.path)
 
         with TemporaryDirectory() as tmp_dir, ZipFile(self.path) as package:
@@ -56,7 +56,7 @@ def qpy_server(tmp_path_factory: TempPathFactory) -> QPyServer:
         config_files=(),
         general=GeneralSettings(),
         webservice=WebserviceSettings(listen_address="127.0.0.1", listen_port=0),
-        worker=WorkerSettings(),
+        worker=WorkerSettings(type=ThreadWorker),
         cache_package=PackageCacheSettings(directory=tmp_path_factory.mktemp('qpy_package_cache')),
         cache_repo_index=RepoIndexCacheSettings(directory=tmp_path_factory.mktemp('qpy_repo_index_cache')),
         collector=CollectorSettings()

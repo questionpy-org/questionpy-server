@@ -5,7 +5,6 @@
 from asyncio import Semaphore, Condition
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Optional, Type
 
 from questionpy_common.constants import MiB
@@ -14,6 +13,7 @@ from questionpy_common.environment import WorkerResourceLimits
 from .exception import WorkerStartError
 from .worker import Worker
 from .worker.subprocess import SubprocessWorker
+from questionpy_server.worker.runtime.package_location import PackageLocation
 
 
 class WorkerPool:
@@ -43,15 +43,15 @@ class WorkerPool:
         return self._total_memory + size <= self.max_memory
 
     @asynccontextmanager
-    async def get_worker(self, package: Path, _lms: int, _context: Optional[int]) -> AsyncIterator[Worker]:
+    async def get_worker(self, package: PackageLocation, _lms: int, _context: Optional[int]) -> AsyncIterator[Worker]:
         """Get a (new) worker executing a QuestionPy package.
 
         A context manager is used to ensure that a worker is always given back to the pool.
 
         Args:
-            package (Path): path to QuestionPy package
-            _lms (int): id of the LMS
-            _context (Optional[int]): context id within the lms
+            package: path to QuestionPy package
+            _lms: id of the LMS
+            _context: context id within the lms
 
         Returns:
             A worker
