@@ -11,7 +11,7 @@ from typing import Optional, Sequence
 
 from questionpy_common.environment import WorkerResourceLimits
 
-from questionpy_server.utils.streams import DuplexPipe, AsyncReadAdapter
+from questionpy_server.worker.runtime.streams import DuplexPipe, AsyncReadAdapter
 from questionpy_server.worker.runtime.package_location import PackageLocation
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError

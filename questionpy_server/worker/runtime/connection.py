@@ -2,7 +2,7 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from questionpy_server.utils.streams import SupportsWrite, SupportsRead
+from questionpy_server.worker.runtime.streams import SupportsWrite, SupportsRead
 from questionpy_server.worker.runtime.messages import Message, get_message_bytes, MessageToServer, MessageToWorker, \
     messages_header_struct, InvalidMessageIdError
 

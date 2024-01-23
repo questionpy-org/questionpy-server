@@ -16,7 +16,9 @@ import pytest
 from questionpy_common.constants import MiB
 
 from questionpy_server import WorkerPool
-from questionpy_server.worker.exception import WorkerUnknownError, WorkerStartError
+from questionpy_server.worker.exception import WorkerStartError
+from questionpy_server.worker.runtime.messages import WorkerUnknownError
+
 from questionpy_server.worker.runtime.manager import WorkerManager
 from questionpy_server.worker.worker.thread import ThreadWorker
 from tests.conftest import PACKAGE
