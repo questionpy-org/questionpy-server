@@ -592,12 +592,13 @@ components:
           type: integer
           minimum: 1
           description: Maximum number of subquestions that this question can have.
-        score_min:
-          type: number
-          format: double
-        score_max:
-          type: number
-          format: double
+        score:
+          $ref: '#/components/schemas/Score'
+        outcomes:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/Outcome'
         scoring_method:
           type: string
           enum:
@@ -627,12 +628,8 @@ components:
               subquestion_id:
                 type: string
                 maxLength: 30
-              score_max:
-                type: number
-                format: double
-                nullable: true
-                description: Maximum score. May be null if no score can be assigned directly to this
-                  specific subquestion.
+              score:
+                $ref: '#/components/schemas/Score'
               response_classes:
                 type: array
                 nullable: true
@@ -640,16 +637,8 @@ components:
                   statistics in order to classify responses. Can be null if question does not
                   support a response analysis.
                 items:
-                  type: object
-                  properties:
-                    response_class:
-                      type: string
-                      maxLength: 30
-                    score:
-                      type: number
-                      format: double
-                  required: [ response_class, score ]
-            required: [ subquestion_id, score_max, response_classes ]
+                  $ref: '#/components/schemas/Outcome'
+            required: [ subquestion_id, response_classes ]
         response_analysis_by_variant:
           type: boolean
           description: If true, the LMS should break down the stats and response analysis by the question variant.
@@ -661,9 +650,51 @@ components:
           type: string
           nullable: true
           description: General feedback that is shown to everyone after scoring.
-      required: [ num_variants, num_subquestions, score_min,
-                  score_max, scoring_method, penalty, random_guess_score, subquestions,
+      required: [ num_variants, num_subquestions, score, outcomes,
+                  scoring_method, penalty, random_guess_score, subquestions,
                   response_analysis_by_variant, render_every_view, general_feedback ]
+
+    Score:
+      type: object
+      properties:
+        value:
+          type: number
+          nullable: true
+          format: double
+      allOf:
+        - $ref: '#/components/schemas/Outcome'
+      required: [ score_max, score_min ]
+
+    Outcome:
+      # see http://www.imsglobal.org/spec/qti/v3p0/impl#h.886q73e2ya9q
+      type: object
+      properties:
+        identifier:
+          type: string
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: integer
+        view:
+          type: string
+          description: The intended audience for this outcome.
+          enum: [ author, candidate, proctor, scorer, testConstructor, tutor ]
+        interpretation:
+          type: string
+          description: A human interpretation of the variable's value.
+        score_max:
+          type: number
+          format: double
+        score_min:
+          type: number
+          format: double
+        mastery:
+          type: number
+          description: The mastery-value attribute optionally defines a value for numeric outcome variables above which 
+            the aspect being measured is considered to have been mastered by the candidate.
+          format: double
+      required: [ identifier, value ]
 
     QuestionCreated:
       allOf:
