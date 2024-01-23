@@ -13,7 +13,6 @@ from questionpy_common.models import AttemptModel, QuestionModel
 from questionpy_common.qtype import OptionsFormDefinition
 
 from questionpy_server.worker.runtime.package_location import PackageLocation
-from questionpy_server.worker.exception import WorkerMemoryLimitExceededError, WorkerUnknownError
 
 messages_header_struct: Struct = Struct('=LL')
 """4 bytes unsigned long int message id and 4 bytes unsigned long int payload length"""
@@ -211,3 +210,11 @@ def get_message_bytes(message: Message) -> tuple[bytes, Optional[bytes]]:
 class InvalidMessageIdError(Exception):
     def __init__(self, message_id: int, length: int):
         super().__init__(f"Received unknown message with id {message_id} and length {length}.")
+
+
+class WorkerMemoryLimitExceededError(Exception):
+    pass
+
+
+class WorkerUnknownError(Exception):
+    pass

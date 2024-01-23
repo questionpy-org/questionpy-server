@@ -4,7 +4,7 @@
 
 from typing import AsyncIterator
 
-from questionpy_server.utils.streams import SupportsAsyncRead, SupportsWrite
+from questionpy_server.worker.runtime.streams import SupportsAsyncRead, SupportsWrite
 from questionpy_server.worker.runtime.connection import send_message
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker, messages_header_struct, \
     InvalidMessageIdError
