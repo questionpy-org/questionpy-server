@@ -10,7 +10,7 @@ on:
 jobs:
   ci:
     # https://github.com/questionpy-org/.github
-    uses: questionpy-org/.github/.github/workflows/python-ci.yml@v6
+    uses: questionpy-org/.github/.github/workflows/python-ci.yml@v7
     with:
       # GitHub workflow inputs do not support lists, so we pass JSON.
       pytest-python-versions: '["3.9", "3.10", "3.11"]'
