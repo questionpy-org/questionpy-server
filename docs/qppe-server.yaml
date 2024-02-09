@@ -561,7 +561,10 @@ components:
           type: string
           description: Token that is needed to access the LMS Callback API.
           nullable: true
-      required: [ question_ref, context, callback_url, lms_auth_token ]
+        local_package:
+          type: boolean
+          description: True if the LMS is able to return the .qpy file through the LMS Callback API.
+      required: [ question_ref, context, callback_url, lms_auth_token, local_package ]
 
     QuestionCreateArguments:
       description: Information that is needed to create a new question.
