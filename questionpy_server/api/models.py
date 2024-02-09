@@ -121,8 +121,13 @@ class AttemptScored(AttemptModel):
     scored_fields: Optional[List[ScoredField]] = None
 
 
-class PackageNotFound(BaseModel):
-    package_not_found: bool
+class NotFoundStatusWhat(Enum):
+    PACKAGE = 'PACKAGE'
+    QUESTION_STATE = 'QUESTION_STATE'
+
+
+class NotFoundStatus(BaseModel):
+    what: NotFoundStatusWhat
 
 
 class QuestionStateMigrationErrorCode(Enum):

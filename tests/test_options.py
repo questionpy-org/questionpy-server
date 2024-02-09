@@ -37,7 +37,7 @@ async def test_no_package(client: TestClient) -> None:
 
     assert res.status == 404
     res_data = await res.json()
-    assert res_data == {"package_not_found": True}
+    assert res_data == {"what": "PACKAGE"}
 
 
 async def test_data_gets_cached(client: TestClient) -> None:

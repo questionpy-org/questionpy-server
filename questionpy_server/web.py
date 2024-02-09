@@ -18,7 +18,7 @@ from pydantic import BaseModel, ValidationError
 from questionpy_common import constants
 from questionpy_common.constants import KiB
 
-from questionpy_server.api.models import PackageNotFound, MainBaseModel
+from questionpy_server.api.models import NotFoundStatus, NotFoundStatusWhat, MainBaseModel
 from questionpy_server.cache import SizeError
 from questionpy_server.collector import PackageCollection
 from questionpy_server.package import Package
@@ -248,7 +248,7 @@ def ensure_package_and_question_state_exist(_func: Optional[RouteHandler] = None
             if package is None:
                 if package_hash:
                     raise HTTPNotFound(
-                        text=PackageNotFound(package_not_found=True).model_dump_json(),
+                        text=NotFoundStatus(what=NotFoundStatusWhat.PACKAGE).model_dump_json(),
                         content_type='application/json'
                     )
 
