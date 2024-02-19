@@ -14,3 +14,5 @@ MiB: Final[int] = 1024 * KiB  # pylint: disable=invalid-name
 # Request.
 MAX_PACKAGE_SIZE: Final[ByteSize] = ByteSize(20 * MiB)
 MAX_QUESTION_STATE_SIZE: Final[ByteSize] = ByteSize(2 * MiB)
+
+MANIFEST_FILENAME = "qpy_manifest.json"
