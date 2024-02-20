@@ -26,7 +26,7 @@ class DirPackageLocation:
     path: Path
 
     manifest: Manifest
-    """The manifest to use, probably loaded from ``{path}/qpy_manifest.yml``.
+    """The manifest to use, probably loaded from the package config.
 
     Since the source format of a manifest is YAML and we don't want the runtime to depend on PyYAML, the server should
     load the manifest and pass it into the worker here.

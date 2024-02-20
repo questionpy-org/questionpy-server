@@ -14,6 +14,7 @@ from types import ModuleType
 from typing import cast
 from zipfile import ZipFile
 
+from questionpy_common.constants import MANIFEST_FILENAME
 from questionpy_common.environment import Environment, Package, set_qpy_environment
 from questionpy_common.manifest import Manifest
 from questionpy_common.qtype import BaseQuestionType
@@ -68,7 +69,7 @@ class ZipBasedPackage(ZipFile, ImportablePackage):
     @cached_property
     def manifest(self) -> Manifest:
         """Load QuestionPy manifest from package."""
-        data = json.loads(self.read("qpy_manifest.json"))
+        data = json.loads(self.read(MANIFEST_FILENAME))
         return Manifest.model_validate(data)
 
     def get_path(self, path: str) -> Traversable:
