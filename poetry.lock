@@ -1178,17 +1178,15 @@ description = "Common classes and functions for QuestionPy"
 optional = false
 python-versions = "^3.9"
 files = []
-develop = false
+develop = true
 
 [package.dependencies]
 polyfactory = "^2.7.2"
 pydantic = "^2.4"
 
 [package.source]
-type = "git"
-url = "https://github.com/questionpy-org/questionpy-common.git"
-reference = "cdc3bad516df137651e14d81fb6d1bfde11ceaaf"
-resolved_reference = "cdc3bad516df137651e14d81fb6d1bfde11ceaaf"
+type = "directory"
+url = "../questionpy-common"
 
 [[package]]
 name = "semver"
@@ -1527,4 +1525,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "c921511f6f73819c58d747ff3cd21860bbf038cc3ec01ceecb984affefb69c08"
+content-hash = "6231eea9527744a2aad39648ba20bdd3272e4309a05d75a6ca756b40f945c548"

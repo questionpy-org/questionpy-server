@@ -1,13 +1,14 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-
-import resource
 import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Optional, Callable, Union, Literal, Any, Generator
 
+import resource
+from pydantic import TypeAdapter
+from questionpy_common.api.attempt import AttemptScoredModel
 from questionpy_common.api.qtype import BaseQuestionType
 from questionpy_common.environment import Environment, RequestUser, WorkerResourceLimits, OnRequestCallback, \
     get_qpy_environment
@@ -18,6 +19,8 @@ from questionpy_server.worker.runtime.messages import MessageToServer, MessageId
     ViewAttempt, MessageToWorker, ScoreAttempt
 from questionpy_server.worker.runtime.package import ImportablePackage, load_package
 
+# Even without type information, pydantic does a decent job of serializing dicts and models.
+_STATE_TYPE_ADAPTER = TypeAdapter(object)
 
 @dataclass
 class EnvironmentImpl(Environment):
@@ -126,8 +129,10 @@ class WorkerManager:
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_options(msg.question_state, msg.form_data)
 
-            return CreateQuestionFromOptions.Response(question_state=question.export_question_state(),
-                                                      question_model=question.export())
+            return CreateQuestionFromOptions.Response(
+                question_state=_STATE_TYPE_ADAPTER.dump_json(question.get_state()).decode(),
+                question_model=question.export()
+            )
 
     def on_msg_start_attempt(self, msg: StartAttempt) -> StartAttempt.Response:
         self._require_init(msg)
@@ -137,7 +142,8 @@ class WorkerManager:
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_state(msg.question_state)
             attempt = question.start_attempt(msg.variant)
-            return StartAttempt.Response(attempt_state=attempt.export_attempt_state(), attempt_model=attempt.export())
+            return StartAttempt.Response(attempt_state=_STATE_TYPE_ADAPTER.dump_json(attempt.get_state()).decode(),
+                                         attempt_model=attempt.export())
 
     def on_msg_view_attempt(self, msg: ViewAttempt) -> ViewAttempt.Response:
         self._require_init(msg)
@@ -146,9 +152,8 @@ class WorkerManager:
 
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_state(msg.question_state)
-            attempt = question.get_attempt(msg.attempt_state, msg.scoring_state, msg.response,
-                                           compute_score=False, generate_hint=False)
-            if __debug__ and msg.attempt_state != attempt.export_attempt_state():
+            attempt = question.get_attempt(msg.attempt_state, msg.scoring_state, msg.response)
+            if __debug__ and msg.attempt_state != _STATE_TYPE_ADAPTER.dump_json(attempt.get_state()).decode():
                 warnings.warn("The attempt state has been changed by viewing the attempt, which has no effect and "
                               "should not happen.")
 
@@ -161,10 +166,15 @@ class WorkerManager:
 
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_state(msg.question_state)
-            attempt = question.get_attempt(msg.attempt_state, msg.scoring_state, msg.response,
-                                           compute_score=True, generate_hint=False)
-            scored_model = attempt.export_scored_attempt()
-            return ScoreAttempt.Response(attempt_scored_model=scored_model)
+            attempt = question.get_attempt(msg.attempt_state, msg.scoring_state, msg.response)
+            score = attempt.score_response()
+            scoring_state = _STATE_TYPE_ADAPTER.dump_json(score.get_state()).decode()
+            model = AttemptScoredModel(
+                scoring_state=scoring_state,
+                scoring_code=score.code, score=score.fraction, classification=score.classification,
+                **attempt.export().model_dump()
+            )
+            return ScoreAttempt.Response(attempt_scored_model=model)
 
     def _require_init(self, msg: MessageToWorker) -> None:
         if not self.worker_type:
