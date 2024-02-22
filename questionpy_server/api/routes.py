@@ -54,7 +54,8 @@ async def post_options(request: web.Request, package: Package, question_state: O
     package_path = await package.get_path()
     worker: Worker
     async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
-        definition, form_data = await worker.get_options_form(RequestUser(["de", "en"]), question_state)
+        definition, form_data = await worker.get_options_form(RequestUser(["de", "en"]),
+                                                              question_state.decode() if question_state else None)
 
     return json_response(data=QuestionEditFormResponse(definition=definition, form_data=form_data))
 
@@ -119,7 +120,9 @@ async def post_question(request: web.Request, data: QuestionCreateArguments,
     package_path = await package.get_path()
     worker: Worker
     async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
-        question = await worker.create_question_from_options(RequestUser(["de", "en"]), question_state, data.form_data)
+        question = await worker.create_question_from_options(RequestUser(["de", "en"]),
+                                                             question_state.decode() if question_state else None,
+                                                             data.form_data)
 
     return json_response(data=question)
 

@@ -142,17 +142,15 @@ class BaseWorker(Worker, ABC):
         ret = await self._send_and_wait_response(msg, GetQPyPackageManifest.Response)
         return ComparableManifest(**ret.manifest.model_dump())
 
-    async def get_options_form(self, request_user: RequestUser, question_state: Optional[bytes]) \
+    async def get_options_form(self, request_user: RequestUser, question_state: Optional[str]) \
             -> tuple[OptionsFormDefinition, dict[str, object]]:
-        question_state_str = None if question_state is None else question_state.decode()
-        msg = GetOptionsForm(question_state=question_state_str, request_user=request_user)
+        msg = GetOptionsForm(question_state=question_state, request_user=request_user)
         ret = await self._send_and_wait_response(msg, GetOptionsForm.Response)
         return ret.definition, ret.form_data
 
-    async def create_question_from_options(self, request_user: RequestUser, old_state: Optional[bytes],
+    async def create_question_from_options(self, request_user: RequestUser, old_state: Optional[str],
                                            form_data: dict[str, object]) -> QuestionCreated:
-        question_state_str = None if old_state is None else old_state.decode()
-        msg = CreateQuestionFromOptions(question_state=question_state_str, form_data=form_data,
+        msg = CreateQuestionFromOptions(question_state=old_state, form_data=form_data,
                                         request_user=request_user)
         ret = await self._send_and_wait_response(msg, CreateQuestionFromOptions.Response)
 
