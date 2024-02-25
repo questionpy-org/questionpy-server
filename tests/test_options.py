@@ -3,6 +3,7 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 from io import BytesIO
 from pathlib import Path
+from posixpath import dirname
 
 from aiohttp import FormData
 from aiohttp.test_utils import TestClient
@@ -10,13 +11,13 @@ from questionpy_common.elements import OptionsFormDefinition
 
 from tests.conftest import get_file_hash
 
-PACKAGE = Path('./tests/test_data/package/package_1.qpy')
+PACKAGE = Path(dirname(__file__)) / "test_data" / "package" / "package_1.qpy"
 PACKAGE_HASH = get_file_hash(PACKAGE)
 
 METHOD = 'POST'
 URL = f'packages/{PACKAGE_HASH}/options'
 
-path = Path('./tests/test_data/question_state/')
+path = Path(dirname(__file__)) / "test_data" / "question_state"
 QUESTION_STATE = (path / 'question_state.json').read_text()
 QUESTION_STATE_REQUEST = (path / 'main.json').read_text()
 
