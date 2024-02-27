@@ -24,66 +24,38 @@ psutil = "^5.9.4"
 jinja2 = "^3.1.2"
 
 [tool.poetry.group.dev.dependencies]
-pylint = "^2.17.0"
+types-psutil = "^5.9.5.6"
+tox = "^4.13.0"
+
+[tool.poetry.group.test]
+optional = true
+
+[tool.poetry.group.test.dependencies]
 pytest = "^7.1.2"
 pytest-aiohttp = "^1.0.4"
 pytest-md = "^0.2.0"
-mypy = "^1.1.1"
-flake8 = "^6.0.0"
 coverage = { extras = ["toml"], version = "^7.2.1" }
-tox = "^4.2.6"
-types-psutil = "^5.9.5.6"
+
+[tool.poetry.group.linter]
+dependencies = { ruff = "^0.2.2" }
+optional = true
+
+[tool.poetry.group.type-checker]
+dependencies = { mypy = "^1.1.1" }
+optional = true
+
+[tool.ruff]
+extend = "ruff_defaults.toml"
 
 [tool.pytest.ini_options]
 # https://github.com/pytest-dev/pytest-asyncio#auto-mode
 asyncio_mode = "auto"
-
 
 # This section is read automatically by Coverage.py when its working directory is .
 # https://coverage.readthedocs.io/en/6.5.0/config.html#configuration-reference
 [tool.coverage.run]
 branch = true
 source = ["questionpy_server"]
-
-
-[tool.pylint]
-
-[tool.pylint.MAIN]
-extension-pkg-allow-list = "pydantic"
-fail-on = ["E", "F"]
-fail-under = 8
-
-[tool.pylint.BASIC]
-# Allow these well-known names despite usual naming conventions
-good-names = ["i", "j", "k", "e", "ex", "_"]
-# Allow any name for test methods
-function-rgx = "^test_.+|[a-z0-9_]+$"
-
-[tool.pylint.CLASSES]
-valid-metaclass-classmethod-first-arg = "mcs"
-
-[tool.pylint.DESIGN]
-max-attributes = 15
-max-branches = 15
-
-[tool.pylint.REPORTS]
-output-format = "colorized"
-
-[tool.pylint."MESSAGES CONTROL"]
-disable = [
-    "missing-module-docstring", "missing-class-docstring", "missing-function-docstring",
-    "unused-wildcard-import", "too-few-public-methods",
-]
-enable = ""
-
-[tool.pylint.FORMAT]
-expected-line-ending-format = "LF"
-indent-after-paren = 4
-indent-string = "    "
-max-line-length = 120
-
-[tool.pylint.IMPORTS]
-allow-wildcard-with-all = true
 
 [tool.mypy]
 plugins = "pydantic.mypy"

@@ -5,9 +5,11 @@
 config.ini
 __pycache__
 /dist
+/.vscode
 
 /.mypy_cache
 /.pytest_cache
+/.ruff_cache
 
 /.coverage
 /coverage.xml
