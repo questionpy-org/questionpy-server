@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Optional, Callable, Union, Literal, Any, Generator
 
+from questionpy_common.api.attempt import AttemptScoredModel
 from questionpy_common.api.qtype import BaseQuestionType
 from questionpy_common.environment import Environment, RequestUser, WorkerResourceLimits, OnRequestCallback, \
     get_qpy_environment
@@ -114,7 +115,10 @@ class WorkerManager:
         assert self.question_type
 
         with self._with_request_user(msg.request_user):
-            definition, form_data = self.question_type.get_options_form(msg.question_state)
+            old_question = None
+            if msg.question_state:
+                old_question = self.question_type.create_question_from_state(msg.question_state)
+            definition, form_data = self.question_type.get_options_form(old_question)
 
             return GetOptionsForm.Response(definition=definition, form_data=form_data)
 
@@ -124,10 +128,15 @@ class WorkerManager:
         assert self.question_type
 
         with self._with_request_user(msg.request_user):
-            question = self.question_type.create_question_from_options(msg.question_state, msg.form_data)
+            old_question = None
+            if msg.question_state:
+                old_question = self.question_type.create_question_from_state(msg.question_state)
+            question = self.question_type.create_question_from_options(msg.form_data, old_question)
 
-            return CreateQuestionFromOptions.Response(question_state=question.export_question_state(),
-                                                      question_model=question.export())
+            return CreateQuestionFromOptions.Response(
+                question_state=question.export_question_state(),
+                question_model=question.export()
+            )
 
     def on_msg_start_attempt(self, msg: StartAttempt) -> StartAttempt.Response:
         self._require_init(msg)
@@ -137,7 +146,8 @@ class WorkerManager:
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_state(msg.question_state)
             attempt = question.start_attempt(msg.variant)
-            return StartAttempt.Response(attempt_state=attempt.export_attempt_state(), attempt_model=attempt.export())
+            return StartAttempt.Response(attempt_state=attempt.export_attempt_state(),
+                                         attempt_model=attempt.export())
 
     def on_msg_view_attempt(self, msg: ViewAttempt) -> ViewAttempt.Response:
         self._require_init(msg)
@@ -163,8 +173,14 @@ class WorkerManager:
             question = self.question_type.create_question_from_state(msg.question_state)
             attempt = question.get_attempt(msg.attempt_state, msg.scoring_state, msg.response,
                                            compute_score=True, generate_hint=False)
-            scored_model = attempt.export_scored_attempt()
-            return ScoreAttempt.Response(attempt_scored_model=scored_model)
+            score = attempt.score_response()
+            scoring_state = score.export_scoring_state()
+            model = AttemptScoredModel(
+                scoring_state=scoring_state,
+                scoring_code=score.code, score=score.fraction, classification=score.classification,
+                **attempt.export().model_dump()
+            )
+            return ScoreAttempt.Response(attempt_scored_model=model)
 
     def _require_init(self, msg: MessageToWorker) -> None:
         if not self.worker_type:
