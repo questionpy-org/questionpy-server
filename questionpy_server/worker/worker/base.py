@@ -8,18 +8,18 @@ import logging
 from abc import ABC
 from typing import Optional, Type, TypeVar, Sequence
 
+from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import WorkerResourceLimits, RequestUser
-from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
 
 from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
-from questionpy_server.worker.runtime.package_location import PackageLocation
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer, MessageIds, WorkerError, \
     InitWorker, LoadQPyPackage, Exit, GetQPyPackageManifest, GetOptionsForm, CreateQuestionFromOptions, StartAttempt, \
     ViewAttempt, ScoreAttempt
+from questionpy_server.worker.runtime.package_location import PackageLocation
 from questionpy_server.worker.worker import WorkerState, Worker
 
 log = logging.getLogger(__name__)
