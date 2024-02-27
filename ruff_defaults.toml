@@ -1,0 +1,132 @@
+# Partly based on https://github.com/pypa/hatch/blob/master/ruff_defaults.toml
+
+target-version = "py311"
+line-length = 120
+output-format = "concise"
+preview = true
+
+[format]
+docstring-code-format = true
+docstring-code-line-length = 120
+
+[lint]
+# https://docs.astral.sh/ruff/rules/
+extend-select = [
+  "F",  # pyflakes
+  "E",  # pycodestyle errors
+  "W",  # pycodestyle warnings
+  "PL", # pylint
+
+  # flake8
+  "A",     #   -builtins
+  "ASYNC", #   -async
+  "B",     #   -bugbear
+  "BLE",   #   -blind-except
+  "C4",    #   -comprehensions
+  "COM",   #   -commas
+  "DTZ",   #   -datetimez
+  "EM",    #   -errmsg
+  "EXE",   #   -executable
+  "FA",    #   -future-annotations
+  "FBT",   #   -boolean-trap
+  "G",     #   -logging-format
+  "ICN",   #   -import-conventions
+  "INP",   #   -no-pep420
+  "INT",   #   -gettext
+  "ISC",   #   -implicit-str-concat
+  "LOG",   #   -logging
+  "PIE",   #   -pie
+  "PT",    #   -pytest-style
+  "PYI",   #   -pyi
+  "Q",     #   --quotes
+  "RET",   #   -return
+  "RSE",   #   -raise
+  "S",     #   -bandit
+  "SIM",   #   -simplify
+  "SLOT",  #   -slots
+  "T10",   #   -debugger
+  "T20",   #   -print
+  "TCH",   #   -type-checking
+  "TD004", #   -todos
+  "TD005",
+  "TD006",
+  "TD007",
+  "TID",   #   -tidy-imports
+  "YTT",   #   -2020
+
+  "C90",  # mccabe
+  "D",    # pydocstyle
+  "ERA",  # eradicate
+  "FLY",  # flynt
+  "FURB", # refurb
+  "I",    # isort
+  "N",    # pep8-naming
+  "PERF", # Perflint
+  "PGH",  # pygrep-hooks
+  "RUF",  # Ruff-specific rules
+  "TRY",  # tryceratops
+  "UP",   # pyupgrade
+]
+
+ignore = [
+  # Relax on missing docstrings
+  "D1",
+
+  # conflicting with formatter
+  "W191",
+  "E111",
+  "E114",
+  "E117",
+  "D206",
+  "D300",
+  "Q000",
+  "Q001",
+  "Q002",
+  "Q003",
+  "COM812",
+  "COM819",
+  "ISC001",
+  "ISC002",
+
+  # seems to produce a lot of false positives
+  "PLR6301",
+]
+
+pydocstyle = { convention = "google" }
+
+[lint.per-file-ignores]
+"**/scripts/*" = ["INP001", "T201"]
+"**/tests/**/*" = ["PLC1901", "PLR2004", "S", "TID252", "FBT"]
+
+[lint.pyupgrade]
+# Ensure we can still parse type hints at runtime.
+# - https://docs.astral.sh/ruff/settings/#lint_pyupgrade_keep-runtime-typing
+# - https://github.com/astral-sh/ruff/issues/6617
+keep-runtime-typing = true
+
+[lint.flake8-type-checking]
+# Prevent from being moved into TYPE_CHECKING block as pydantic needs type hints at runtime
+runtime-evaluated-decorators = ["pydantic.validate_call"]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+
+[lint.pep8-naming]
+# Allow Pydantic's `@validator` decorator to trigger class method treatment.
+classmethod-decorators = ["pydantic.validator"]
+
+[lint.flake8-pytest-style]
+fixture-parentheses = false
+mark-parentheses = false
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[lint.isort]
+known-first-party = ["questionpy_common", "questionpy_sdk", "questionpy_server"]
+
+[lint.mccabe]
+max-complexity = 10
+
+[lint.pylint]
+max-args = 10
+max-branches = 15
+max-nested-blocks = 10
