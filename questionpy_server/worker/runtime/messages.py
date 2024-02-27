@@ -1,17 +1,17 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-
+import traceback
 from enum import IntEnum, unique
 from struct import Struct
 from typing import ClassVar, Type, Optional, Any
 
 from pydantic import BaseModel
-from questionpy_common.environment import RequestUser, WorkerResourceLimits
-from questionpy_common.manifest import Manifest
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
 from questionpy_common.api.question import QuestionModel
-from questionpy_common.api.qtype import OptionsFormDefinition
+from questionpy_common.elements import OptionsFormDefinition
+from questionpy_common.environment import RequestUser, WorkerResourceLimits
+from questionpy_common.manifest import Manifest
 
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
@@ -194,6 +194,9 @@ class WorkerError(MessageToServer):
     type: ErrorType
     message: Optional[str]
 
+    original_stacktrace: Optional[str] = None
+    """The original worker-side stacktrace."""
+
     @classmethod
     def from_exception(cls, error: Exception, cause: MessageToWorker) -> "WorkerError":
         """Get a WorkerError message from an exception."""
@@ -201,13 +204,26 @@ class WorkerError(MessageToServer):
             error_type = WorkerError.ErrorType.MEMORY_EXCEEDED
         else:
             error_type = WorkerError.ErrorType.UNKNOWN
-        return WorkerError(type=error_type, message=str(error), expected_response_id=cause.Response.message_id)
+
+        if __debug__:
+            original_stacktrace = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+        else:
+            original_stacktrace = None
+
+        return cls(type=error_type, message=str(error), expected_response_id=cause.Response.message_id,
+                   original_stacktrace=original_stacktrace)
 
     def to_exception(self) -> Exception:
         """Get an exception from a WorkerError message."""
+        message = self.message
+        if __debug__ and self.original_stacktrace:
+            # add_note (PEP 678) will be great for this when we're on Python 3.11.
+            note = f"The original worker-side stacktrace follows:\n{self.original_stacktrace}"
+            message = message + "\n" + note if message else note
+
         if self.type == WorkerError.ErrorType.MEMORY_EXCEEDED:
-            return WorkerMemoryLimitExceededError(self.message)
-        return WorkerUnknownError(self.message)
+            return WorkerMemoryLimitExceededError(message)
+        return WorkerUnknownError(message)
 
 
 def get_message_bytes(message: Message) -> tuple[bytes, Optional[bytes]]:
