@@ -11,7 +11,6 @@ from pydantic import HttpUrl
 
 from questionpy_server import WorkerPool
 from questionpy_server.cache import FileLimitLRU
-from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
@@ -19,6 +18,7 @@ from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.utils.manifest import SemVer
 
 if TYPE_CHECKING:
+    from questionpy_server.collector.abc import BaseCollector
     from questionpy_server.package import Package
     from questionpy_server.web import HashContainer
 

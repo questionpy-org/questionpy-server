@@ -6,9 +6,8 @@ import asyncio
 import logging
 import sys
 from asyncio import StreamReader
-from asyncio.subprocess import Process
 from collections.abc import Sequence
-from typing import TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 import psutil
 from pydantic import ByteSize
@@ -21,6 +20,9 @@ from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStar
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
 from questionpy_server.worker.runtime.package_location import PackageLocation
 from questionpy_server.worker.worker.base import BaseWorker
+
+if TYPE_CHECKING:
+    from asyncio.subprocess import Process
 
 log = logging.getLogger(__name__)
 _T = TypeVar("_T", bound=MessageToServer)

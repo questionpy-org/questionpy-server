@@ -13,7 +13,6 @@ from questionpy_server.decorators import ensure_package_and_question_state_exist
 from questionpy_server.package import Package
 from questionpy_server.web import json_response
 from questionpy_server.worker.runtime.package_location import ZipPackageLocation
-from questionpy_server.worker.worker import Worker
 
 from .models import (
     AttemptScoreArguments,
@@ -28,6 +27,7 @@ from .models import (
 
 if TYPE_CHECKING:
     from questionpy_server.app import QPyServer
+    from questionpy_server.worker.worker import Worker
 
 routes = web.RouteTableDef()
 

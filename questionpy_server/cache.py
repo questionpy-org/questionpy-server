@@ -5,11 +5,13 @@
 import logging
 from asyncio import Lock, to_thread
 from collections import OrderedDict
-from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 from pydantic import ByteSize
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 
 class File(NamedTuple):
