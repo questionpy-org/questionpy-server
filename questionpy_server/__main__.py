@@ -20,7 +20,7 @@ _DEFAULT_CONFIG_FILES = (
 def update_logging(level: str) -> None:
     if level == "NONE":
         logging.disable()
-    elif level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+    elif level in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
         logging.getLogger().setLevel(level)
 
 
