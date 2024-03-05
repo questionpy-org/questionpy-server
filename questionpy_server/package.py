@@ -2,6 +2,7 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
+import contextlib
 from pathlib import Path
 
 from questionpy_server.api.models import PackageInfo
@@ -40,7 +41,8 @@ class PackageSources:
         elif isinstance(collector, LMSCollector):
             self._lms_collector = collector
         else:
-            raise TypeError(f"Invalid collector type: {type(collector)}")
+            msg = f"Invalid collector type: {type(collector)}"
+            raise TypeError(msg)
 
     def remove(self, collector: BaseCollector) -> None:
         """Removes a collector from the package sources.
@@ -51,14 +53,13 @@ class PackageSources:
         if isinstance(collector, LocalCollector):
             self._local_collector = None
         elif isinstance(collector, RepoCollector):
-            try:
+            with contextlib.suppress(ValueError):
                 self._repo_collectors.remove(collector)
-            except ValueError:
-                pass
         elif isinstance(collector, LMSCollector):
             self._lms_collector = None
         else:
-            raise TypeError(f"Invalid collector type: {type(collector)}")
+            msg = f"Invalid collector type: {type(collector)}"
+            raise TypeError(msg)
 
     async def get_path(self) -> Path:
         """Returns the path to the package.

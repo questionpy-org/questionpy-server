@@ -67,7 +67,7 @@ def get_file_count(directory: Path) -> int:
     Returns:
         count of files in directory
     """
-    return len(list(file for file in directory.iterdir() if file.is_file()))
+    return len([file for file in directory.iterdir() if file.is_file()])
 
 
 def get_directory_size(directory: str) -> int:
@@ -206,9 +206,8 @@ async def test_put(cache: FileLimitLRU, settings: Settings) -> None:
     assert get_file_count(settings.cache.directory) == 1
 
     # Partially written file raises error.
-    with patch("questionpy_server.cache.Path.write_bytes", return_value=-1):
-        with pytest.raises(IOError):
-            await cache.put("B", b".")
+    with patch("questionpy_server.cache.Path.write_bytes", return_value=-1), pytest.raises(IOError):
+        await cache.put("B", b".")
 
     # Delete every file in directory.
     for filepath in Path(settings.cache.directory).iterdir():

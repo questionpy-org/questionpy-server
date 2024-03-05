@@ -41,7 +41,7 @@ async def test_update_downloads_packages_only_on_newer_package_index() -> None:
 
 
 @pytest.mark.parametrize(
-    "first_update, second_update",
+    ("first_update", "second_update"),
     [
         ([], []),
         (["a"], []),

@@ -95,7 +95,7 @@ class SubprocessWorker(BaseWorker):
         )
 
         if self._proc.stdout is None or self._proc.stderr is None or self._proc.stdin is None:
-            raise WorkerStartError()
+            raise WorkerStartError
 
         self._stderr_buffer = _StderrBuffer(self._proc.stderr)
         self._connection = ServerToWorkerConnection(self._proc.stdout, self._proc.stdin)

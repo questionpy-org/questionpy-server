@@ -170,4 +170,5 @@ def load_package(location: PackageLocation) -> ImportablePackage:
     if isinstance(location, FunctionPackageLocation):
         return FunctionBasedPackage(location.module_name, location.function_name, location.manifest)
 
-    raise ValueError(f"Unknown package location: '{location}'")
+    msg = f"Unknown package location: '{location}'"
+    raise ValueError(msg)
