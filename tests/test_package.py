@@ -3,7 +3,6 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from io import BytesIO
-from typing import List
 
 from aiohttp import FormData
 from aiohttp.test_utils import TestClient
@@ -18,7 +17,7 @@ async def test_packages(client: TestClient) -> None:
 
     assert res.status == 200
     data = await res.json()
-    TypeAdapter(List[PackageInfo]).validate_python(data)
+    TypeAdapter(list[PackageInfo]).validate_python(data)
 
 
 async def test_extract_info(client: TestClient) -> None:

@@ -3,7 +3,8 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 import logging
-from typing import MutableMapping, Any
+from collections.abc import MutableMapping
+from typing import Any
 
 
 class URLAdapter(logging.LoggerAdapter):

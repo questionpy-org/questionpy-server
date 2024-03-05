@@ -3,44 +3,40 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 import functools
+from collections.abc import Callable, Sequence
 from hashlib import sha256
 from io import BytesIO
-from json import loads, JSONDecodeError
+from json import JSONDecodeError, loads
 from typing import (
-    Optional,
-    Union,
-    Callable,
-    Any,
-    cast,
-    Type,
     TYPE_CHECKING,
-    overload,
+    Any,
     Literal,
     NamedTuple,
-    Sequence,
+    cast,
     get_type_hints,
+    overload,
 )
 
 from aiohttp import BodyPartReader
 from aiohttp.abc import Request
 from aiohttp.log import web_logger
-from aiohttp.web_exceptions import HTTPBadRequest, HTTPRequestEntityTooLarge, HTTPNotFound, HTTPUnsupportedMediaType
+from aiohttp.web_exceptions import HTTPBadRequest, HTTPNotFound, HTTPRequestEntityTooLarge, HTTPUnsupportedMediaType
 from aiohttp.web_response import Response
 from pydantic import BaseModel, ValidationError
+
 from questionpy_common import constants
 from questionpy_common.constants import KiB
-
-from questionpy_server.api.models import NotFoundStatus, NotFoundStatusWhat, MainBaseModel
+from questionpy_server.api.models import MainBaseModel, NotFoundStatus, NotFoundStatusWhat
 from questionpy_server.cache import SizeError
 from questionpy_server.collector import PackageCollection
 from questionpy_server.package import Package
-from questionpy_server.types import RouteHandler, M
+from questionpy_server.types import M, RouteHandler
 
 if TYPE_CHECKING:
     from questionpy_server.app import QPyServer
 
 
-def json_response(data: Union[Sequence[BaseModel], BaseModel], status: int = 200) -> Response:
+def json_response(data: Sequence[BaseModel] | BaseModel, status: int = 200) -> Response:
     """Creates a json response from a single BaseModel or a list of BaseModels.
 
     Args:
@@ -50,14 +46,13 @@ def json_response(data: Union[Sequence[BaseModel], BaseModel], status: int = 200
     Returns:
         Response: A response object.
     """
-
     if isinstance(data, Sequence):
         json_list = f'[{",".join(x.json() for x in data)}]'
         return Response(text=json_list, status=status, content_type="application/json")
     return Response(text=data.model_dump_json(), status=status, content_type="application/json")
 
 
-def create_model_from_json(json: Union[object, str], param_class: Type[M]) -> M:
+def create_model_from_json(json: object | str, param_class: type[M]) -> M:
     """Creates a BaseModel from an object.
 
     Args:
@@ -67,7 +62,6 @@ def create_model_from_json(json: Union[object, str], param_class: Type[M]) -> M:
     Returns:
         M: BaseModel
     """
-
     try:
         if isinstance(json, str):
             json = loads(json)
@@ -94,7 +88,7 @@ async def read_part(part: BodyPartReader, max_size: int, calculate_hash: Literal
 async def read_part(part: BodyPartReader, max_size: int, calculate_hash: Literal[False]) -> bytes: ...
 
 
-async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = False) -> Union[HashContainer, bytes]:
+async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = False) -> HashContainer | bytes:
     """Reads a body part of a multipart/form-data request.
 
     Args:
@@ -105,7 +99,6 @@ async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = 
     Returns:
         body part or tuple of body part and its hash
     """
-
     buffer = BytesIO()
     hash_object = sha256()
 
@@ -131,7 +124,7 @@ async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = 
     return buffer.getvalue()
 
 
-async def parse_form_data(request: Request) -> tuple[Optional[bytes], Optional[HashContainer], Optional[bytes]]:
+async def parse_form_data(request: Request) -> tuple[bytes | None, HashContainer | None, bytes | None]:
     """Parses a multipart/form-data request.
 
     Args:
@@ -140,7 +133,6 @@ async def parse_form_data(request: Request) -> tuple[Optional[bytes], Optional[H
     Returns:
         tuple of main field, package, and question state
     """
-
     server: "QPyServer" = request.app["qpy_server_app"]
     main = package = question_state = None
 
@@ -160,8 +152,8 @@ async def parse_form_data(request: Request) -> tuple[Optional[bytes], Optional[H
 
 
 async def get_or_save_package(
-    collection: PackageCollection, hash_value: str, container: Optional[HashContainer]
-) -> Optional[Package]:
+    collection: PackageCollection, hash_value: str, container: HashContainer | None
+) -> Package | None:
     """Gets a package from or saves it in the package collection.
 
     Args:
@@ -172,7 +164,6 @@ async def get_or_save_package(
     Returns:
         package
     """
-
     try:
         if not container:
             package = collection.get(hash_value)
@@ -188,8 +179,8 @@ async def get_or_save_package(
 
 
 def ensure_package_and_question_state_exist(
-    _func: Optional[RouteHandler] = None,
-) -> Union[RouteHandler, Callable[[RouteHandler], RouteHandler]]:
+    _func: RouteHandler | None = None,
+) -> RouteHandler | Callable[[RouteHandler], RouteHandler]:
     """Decorator function used to ensure that the package and question state exist (if needed by func) and that the json
     corresponds to the model given as a type annotation in func.
 
@@ -206,12 +197,11 @@ def ensure_package_and_question_state_exist(
 
     def decorator(function: RouteHandler) -> RouteHandler:
         """Internal decorator function."""
-
         type_hints = get_type_hints(function)
         question_state_type = type_hints.get("question_state")
         takes_question_state = question_state_type is not None
         require_question_state = question_state_type is bytes
-        main_part_json_model: Optional[Type[MainBaseModel]] = type_hints.get("data")
+        main_part_json_model: type[MainBaseModel] | None = type_hints.get("data")
 
         if main_part_json_model:
             assert issubclass(
@@ -221,7 +211,6 @@ def ensure_package_and_question_state_exist(
         @functools.wraps(function)
         async def wrapper(request: Request, *args: Any, **kwargs: Any) -> Any:
             """Wrapper around the actual function call."""
-
             server: "QPyServer" = request.app["qpy_server_app"]
             package_hash: str = request.match_info.get("package_hash", "")
 

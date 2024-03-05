@@ -1,12 +1,12 @@
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Literal, Union, Annotated
+from typing import Annotated, Literal, TypeAlias
 
 from pydantic import Field
+
 from questionpy_common.environment import PackageInitFunction
 from questionpy_common.manifest import Manifest
-from typing_extensions import TypeAlias
 
 
 @dataclass
@@ -63,7 +63,7 @@ class FunctionPackageLocation:
 
     kind: Literal["module"] = field(default="module", init=False)
 
-    def __init__(self, module_name: str, function_name: str = "init", manifest: Optional[Manifest] = None) -> None:
+    def __init__(self, module_name: str, function_name: str = "init", manifest: Manifest | None = None) -> None:
         if not manifest:
             manifest = Manifest(
                 short_name=function_name,
@@ -82,10 +82,9 @@ class FunctionPackageLocation:
 
     @classmethod
     def from_function(
-        cls, function: PackageInitFunction, manifest: Optional[Manifest] = None
+        cls, function: PackageInitFunction, manifest: Manifest | None = None
     ) -> "FunctionPackageLocation":
         """Get the module and name of the function and create a :class:`FunctionPackageLocation` targeting it."""
-
         if not hasattr(function, "__module__") or not hasattr(function, "__name__"):
             raise ValueError(f"Callable '{function}' is missing __module__ or __name__ attribute")
 
@@ -99,7 +98,7 @@ class FunctionPackageLocation:
 
 
 PackageLocation: TypeAlias = Annotated[
-    Union[ZipPackageLocation, DirPackageLocation, FunctionPackageLocation], Field(discriminator="kind")
+    ZipPackageLocation | DirPackageLocation | FunctionPackageLocation, Field(discriminator="kind")
 ]
 """Identifies how to load a package.
 

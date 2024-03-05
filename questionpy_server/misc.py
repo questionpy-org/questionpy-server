@@ -4,12 +4,11 @@
 
 from hashlib import sha256
 from pathlib import Path
-from typing import Union
 
 from questionpy_common.constants import MiB
 
 
-def calculate_hash(source: Union[bytes, Path]) -> str:
+def calculate_hash(source: bytes | Path) -> str:
     """Calculates the sha256 of either bytes or a file.
 
     Args:

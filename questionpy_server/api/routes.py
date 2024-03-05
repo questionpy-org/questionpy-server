@@ -2,18 +2,21 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPMethodNotAllowed, HTTPNotFound
+
 from questionpy_common.environment import RequestUser
 from questionpy_server import __version__
 from questionpy_server.web import ensure_package_and_question_state_exist, json_response
 from questionpy_server.worker.runtime.package_location import ZipPackageLocation
 
+from ..package import Package
+from ..worker.worker import Worker
 from .models import (
-    AttemptStartArguments,
     AttemptScoreArguments,
+    AttemptStartArguments,
     AttemptViewArguments,
     QuestionCreateArguments,
     QuestionEditFormResponse,
@@ -21,8 +24,6 @@ from .models import (
     ServerStatus,
     Usage,
 )
-from ..package import Package
-from ..worker.worker import Worker
 
 if TYPE_CHECKING:
     from questionpy_server.app import QPyServer
@@ -55,7 +56,7 @@ async def get_package(request: web.Request) -> web.Response:
 @ensure_package_and_question_state_exist
 # pylint: disable=unused-argument
 async def post_options(
-    request: web.Request, package: Package, question_state: Optional[bytes], data: RequestBaseData
+    request: web.Request, package: Package, question_state: bytes | None, data: RequestBaseData
 ) -> web.Response:
     """Get the options form definition that allow a question creator to customize a question."""
     qpyserver: "QPyServer" = request.app["qpy_server_app"]
@@ -133,7 +134,7 @@ async def post_attempt_score(
 @routes.post(r"/packages/{package_hash:\w+}/question")  # type: ignore[arg-type]
 @ensure_package_and_question_state_exist
 async def post_question(
-    request: web.Request, data: QuestionCreateArguments, package: Package, question_state: Optional[bytes] = None
+    request: web.Request, data: QuestionCreateArguments, package: Package, question_state: bytes | None = None
 ) -> web.Response:
     qpyserver: "QPyServer" = request.app["qpy_server_app"]
 

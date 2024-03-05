@@ -4,15 +4,15 @@
 import traceback
 from enum import IntEnum, unique
 from struct import Struct
-from typing import ClassVar, Type, Optional, Any
+from typing import Any, ClassVar
 
 from pydantic import BaseModel
+
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
+from questionpy_common.api.qtype import OptionsFormDefinition
 from questionpy_common.api.question import QuestionModel
-from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_common.manifest import Manifest
-
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
 messages_header_struct: Struct = Struct("=LL")
@@ -57,13 +57,13 @@ class Message(BaseModel):
     """Message base class."""
 
     message_id: ClassVar[MessageIds]
-    Response: ClassVar[Type["Message"]]
+    Response: ClassVar[type["Message"]]
 
 
 class MessageToWorker(Message):
     """A message from server to worker."""
 
-    types: ClassVar[dict[int, Type["MessageToWorker"]]] = {}
+    types: ClassVar[dict[int, type["MessageToWorker"]]] = {}
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -73,7 +73,7 @@ class MessageToWorker(Message):
 class MessageToServer(Message):
     """A message from worker to server."""
 
-    types: ClassVar[dict[int, Type["MessageToServer"]]] = {}
+    types: ClassVar[dict[int, type["MessageToServer"]]] = {}
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -84,7 +84,7 @@ class InitWorker(MessageToWorker):
     """Give worker some basic information."""
 
     message_id: ClassVar[MessageIds] = MessageIds.INIT_WORKER
-    limits: Optional[WorkerResourceLimits] = None
+    limits: WorkerResourceLimits | None = None
     worker_type: str
 
     class Response(MessageToServer):
@@ -131,7 +131,7 @@ class GetOptionsForm(MessageToWorker):
 
     message_id: ClassVar[MessageIds] = MessageIds.GET_OPTIONS_FORM_DEFINITION
     request_user: RequestUser
-    question_state: Optional[str]
+    question_state: str | None
     """Old question state or ``None`` if the question is new."""
 
     class Response(MessageToServer):
@@ -145,7 +145,7 @@ class GetOptionsForm(MessageToWorker):
 class CreateQuestionFromOptions(MessageToWorker):
     message_id: ClassVar[MessageIds] = MessageIds.CREATE_QUESTION
     request_user: RequestUser
-    question_state: Optional[str]
+    question_state: str | None
     """Old question state or ``None`` if the question is new."""
     form_data: dict[str, object]
 
@@ -173,8 +173,8 @@ class ViewAttempt(MessageToWorker):
     request_user: RequestUser
     question_state: str
     attempt_state: str
-    scoring_state: Optional[str]
-    response: Optional[dict]
+    scoring_state: str | None
+    response: dict | None
 
     class Response(MessageToServer):
         message_id: ClassVar[MessageIds] = MessageIds.RETURN_VIEW_ATTEMPT
@@ -186,7 +186,7 @@ class ScoreAttempt(MessageToWorker):
     request_user: RequestUser
     question_state: str
     attempt_state: str
-    scoring_state: Optional[str]
+    scoring_state: str | None
     response: dict
 
     class Response(MessageToServer):
@@ -206,9 +206,9 @@ class WorkerError(MessageToServer):
     message_id: ClassVar[MessageIds] = MessageIds.ERROR
     expected_response_id: MessageIds
     type: ErrorType
-    message: Optional[str]
+    message: str | None
 
-    original_stacktrace: Optional[str] = None
+    original_stacktrace: str | None = None
     """The original worker-side stacktrace."""
 
     @classmethod
@@ -224,8 +224,12 @@ class WorkerError(MessageToServer):
         else:
             original_stacktrace = None
 
-        return cls(type=error_type, message=str(error), expected_response_id=cause.Response.message_id,
-                   original_stacktrace=original_stacktrace)
+        return cls(
+            type=error_type,
+            message=str(error),
+            expected_response_id=cause.Response.message_id,
+            original_stacktrace=original_stacktrace,
+        )
 
     def to_exception(self) -> Exception:
         """Get an exception from a WorkerError message."""
@@ -240,7 +244,7 @@ class WorkerError(MessageToServer):
         return WorkerUnknownError(message)
 
 
-def get_message_bytes(message: Message) -> tuple[bytes, Optional[bytes]]:
+def get_message_bytes(message: Message) -> tuple[bytes, bytes | None]:
     json_str = message.model_dump_json()
     json_bytes = None
     message_length = 0

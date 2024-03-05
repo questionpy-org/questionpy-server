@@ -7,14 +7,14 @@ import logging
 import os
 from abc import abstractmethod
 from io import BufferedReader, FileIO
-from typing import Protocol, Optional
+from typing import Protocol
 
 log = logging.getLogger(__name__)
 
 
 class SupportsWrite(Protocol):
     @abstractmethod
-    def write(self, data: bytes) -> Optional[int]:
+    def write(self, data: bytes) -> int | None:
         pass
 
 

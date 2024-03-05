@@ -6,7 +6,8 @@ import asyncio
 import contextlib
 import logging
 from abc import ABC
-from typing import Optional, Sequence, Type, TypeVar
+from collections.abc import Sequence
+from typing import TypeVar
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
 from questionpy_common.elements import OptionsFormDefinition
@@ -30,6 +31,7 @@ from questionpy_server.worker.runtime.messages import (
     ViewAttempt,
     WorkerError,
 )
+from questionpy_server.worker.runtime.package_location import PackageLocation
 from questionpy_server.worker.worker import Worker, WorkerState
 
 log = logging.getLogger(__name__)
@@ -41,12 +43,12 @@ class BaseWorker(Worker, ABC):
 
     _worker_type = "unknown"
 
-    def __init__(self, package: PackageLocation, limits: Optional[WorkerResourceLimits]) -> None:
+    def __init__(self, package: PackageLocation, limits: WorkerResourceLimits | None) -> None:
         super().__init__(package, limits)
 
-        self._observe_task: Optional[asyncio.Task] = None
+        self._observe_task: asyncio.Task | None = None
 
-        self._connection: Optional[ServerToWorkerConnection] = None
+        self._connection: ServerToWorkerConnection | None = None
         self._expected_incoming_messages: list[tuple[MessageIds, asyncio.Future]] = []
 
     async def _initialize(self) -> None:
@@ -76,7 +78,7 @@ class BaseWorker(Worker, ABC):
             raise WorkerNotRunningError()
         self._connection.send_message(message)
 
-    async def _send_and_wait_response(self, message: MessageToWorker, expected_response_message: Type[_T]) -> _T:
+    async def _send_and_wait_response(self, message: MessageToWorker, expected_response_message: type[_T]) -> _T:
         self.send(message)
         fut = asyncio.get_running_loop().create_future()
         self._expected_incoming_messages.append((expected_response_message.message_id, fut))
@@ -150,7 +152,7 @@ class BaseWorker(Worker, ABC):
             try:
                 # wait_for cancels the Observe task when the timeout occurs. The task will kill the process.
                 await asyncio.wait_for(self._observe_task, timeout)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 log.info("Worker was killed because it did not stop gracefully")
 
     async def get_manifest(self) -> ComparableManifest:
@@ -159,14 +161,14 @@ class BaseWorker(Worker, ABC):
         return ComparableManifest(**ret.manifest.model_dump())
 
     async def get_options_form(
-        self, request_user: RequestUser, question_state: Optional[str]
+        self, request_user: RequestUser, question_state: str | None
     ) -> tuple[OptionsFormDefinition, dict[str, object]]:
         msg = GetOptionsForm(question_state=question_state, request_user=request_user)
         ret = await self._send_and_wait_response(msg, GetOptionsForm.Response)
         return ret.definition, ret.form_data
 
     async def create_question_from_options(
-        self, request_user: RequestUser, old_state: Optional[str], form_data: dict[str, object]
+        self, request_user: RequestUser, old_state: str | None, form_data: dict[str, object]
     ) -> QuestionCreated:
         msg = CreateQuestionFromOptions(question_state=old_state, form_data=form_data, request_user=request_user)
         ret = await self._send_and_wait_response(msg, CreateQuestionFromOptions.Response)
@@ -185,8 +187,8 @@ class BaseWorker(Worker, ABC):
         request_user: RequestUser,
         question_state: str,
         attempt_state: str,
-        scoring_state: Optional[str] = None,
-        response: Optional[dict] = None,
+        scoring_state: str | None = None,
+        response: dict | None = None,
     ) -> AttemptModel:
         msg = ViewAttempt(
             question_state=question_state,
@@ -205,7 +207,7 @@ class BaseWorker(Worker, ABC):
         request_user: RequestUser,
         question_state: str,
         attempt_state: str,
-        scoring_state: Optional[str] = None,
+        scoring_state: str | None = None,
         response: dict,
     ) -> AttemptScoredModel:
         msg = ScoreAttempt(

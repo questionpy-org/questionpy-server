@@ -2,16 +2,16 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
-from questionpy_server.worker.runtime.streams import SupportsAsyncRead, SupportsWrite
 from questionpy_server.worker.runtime.connection import send_message
 from questionpy_server.worker.runtime.messages import (
+    InvalidMessageIdError,
     MessageToServer,
     MessageToWorker,
     messages_header_struct,
-    InvalidMessageIdError,
 )
+from questionpy_server.worker.runtime.streams import SupportsAsyncRead, SupportsWrite
 
 
 class ServerToWorkerConnection(AsyncIterator[MessageToServer]):
@@ -30,7 +30,7 @@ class ServerToWorkerConnection(AsyncIterator[MessageToServer]):
     async def receive_message(self) -> MessageToServer:
         """Receive a message from a worker."""
         if self.stream_in_invalid_state:
-            raise ConnectionError()
+            raise ConnectionError
 
         header_bytes = await self.stream_in.readexactly(messages_header_struct.size)
         message_id, length = messages_header_struct.unpack(header_bytes)

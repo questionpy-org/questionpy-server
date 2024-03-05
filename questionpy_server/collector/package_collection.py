@@ -5,7 +5,7 @@
 from asyncio import gather
 from datetime import timedelta
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from pydantic import HttpUrl
 
@@ -19,8 +19,8 @@ from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.utils.manifest import SemVer
 
 if TYPE_CHECKING:
-    from questionpy_server.web import HashContainer
     from questionpy_server.package import Package
+    from questionpy_server.web import HashContainer
 
 
 class PackageCollection:
@@ -28,7 +28,7 @@ class PackageCollection:
 
     def __init__(
         self,
-        local_dir: Optional[Path],
+        local_dir: Path | None,
         repos: dict[HttpUrl, timedelta],
         repo_index_cache: FileLimitLRU,
         package_cache: FileLimitLRU,
@@ -53,7 +53,6 @@ class PackageCollection:
 
     async def start(self) -> None:
         """Starts the package collection."""
-
         # Get every start()-coroutine of the collectors and start them.
         await gather(*[collector.start() for collector in self._collectors])
 
@@ -67,7 +66,6 @@ class PackageCollection:
         not be removed from the index, as it might be still available. Therefore, this function only removes packages
         from the index if they were received by an LMS.
         """
-
         await self._indexer.unregister_package(package_hash, self._lms_collector)
 
     async def put(self, package_container: "HashContainer") -> "Package":
@@ -79,7 +77,6 @@ class PackageCollection:
         Returns:
             package
         """
-
         return await self._lms_collector.put(package_container)
 
     def get(self, package_hash: str) -> "Package":
@@ -91,7 +88,6 @@ class PackageCollection:
         Returns:
           path to the package
         """
-
         # Check if package was indexed
         if package := self._indexer.get_by_hash(package_hash):
             return package
@@ -107,7 +103,6 @@ class PackageCollection:
         Returns:
           dict of packages and versions
         """
-
         return self._indexer.get_by_identifier(identifier)
 
     def get_by_identifier_and_version(self, identifier: str, version: SemVer) -> "Package":
@@ -120,7 +115,6 @@ class PackageCollection:
         Returns:
           package
         """
-
         if package := self._indexer.get_by_identifier_and_version(identifier, version):
             return package
 
@@ -132,5 +126,4 @@ class PackageCollection:
         Returns:
             set of packages
         """
-
         return self._indexer.get_packages()

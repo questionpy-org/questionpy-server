@@ -4,6 +4,7 @@
 
 import sys
 from io import BufferedReader, FileIO, StringIO
+
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
 from questionpy_server.worker.runtime.manager import WorkerManager
 

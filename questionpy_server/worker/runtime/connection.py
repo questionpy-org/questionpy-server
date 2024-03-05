@@ -2,15 +2,15 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from questionpy_server.worker.runtime.streams import SupportsWrite, SupportsRead
 from questionpy_server.worker.runtime.messages import (
+    InvalidMessageIdError,
     Message,
-    get_message_bytes,
     MessageToServer,
     MessageToWorker,
+    get_message_bytes,
     messages_header_struct,
-    InvalidMessageIdError,
 )
+from questionpy_server.worker.runtime.streams import SupportsRead, SupportsWrite
 
 
 def send_message(message: Message, out: SupportsWrite) -> None:
@@ -39,12 +39,12 @@ class WorkerToServerConnection:
     def receive_message(self) -> MessageToWorker:
         """Receive a message from the server."""
         if self.stream_in_invalid_state:
-            raise ConnectionError()
+            raise ConnectionError
 
         header_bytes = self.stream_in.read(messages_header_struct.size)
         if header_bytes is None or len(header_bytes) != messages_header_struct.size:
             self.stream_in_invalid_state = True
-            raise BrokenPipeError()
+            raise BrokenPipeError
 
         message_id, length = messages_header_struct.unpack(header_bytes)
         message_type = MessageToWorker.types.get(message_id, None)
@@ -56,7 +56,7 @@ class WorkerToServerConnection:
             json_data = self.stream_in.read(length)
             if json_data is None or len(json_data) != length:
                 self.stream_in_invalid_state = True
-                raise BrokenPipeError()
+                raise BrokenPipeError
 
             return message_type.model_validate_json(json_data)
 

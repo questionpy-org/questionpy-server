@@ -2,7 +2,8 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from polyfactory.factories.pydantic_factory import ModelFactory
 from semver import Version

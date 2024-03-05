@@ -7,18 +7,19 @@ import logging
 import sys
 from asyncio import StreamReader
 from asyncio.subprocess import Process
-from typing import Optional, Sequence, TypeVar, Type
+from collections.abc import Sequence
+from typing import TypeVar
 
 import psutil
 from pydantic import ByteSize
+
 from questionpy_common.constants import KiB
 from questionpy_common.environment import WorkerResourceLimits
-
 from questionpy_server.worker import WorkerResources
-from questionpy_server.worker.runtime.package_location import PackageLocation
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
+from questionpy_server.worker.runtime.package_location import PackageLocation
 from questionpy_server.worker.worker.base import BaseWorker
 
 log = logging.getLogger(__name__)
@@ -35,11 +36,9 @@ class _StderrBuffer:
         self._skipped_bytes = 0
 
     async def read_stderr(self) -> None:
-        """
-        Read and save data written by the worker to stderr (worker is set up to redirect stdout to stderr).
+        """Read and save data written by the worker to stderr (worker is set up to redirect stdout to stderr).
         Only read up to a certain amount due to security reasons and stderr should not be used besides debugging.
         """
-
         while True:
             space_left = self._max_size - len(self._buffer)
             if space_left == 0:
@@ -74,11 +73,11 @@ class SubprocessWorker(BaseWorker):
 
     _worker_type = "process"
 
-    def __init__(self, package: PackageLocation, limits: Optional[WorkerResourceLimits]):
+    def __init__(self, package: PackageLocation, limits: WorkerResourceLimits | None):
         super().__init__(package, limits)
 
-        self._proc: Optional[Process] = None
-        self._stderr_buffer: Optional[_StderrBuffer] = None
+        self._proc: Process | None = None
+        self._stderr_buffer: _StderrBuffer | None = None
 
     async def start(self) -> None:
         """Start the worker process."""
@@ -107,7 +106,7 @@ class SubprocessWorker(BaseWorker):
             # Whether initialization was successful or not, flush the logs.
             self._stderr_buffer.flush()
 
-    async def _send_and_wait_response(self, message: MessageToWorker, expected_response_message: Type[_T]) -> _T:
+    async def _send_and_wait_response(self, message: MessageToWorker, expected_response_message: type[_T]) -> _T:
         try:
             return await super()._send_and_wait_response(message, expected_response_message)
         finally:
