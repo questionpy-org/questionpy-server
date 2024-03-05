@@ -7,14 +7,13 @@ import contextlib
 import logging
 from abc import ABC
 from collections.abc import Sequence
-from typing import TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
-from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.runtime.messages import (
     CreateQuestionFromOptions,
@@ -33,6 +32,9 @@ from questionpy_server.worker.runtime.messages import (
 )
 from questionpy_server.worker.runtime.package_location import PackageLocation
 from questionpy_server.worker.worker import Worker, WorkerState
+
+if TYPE_CHECKING:
+    from questionpy_server.worker.connection import ServerToWorkerConnection
 
 log = logging.getLogger(__name__)
 _T = TypeVar("_T", bound=MessageToServer)
