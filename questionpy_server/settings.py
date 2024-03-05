@@ -249,7 +249,10 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        assert isinstance(init_settings, InitSettingsSource)
+        if not isinstance(init_settings, InitSettingsSource):
+            msg = "Expected 'init_settings' to be of type InitSettingsSource."
+            raise TypeError(msg)
+
         if "config_files" in init_settings.init_kwargs:
             ini_settings = IniFileSettingsSource(settings_cls, init_settings.init_kwargs["config_files"])
             return init_settings, CustomEnvSettingsSource(settings_cls), ini_settings
