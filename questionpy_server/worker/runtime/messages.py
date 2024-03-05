@@ -248,7 +248,8 @@ def get_message_bytes(message: Message) -> tuple[bytes, bytes | None]:
     json_str = message.model_dump_json()
     json_bytes = None
     message_length = 0
-    if len(json_str) > 2:
+    empty_json_length = 2
+    if len(json_str) > empty_json_length:
         # Only transmit non-empty json objects.
         json_bytes = json_str.encode()
         message_length = len(json_bytes)

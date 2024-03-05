@@ -50,6 +50,9 @@ class RepoPackageVersion(BaseModel):
             return NotImplemented
         return self.version == other.version
 
+    def __hash__(self) -> int:
+        return hash(self.version)
+
 
 class RepoPackageVersions(BaseModel):
     """Represents a package with all its versions in the repository."""
