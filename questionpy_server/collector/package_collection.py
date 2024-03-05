@@ -62,9 +62,10 @@ class PackageCollection:
         await gather(*[collector.stop() for collector in self._collectors])
 
     async def _unregister_package_from_index(self, package_hash: str) -> None:
-        """This function should be called when a package gets removed from the cache. A package from a repository should
-        not be removed from the index, as it might be still available. Therefore, this function only removes packages
-        from the index if they were received by an LMS.
+        """Should be called when a package gets removed from the cache.
+
+        A package from a repository should not be removed from the index, as it might be still available. Therefore,
+        this function only removes packages from the index if they were received by an LMS.
         """
         await self._indexer.unregister_package(package_hash, self._lms_collector)
 

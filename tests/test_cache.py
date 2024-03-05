@@ -2,8 +2,6 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-# pylint: disable=redefined-outer-name, protected-access
-
 from dataclasses import dataclass
 from pathlib import Path
 from string import ascii_lowercase
@@ -206,7 +204,10 @@ async def test_put(cache: FileLimitLRU, settings: Settings) -> None:
     assert get_file_count(settings.cache.directory) == 1
 
     # Partially written file raises error.
-    with patch("questionpy_server.cache.Path.write_bytes", return_value=-1), pytest.raises(IOError):
+    with (
+        patch("questionpy_server.cache.Path.write_bytes", return_value=-1),
+        pytest.raises(IOError, match="Failed to write bytes"),
+    ):
         await cache.put("B", b".")
 
     # Delete every file in directory.

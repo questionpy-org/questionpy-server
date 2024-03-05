@@ -47,7 +47,7 @@ class Indexer:
         """Returns a dict of packages with the given identifier and available versions.
 
         Args:
-          identifier str: identifier of the package
+          identifier (str): identifier of the package
 
         Returns:
           dict of packages and versions
@@ -77,28 +77,21 @@ class Indexer:
     @overload
     async def register_package(
         self, package_hash: str, path_or_manifest: ComparableManifest, source: BaseCollector
-    ) -> Package:
-        """Registers a package in the index.
-
-        Args:
-            package_hash (str): The hash of the package.
-            path_or_manifest (Manifest): The manifest of the package.
-            source (BaseCollector): The source of the package.
-        """
+    ) -> Package: ...
 
     @overload
-    async def register_package(self, package_hash: str, path_or_manifest: Path, source: BaseCollector) -> Package:
-        """Registers a package in the index.
-
-        Args:
-            package_hash (str): The hash of the package.
-            path_or_manifest (Manifest): The manifest of the package.
-            source (BaseCollector): The source of the package.
-        """
+    async def register_package(self, package_hash: str, path_or_manifest: Path, source: BaseCollector) -> Package: ...
 
     async def register_package(
         self, package_hash: str, path_or_manifest: Path | ComparableManifest, source: BaseCollector
     ) -> Package:
+        """Registers a package in the index.
+
+        Args:
+            package_hash (str): The hash of the package.
+            path_or_manifest (Union[Path, ComparableManifest]): The manifest of the package.
+            source (BaseCollector): The source of the package.
+        """
         if not self._lock:
             self._lock = Lock()
 
@@ -139,6 +132,7 @@ class Indexer:
 
     async def unregister_package(self, package_hash: str, source: BaseCollector) -> None:
         """Removes the given source from the package.
+
         If the only left source of the package is an LMS, it will only be
         accessible by its hash.
         If the package has no more sources, it is removed from the index.

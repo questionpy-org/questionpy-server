@@ -9,7 +9,7 @@ from pathlib import Path
 from signal import SIGUSR1
 from typing import TYPE_CHECKING, Any, overload
 
-from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff, EmptyDirectorySnapshot  # type: ignore
+from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff, EmptyDirectorySnapshot
 
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.misc import calculate_hash
@@ -42,26 +42,10 @@ class PathToHash:
         self.hashes.setdefault(package_hash, set()).add(path.resolve())
 
     @overload
-    def get(self, key: Path) -> str | None:
-        """Gets the hash of a package from its path.
-
-        Args:
-            key (Path): The path of the package.
-
-        Returns:
-            The hash of the package.
-        """
+    def get(self, key: Path) -> str | None: ...
 
     @overload
-    def get(self, key: str) -> set[Path] | None:
-        """Gets the paths of a package from its hash.
-
-        Args:
-            key (str): The hash of the package.
-
-        Returns:
-            The paths of the package.
-        """
+    def get(self, key: str) -> set[Path] | None: ...
 
     def get(self, key: str | Path) -> set[Path] | None | str:
         if isinstance(key, Path):
@@ -76,28 +60,23 @@ class PathToHash:
         raise TypeError(msg)
 
     @overload
-    def pop(self, key: Path) -> str | None:
-        """Removes the package with the given path and returns its hash.
-
-        Args:
-            key (Path): The path of the package.
-
-        Returns:
-            The hash of the package.
-        """
+    def pop(self, key: Path) -> str | None: ...
 
     @overload
-    def pop(self, key: str) -> set[Path] | None:
-        """Removes all packages with the given hash and returns their paths.
+    def pop(self, key: str) -> set[Path] | None: ...
+
+    def pop(self, key: Path | str) -> str | set[Path] | None:
+        """Removes package(s) with given path/hash.
+
+        When path is given, remove the package and return hash. When hash is given,
+        remove all matching packages and return their paths.
 
         Args:
-            key (str): The hash of the packages.
+            key (Union[Path, str]): The path or hash of the package(s).
 
         Returns:
-            The paths of the packages.
+            The paths or hash of the package(s).
         """
-
-    def pop(self, key: Path | str) -> str | None | set[Path]:
         if isinstance(key, Path):
             # Get the hash of the package.
             package_hash = self.paths.pop(key, None)
@@ -151,15 +130,17 @@ class LocalCollector(BaseCollector):
         # Remove signal handler.
         get_running_loop().remove_signal_handler(SIGUSR1)
 
-    async def update(self, with_log: bool = True) -> None:
-        """Reflect changes in the directory to the indexer and internal map.
+    # TODO: refactor to reduce complexity
+    async def update(self, *, with_log: bool = True) -> None:  # noqa: C901
+        """Reflects changes in the directory to the indexer and internal map.
 
         Args:
             with_log (bool): Whether to log the changes.
         """
 
         def directory_iterator(directory: str) -> Generator[Path, Any, None]:
-            """Iterates over all packages in the directory.
+            """Iterate over all packages in the directory.
+
             Used as the custom directory iterator for DirectorySnapshot.
 
             Args:

@@ -186,8 +186,9 @@ class CollectorSettings(BaseModel):
 
 
 class CustomEnvSettingsSource(EnvSettingsSource):
-    """Loads settings from environment variables and notifies the user if any environment variables are found which
-    overwrite the settings file.
+    """Load settings from environment variables.
+
+    Notify the user if any environment variables are found which overwrite the settings file.
 
     pydantic-settings v2 tries to parse multi-line ('complex') environment variables as JSON. This subclass overrides
     that behaviour.
@@ -240,7 +241,6 @@ class Settings(BaseSettings):
     config_files: tuple[Path, ...] = ()
 
     @classmethod
-    # pylint: disable=too-many-arguments
     def settings_customise_sources(
         cls,
         settings_cls: type[BaseSettings],

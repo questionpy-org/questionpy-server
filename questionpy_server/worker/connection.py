@@ -3,6 +3,7 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from collections.abc import AsyncIterator
+from typing import Self
 
 from questionpy_server.worker.runtime.connection import send_message
 from questionpy_server.worker.runtime.messages import (
@@ -15,7 +16,6 @@ from questionpy_server.worker.runtime.streams import SupportsAsyncRead, Supports
 
 
 class ServerToWorkerConnection(AsyncIterator[MessageToServer]):
-    # pylint: disable=duplicate-code
     """Controls the connection (stdin/stdout pipes) from the server to a worker."""
 
     def __init__(self, stream_in: SupportsAsyncRead, stream_out: SupportsWrite):
@@ -45,7 +45,7 @@ class ServerToWorkerConnection(AsyncIterator[MessageToServer]):
 
         return message_type()
 
-    def __aiter__(self) -> AsyncIterator[MessageToServer]:
+    def __aiter__(self) -> Self:
         return self
 
     async def __anext__(self) -> MessageToServer:

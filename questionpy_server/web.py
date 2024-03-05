@@ -71,14 +71,14 @@ class HashContainer(NamedTuple):
 
 
 @overload
-async def read_part(part: BodyPartReader, max_size: int, calculate_hash: Literal[True]) -> HashContainer: ...
+async def read_part(part: BodyPartReader, max_size: int, *, calculate_hash: Literal[True]) -> HashContainer: ...
 
 
 @overload
-async def read_part(part: BodyPartReader, max_size: int, calculate_hash: Literal[False]) -> bytes: ...
+async def read_part(part: BodyPartReader, max_size: int, *, calculate_hash: Literal[False]) -> bytes: ...
 
 
-async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = False) -> HashContainer | bytes:
+async def read_part(part: BodyPartReader, max_size: int, *, calculate_hash: bool = False) -> HashContainer | bytes:
     """Reads a body part of a multipart/form-data request.
 
     Args:

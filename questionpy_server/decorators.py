@@ -14,24 +14,27 @@ if TYPE_CHECKING:
     from questionpy_server.app import QPyServer
 
 
-def ensure_package_and_question_state_exist(
+# TODO: refactor to reduce complexity
+def ensure_package_and_question_state_exist(  # noqa: C901
     _func: RouteHandler | None = None,
 ) -> RouteHandler | Callable[[RouteHandler], RouteHandler]:
-    """Decorator function used to ensure that the package and question state exist (if needed by func) and that the json
-    corresponds to the model given as a type annotation in func.
+    """Decorator that ensures package and question state exist.
+
+    Ensures that the package and question state exist (if needed by func) and that the json corresponds to the model
+    given as a type annotation in func.
 
     This decorator assumes that:
-      * func may want an argument named 'data' (with a subclass of MainBaseModel)
-      * func may want an argument named 'question_state' (bytes or Optional[bytes])
-      * every func wants a package with an argument named 'package'
+    * func may want an argument named 'data' (with a subclass of MainBaseModel)
+    * func may want an argument named 'question_state' (bytes or bytes | None)
+    * every func wants a package with an argument named 'package'
 
     Args:
         _func (Optional[RouteHandler]): Control parameter; allows using the decorator with or without arguments.
-            If this decorator is used with any arguments, this will always be the decorated function itself.
-            (Default value = None)
+            If this decorator is used with any arguments, this will always be the decorated function itself. (Default
+            value = None)
     """
 
-    def decorator(function: RouteHandler) -> RouteHandler:
+    def decorator(function: RouteHandler) -> RouteHandler:  # noqa: C901
         """Internal decorator function."""
         type_hints = get_type_hints(function)
         question_state_type = type_hints.get("question_state")

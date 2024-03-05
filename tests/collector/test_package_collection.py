@@ -77,8 +77,8 @@ def test_get_package_by_identifier_and_version() -> None:
 
     # Package does not exist.
     with patch.object(Indexer, "get_by_identifier_and_version", return_value=None) as get_by_identifier_and_version:
+        version = VersionInfo.parse("0.1.0")
         with pytest.raises(FileNotFoundError):
-            version = VersionInfo.parse("0.1.0")
             package_collection.get_by_identifier_and_version("@default/name", version)
         get_by_identifier_and_version.assert_called_once_with("@default/name", version)
 
