@@ -119,7 +119,7 @@ class Indexer:
                 self._index_by_hash[package.hash] = package
 
             # Check if package should be accessible by identifier and version.
-            if isinstance(source, (LocalCollector, RepoCollector)):
+            if isinstance(source, LocalCollector | RepoCollector):
                 package_versions = self._index_by_identifier.setdefault(package.manifest.identifier, {})
                 existing_package = package_versions.get(package.manifest.version, None)
                 if existing_package and existing_package != package:
@@ -154,7 +154,7 @@ class Indexer:
         # Remove source from package.
         package.sources.remove(source)
 
-        if isinstance(source, (LocalCollector, RepoCollector)) and not package.sources.contains_searchable():
+        if isinstance(source, LocalCollector | RepoCollector) and not package.sources.contains_searchable():
             # Package should not be accessible by identifier and version (anymore).
             package_versions = self._index_by_identifier.get(package.manifest.identifier, None)
             if package_versions:

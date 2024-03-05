@@ -1,5 +1,6 @@
 import functools
-from typing import TYPE_CHECKING, Any, Callable, cast, get_type_hints
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, cast, get_type_hints
 
 from aiohttp.abc import Request
 from aiohttp.log import web_logger

@@ -47,7 +47,7 @@ def create_model_from_json(json: object | str, param_class: type[M]) -> M:
 
     Args:
         json (Union[object, str]): object containing the parsed json
-        param_class (Type[M]): BaseModel class
+        param_class (type[M]): BaseModel class
 
     Returns:
         M: BaseModel

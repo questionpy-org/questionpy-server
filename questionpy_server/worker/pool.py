@@ -23,7 +23,7 @@ class WorkerPool:
         Args:
             max_workers (int): maximum number of workers being executed in parallel
             max_memory (int): maximum memory (in bytes) that all workers in the pool are allowed to consume
-            worker_type (Type[Worker]): worker implementation
+            worker_type (type[Worker]): worker implementation
         """
         self.max_workers = max_workers
         self.max_memory = max_memory
