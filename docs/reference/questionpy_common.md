@@ -12,4 +12,4 @@
 
 ::: questionpy_common.manifest
 
-::: questionpy_common.qtype
+::: questionpy_common.api.qtype
