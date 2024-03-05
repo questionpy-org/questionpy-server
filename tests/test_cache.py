@@ -7,7 +7,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from string import ascii_lowercase
-from typing import NamedTuple, List, Tuple
+from typing import NamedTuple
 from unittest.mock import patch
 
 import pytest
@@ -47,14 +47,13 @@ def settings(tmp_path_factory: TempPathFactory) -> Settings:
     )
 
 
-def write_files_to_directory(files: List[Tuple[str, bytes]], directory: Path) -> None:
+def write_files_to_directory(files: list[tuple[str, bytes]], directory: Path) -> None:
     """Writes files onto a specific directory on the filesystem.
 
     Args:
         files (List[Tuple[str, bytes]]): files to be written
         directory (Path): where files should be created
     """
-
     for file, content in files:
         file_path = directory / file
         file_path.write_bytes(content)
@@ -68,7 +67,6 @@ def get_file_count(directory: Path) -> int:
     Returns:
         count of files in directory
     """
-
     return len(list(file for file in directory.iterdir() if file.is_file()))
 
 
@@ -80,7 +78,6 @@ def get_directory_size(directory: str) -> int:
     Returns:
         size of directory
     """
-
     return sum(file.stat().st_size for file in Path(directory).iterdir() if file.is_file())
 
 

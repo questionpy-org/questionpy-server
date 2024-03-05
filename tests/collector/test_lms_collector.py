@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import pytest
 from _pytest.tmpdir import TempPathFactory
-from questionpy_common.constants import KiB, MiB
 
+from questionpy_common.constants import KiB, MiB
 from questionpy_server import WorkerPool
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector.indexer import Indexer
@@ -26,7 +26,6 @@ def create_lms_collector(tmp_path_factory: TempPathFactory) -> tuple[LMSCollecto
     Returns:
         Local collector and cache.
     """
-
     path = tmp_path_factory.mktemp("qpy")
     cache = FileLimitLRU(path, 100 * KiB, extension=".qpy")
     indexer = Indexer(WorkerPool(1, 200 * MiB))

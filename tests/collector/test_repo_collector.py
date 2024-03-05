@@ -4,13 +4,12 @@
 
 from asyncio import sleep
 from datetime import timedelta
-from unittest.mock import Mock, patch, AsyncMock, call
+from unittest.mock import AsyncMock, Mock, call, patch
 
 import pytest
 
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.repository.helper import DownloadError
-
 from tests.test_data.factories import RepoMetaFactory
 
 

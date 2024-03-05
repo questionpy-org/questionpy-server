@@ -3,14 +3,14 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 import logging
-from asyncio import sleep, Task, create_task
+from asyncio import Task, create_task, sleep
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector.abc import CachedCollector
-from questionpy_server.repository import Repository, RepoMeta, RepoPackage
+from questionpy_server.repository import RepoMeta, RepoPackage, Repository
 from questionpy_server.repository.helper import DownloadError
 from questionpy_server.utils.logger import URLAdapter
 
@@ -38,12 +38,12 @@ class RepoCollector(CachedCollector):
         self._url = url
         self._repository = Repository(self._url, repo_index_cache)
 
-        self._meta: Optional[RepoMeta] = None
+        self._meta: RepoMeta | None = None
         self._index: dict[str, RepoPackage] = {}
 
         self._update_interval = update_interval
 
-        self._task: Optional[Task] = None
+        self._task: Task | None = None
 
         logger = logging.getLogger("questionpy-server:repo-collector")
         self._log = URLAdapter(logger, {"url": self._url})

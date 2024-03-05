@@ -7,7 +7,7 @@ from configparser import ConfigParser
 from datetime import timedelta
 from os import environ
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import ValidationError

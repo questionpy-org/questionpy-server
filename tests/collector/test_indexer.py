@@ -4,13 +4,11 @@
 
 import logging
 from pathlib import Path
-from typing import Union
 from unittest.mock import patch
 
 import pytest
 
 from questionpy_common.constants import MiB
-
 from questionpy_server import WorkerPool
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.indexer import Indexer
@@ -25,7 +23,7 @@ from tests.conftest import PACKAGE
 @pytest.mark.parametrize("kind", [PACKAGE.path, PACKAGE.manifest])
 @patch("questionpy_server.collector.lms_collector.LMSCollector", spec=LMSCollector)
 async def test_register_package_with_path_and_manifest(
-    collector: LMSCollector, kind: Union[Path, ComparableManifest]
+    collector: LMSCollector, kind: Path | ComparableManifest
 ) -> None:
     indexer = Indexer(WorkerPool(1, 200 * MiB))
     await indexer.register_package(PACKAGE.hash, kind, collector)

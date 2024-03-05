@@ -11,8 +11,8 @@ from questionpy_server.collector.abc import CachedCollector
 
 if TYPE_CHECKING:
     from questionpy_server.collector.indexer import Indexer
-    from questionpy_server.web import HashContainer
     from questionpy_server.package import Package
+    from questionpy_server.web import HashContainer
 
 
 class LMSCollector(CachedCollector):

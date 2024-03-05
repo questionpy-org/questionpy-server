@@ -3,10 +3,8 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from pathlib import Path
-from typing import Optional
 
 from questionpy_server.api.models import PackageInfo
-
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
@@ -20,9 +18,9 @@ class PackageSources:
     def __init__(self, package: "Package"):
         self._package = package
 
-        self._local_collector: Optional[LocalCollector] = None
+        self._local_collector: LocalCollector | None = None
         self._repo_collectors: list[RepoCollector] = []
-        self._lms_collector: Optional[LMSCollector] = None
+        self._lms_collector: LMSCollector | None = None
 
     def __len__(self) -> int:
         local_collector = 1 if self._local_collector else 0
@@ -35,7 +33,6 @@ class PackageSources:
         Args:
             collector (BaseCollector): The collector to add.
         """
-
         if isinstance(collector, LocalCollector):
             self._local_collector = collector
         elif isinstance(collector, RepoCollector):
@@ -51,7 +48,6 @@ class PackageSources:
         Args:
             collector (BaseCollector): The collector to remove.
         """
-
         if isinstance(collector, LocalCollector):
             self._local_collector = None
         elif isinstance(collector, RepoCollector):
@@ -75,7 +71,6 @@ class PackageSources:
         Returns:
             The path to the package.
         """
-
         if self._local_collector:
             try:
                 return await self._local_collector.get_path(self._package)
@@ -103,15 +98,15 @@ class Package:
 
     sources: PackageSources
 
-    _info: Optional[PackageInfo]
-    _path: Optional[Path]
+    _info: PackageInfo | None
+    _path: Path | None
 
     def __init__(
         self,
         package_hash: str,
         manifest: ComparableManifest,
-        source: Optional[BaseCollector] = None,
-        path: Optional[Path] = None,
+        source: BaseCollector | None = None,
+        path: Path | None = None,
     ):
         self.hash = package_hash
         self.manifest = manifest
@@ -137,7 +132,6 @@ class Package:
         Returns:
             The package info.
         """
-
         if not self._info:
             tmp = self.manifest.model_dump()
             tmp["version"] = str(tmp["version"])
@@ -150,7 +144,6 @@ class Package:
         Returns:
             The path to the package.
         """
-
         if not (self._path and self._path.is_file()):
             self._path = await self.sources.get_path()
         return self._path

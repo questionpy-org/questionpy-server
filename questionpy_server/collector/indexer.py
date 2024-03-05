@@ -5,7 +5,7 @@
 import logging
 from asyncio import Lock
 from pathlib import Path
-from typing import Optional, overload, Union
+from typing import overload
 
 from questionpy_server import WorkerPool
 from questionpy_server.collector.abc import BaseCollector
@@ -30,9 +30,9 @@ class Indexer:
         self._index_by_identifier: dict[str, dict[SemVer, Package]] = {}
         """dict[identifier, dict[version, Package]]"""
 
-        self._lock: Optional[Lock] = None
+        self._lock: Lock | None = None
 
-    def get_by_hash(self, package_hash: str) -> Optional[Package]:
+    def get_by_hash(self, package_hash: str) -> Package | None:
         """Returns the package with the given hash or None if it does not exist.
 
         Args:
@@ -41,7 +41,6 @@ class Indexer:
         Returns:
           The package or None.
         """
-
         return self._index_by_hash.get(package_hash, None)
 
     def get_by_identifier(self, identifier: str) -> dict[SemVer, Package]:
@@ -53,10 +52,9 @@ class Indexer:
         Returns:
           dict of packages and versions
         """
-
         return self._index_by_identifier.get(identifier, {}).copy()
 
-    def get_by_identifier_and_version(self, identifier: str, version: SemVer) -> Optional[Package]:
+    def get_by_identifier_and_version(self, identifier: str, version: SemVer) -> Package | None:
         """Returns the package with the given identifier and version or None if it does not exist.
 
         Args:
@@ -66,7 +64,6 @@ class Indexer:
         Returns:
           The package or None.
         """
-
         return self._index_by_identifier.get(identifier, {}).get(version, None)
 
     def get_packages(self) -> set[Package]:
@@ -75,7 +72,6 @@ class Indexer:
         Returns:
             set of packages
         """
-
         return set(package for packages in self._index_by_identifier.values() for package in packages.values())
 
     @overload
@@ -101,7 +97,7 @@ class Indexer:
         """
 
     async def register_package(
-        self, package_hash: str, path_or_manifest: Union[Path, ComparableManifest], source: BaseCollector
+        self, package_hash: str, path_or_manifest: Path | ComparableManifest, source: BaseCollector
     ) -> Package:
         if not self._lock:
             self._lock = Lock()
@@ -151,7 +147,6 @@ class Indexer:
             package_hash (str): The hash of the package to unregister.
             source (BaseCollector): The source of the package.
         """
-
         package = self._index_by_hash.get(package_hash, None)
         if not package:
             return

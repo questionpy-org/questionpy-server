@@ -7,6 +7,7 @@ from datetime import datetime
 from functools import total_ordering
 
 from pydantic import BaseModel, PositiveInt
+
 from questionpy_server.utils.manifest import ComparableManifest, SemVer
 
 
@@ -82,8 +83,7 @@ class RepoPackage:
 
     @classmethod
     def combine(cls, manifest: ComparableManifest, repo_package_version: RepoPackageVersion) -> "RepoPackage":
-        """
-        Combines the manifest of a package with a specific version of that package.
+        """Combines the manifest of a package with a specific version of that package.
 
         Args:
             manifest: manifest of the most recent version of the package

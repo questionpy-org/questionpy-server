@@ -5,17 +5,17 @@
 # pylint: disable=redefined-outer-name
 import logging
 from gzip import compress
-from unittest.mock import patch, Mock, ANY
+from unittest.mock import ANY, Mock, patch
 from urllib.parse import urljoin
 
 import pytest
 from _pytest.tmpdir import TempPathFactory
-from questionpy_common.constants import KiB
 
+from questionpy_common.constants import KiB
 from questionpy_server.cache import FileLimitLRU, SizeError
-from questionpy_server.repository import Repository, RepoMeta, RepoPackage, RepoPackageIndex
+from questionpy_server.repository import RepoMeta, RepoPackage, RepoPackageIndex, Repository
 from questionpy_server.utils.manifest import ComparableManifest
-from tests.test_data.factories import RepoMetaFactory, RepoPackageVersionsFactory, ManifestFactory
+from tests.test_data.factories import ManifestFactory, RepoMetaFactory, RepoPackageVersionsFactory
 
 REPO_URL = "https://example.com/repo/"
 REPO_PACKAGE_VERSIONS_0 = RepoPackageVersionsFactory.build(

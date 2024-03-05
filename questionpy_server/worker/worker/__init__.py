@@ -4,16 +4,15 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import WorkerResourceLimits, RequestUser
-
+from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import WorkerResources
-from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer
+from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
 _T = TypeVar("_T", bound=MessageToServer)
@@ -29,7 +28,7 @@ class WorkerState(Enum):
 class Worker(ABC):
     """Interface for worker implementations."""
 
-    def __init__(self, package: PackageLocation, limits: Optional[WorkerResourceLimits]) -> None:
+    def __init__(self, package: PackageLocation, limits: WorkerResourceLimits | None) -> None:
         self.package = package
         self.limits = limits
         self.state = WorkerState.NOT_RUNNING
@@ -60,7 +59,7 @@ class Worker(ABC):
         """Send a message to the worker."""
 
     @abstractmethod
-    async def get_resource_usage(self) -> Optional[WorkerResources]:
+    async def get_resource_usage(self) -> WorkerResources | None:
         """Get the worker's current resource usage. If unknown or unsupported, return None."""
 
     @abstractmethod
@@ -69,7 +68,7 @@ class Worker(ABC):
 
     @abstractmethod
     async def get_options_form(
-        self, request_user: RequestUser, question_state: Optional[str]
+        self, request_user: RequestUser, question_state: str | None
     ) -> tuple[OptionsFormDefinition, dict[str, object]]:
         """Get the form used to create a new or edit an existing question.
 
@@ -83,7 +82,7 @@ class Worker(ABC):
 
     @abstractmethod
     async def create_question_from_options(
-        self, request_user: RequestUser, old_state: Optional[str], form_data: dict[str, object]
+        self, request_user: RequestUser, old_state: str | None, form_data: dict[str, object]
     ) -> QuestionCreated:
         """Create or update the question (state) with the form data from a submitted question edit form.
 
@@ -116,8 +115,8 @@ class Worker(ABC):
         request_user: RequestUser,
         question_state: str,
         attempt_state: str,
-        scoring_state: Optional[str] = None,
-        response: Optional[dict] = None,
+        scoring_state: str | None = None,
+        response: dict | None = None,
     ) -> AttemptModel:
         """Create an attempt object for a previously started attempt.
 
@@ -140,7 +139,7 @@ class Worker(ABC):
         request_user: RequestUser,
         question_state: str,
         attempt_state: str,
-        scoring_state: Optional[str] = None,
+        scoring_state: str | None = None,
         response: dict,
     ) -> AttemptScoredModel:
         """"""

@@ -3,12 +3,13 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 import logging
-from asyncio import to_thread, get_running_loop, create_task, Lock
+from asyncio import Lock, create_task, get_running_loop, to_thread
+from collections.abc import Generator
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, overload, Union, Generator, Any
 from signal import SIGUSR1
+from typing import TYPE_CHECKING, Any, overload
 
-from watchdog.utils.dirsnapshot import DirectorySnapshot, EmptyDirectorySnapshot, DirectorySnapshotDiff  # type: ignore
+from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff, EmptyDirectorySnapshot  # type: ignore
 
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.misc import calculate_hash
@@ -37,12 +38,11 @@ class PathToHash:
             package_hash (str): The package hash.
             path (Path): The path.
         """
-
         self.paths[path] = package_hash
         self.hashes.setdefault(package_hash, set()).add(path.resolve())
 
     @overload
-    def get(self, key: Path) -> Optional[str]:
+    def get(self, key: Path) -> str | None:
         """Gets the hash of a package from its path.
 
         Args:
@@ -53,7 +53,7 @@ class PathToHash:
         """
 
     @overload
-    def get(self, key: str) -> Optional[set[Path]]:
+    def get(self, key: str) -> set[Path] | None:
         """Gets the paths of a package from its hash.
 
         Args:
@@ -63,7 +63,7 @@ class PathToHash:
             The paths of the package.
         """
 
-    def get(self, key: Union[str, Path]) -> Union[Optional[set[Path]], Optional[str]]:
+    def get(self, key: str | Path) -> set[Path] | None | str:
         if isinstance(key, Path):
             return self.paths.get(key)
 
@@ -75,7 +75,7 @@ class PathToHash:
         raise TypeError(f"Expected Path or str, got {type(key)}")
 
     @overload
-    def pop(self, key: Path) -> Optional[str]:
+    def pop(self, key: Path) -> str | None:
         """Removes the package with the given path and returns its hash.
 
         Args:
@@ -86,7 +86,7 @@ class PathToHash:
         """
 
     @overload
-    def pop(self, key: str) -> Optional[set[Path]]:
+    def pop(self, key: str) -> set[Path] | None:
         """Removes all packages with the given hash and returns their paths.
 
         Args:
@@ -96,7 +96,7 @@ class PathToHash:
             The paths of the packages.
         """
 
-    def pop(self, key: Union[Path, str]) -> Union[Optional[str], Optional[set[Path]]]:
+    def pop(self, key: Path | str) -> str | None | set[Path]:
         if isinstance(key, Path):
             # Get the hash of the package.
             package_hash = self.paths.pop(key, None)
@@ -131,8 +131,8 @@ class LocalCollector(BaseCollector):
         self.directory: Path = directory
         self.map: PathToHash = PathToHash()
 
-        self._lock: Optional[Lock] = None
-        self._snapshot: Optional[DirectorySnapshot] = None
+        self._lock: Lock | None = None
+        self._snapshot: DirectorySnapshot | None = None
         self._log = logging.getLogger("questionpy-server:local-collector")
 
     async def start(self) -> None:
@@ -166,7 +166,6 @@ class LocalCollector(BaseCollector):
             Returns:
                 A generator of paths.
             """
-
             for file in Path(directory).glob("*.qpy"):
                 if file.is_file():
                     yield file
@@ -178,7 +177,6 @@ class LocalCollector(BaseCollector):
                 pkg_hash (str): The hash of the package.
                 pkg_path (Path): The path of the package.
             """
-
             self.map.insert(pkg_hash, pkg_path)
             await self.indexer.register_package(pkg_hash, pkg_path, self)
 
@@ -188,7 +186,6 @@ class LocalCollector(BaseCollector):
             Args:
                 pkg_path (Path): The path of the package.
             """
-
             if not (pkg_hash := self.map.pop(pkg_path)):
                 return
             if not (packages := self.map.get(pkg_hash)) or len(packages) == 0:

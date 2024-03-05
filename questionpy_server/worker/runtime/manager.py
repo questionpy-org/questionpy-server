@@ -4,46 +4,46 @@
 
 import resource
 import warnings
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Optional, Callable, Union, Literal, Any, Generator
+from typing import Any, Literal
 
 from questionpy_common.api.qtype import BaseQuestionType
 from questionpy_common.environment import (
     Environment,
+    OnRequestCallback,
     RequestUser,
     WorkerResourceLimits,
-    OnRequestCallback,
     get_qpy_environment,
 )
-
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
 from questionpy_server.worker.runtime.messages import (
-    MessageToServer,
-    MessageIds,
-    LoadQPyPackage,
-    GetQPyPackageManifest,
-    GetOptionsForm,
     CreateQuestionFromOptions,
-    InitWorker,
     Exit,
-    WorkerError,
-    StartAttempt,
-    ViewAttempt,
+    GetOptionsForm,
+    GetQPyPackageManifest,
+    InitWorker,
+    LoadQPyPackage,
+    MessageIds,
+    MessageToServer,
     MessageToWorker,
     ScoreAttempt,
+    StartAttempt,
+    ViewAttempt,
+    WorkerError,
 )
 from questionpy_server.worker.runtime.package import ImportablePackage, load_package
 
 
 @dataclass
 class EnvironmentImpl(Environment):
-    type: Union[Literal["process", "thread", "container"], str]
+    type: Literal["process", "thread", "container"] | str
     main_package: ImportablePackage
     packages: dict[str, ImportablePackage]
     _on_request_callbacks: list[OnRequestCallback]
-    request_user: Optional[RequestUser] = None
-    limits: Optional[WorkerResourceLimits] = None
+    request_user: RequestUser | None = None
+    limits: WorkerResourceLimits | None = None
 
     def register_on_request_callback(self, callback: OnRequestCallback) -> None:
         self._on_request_callbacks.append(callback)
@@ -51,12 +51,12 @@ class EnvironmentImpl(Environment):
 
 class WorkerManager:
     def __init__(self, server_connection: WorkerToServerConnection):
-        self.worker_type: Optional[str] = None
+        self.worker_type: str | None = None
         self.server_connection: WorkerToServerConnection = server_connection
-        self.limits: Optional[WorkerResourceLimits] = None
+        self.limits: WorkerResourceLimits | None = None
         self.loaded_packages: dict[str, ImportablePackage] = {}
-        self.main_package: Optional[ImportablePackage] = None
-        self.question_type: Optional[BaseQuestionType] = None
+        self.main_package: ImportablePackage | None = None
+        self.question_type: BaseQuestionType | None = None
         self.message_dispatch: dict[MessageIds, Callable[[Any], MessageToServer]] = {
             LoadQPyPackage.message_id: self.on_msg_load_qpy_package,
             GetQPyPackageManifest.message_id: self.on_msg_get_qpy_package_manifest,

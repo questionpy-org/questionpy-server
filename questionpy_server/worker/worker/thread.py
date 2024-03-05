@@ -7,16 +7,15 @@ import itertools
 import logging
 import threading
 from asyncio import Task
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 from questionpy_common.environment import WorkerResourceLimits
-
-from questionpy_server.worker.runtime.streams import DuplexPipe, AsyncReadAdapter
-from questionpy_server.worker.runtime.package_location import PackageLocation
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
 from questionpy_server.worker.runtime.manager import WorkerManager
+from questionpy_server.worker.runtime.package_location import PackageLocation
+from questionpy_server.worker.runtime.streams import AsyncReadAdapter, DuplexPipe
 from questionpy_server.worker.worker.base import BaseWorker
 
 log = logging.getLogger(__name__)
@@ -54,12 +53,12 @@ class ThreadWorker(BaseWorker):
 
     _worker_type = "thread"
 
-    def __init__(self, package: PackageLocation, limits: Optional[WorkerResourceLimits]) -> None:
+    def __init__(self, package: PackageLocation, limits: WorkerResourceLimits | None) -> None:
         super().__init__(package, limits)
 
-        self._pipe: Optional[DuplexPipe] = None
+        self._pipe: DuplexPipe | None = None
 
-        self._task: Optional[Task] = None
+        self._task: Task | None = None
 
     async def _run_and_wait(self, thread: _WorkerThread) -> None:
         try:

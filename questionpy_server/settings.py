@@ -7,19 +7,20 @@ from configparser import ConfigParser
 from datetime import timedelta
 from pathlib import Path
 from pydoc import locate
-from typing import Any, Optional, Type, Literal, Union, Final, ClassVar
+from typing import Any, ClassVar, Final, Literal
 
-from pydantic import field_validator, BaseModel, DirectoryPath, ByteSize, HttpUrl, ValidationInfo
+from pydantic import BaseModel, ByteSize, DirectoryPath, HttpUrl, ValidationInfo, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import (
     BaseSettings,
-    InitSettingsSource,
     EnvSettingsSource,
+    InitSettingsSource,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
 )
-from questionpy_common.constants import MAX_PACKAGE_SIZE, MiB
 
+from questionpy_common.constants import MAX_PACKAGE_SIZE, MiB
+from questionpy_server.types import WorkerType
 from questionpy_server.worker.worker import Worker
 from questionpy_server.worker.worker.subprocess import SubprocessWorker
 
@@ -81,14 +82,14 @@ class WebserviceSettings(BaseModel):
 
 
 class WorkerSettings(BaseModel):
-    type: Type[Worker] = SubprocessWorker
+    type: WorkerType = SubprocessWorker
     """Fully qualified name of the worker class or the class itself (for the default)."""
     max_workers: int = 8
     max_memory: ByteSize = ByteSize(500 * MiB)
 
     @field_validator("type", mode="before")
     @classmethod
-    def _load_worker_class(cls, value: object) -> Type[Worker]:
+    def _load_worker_class(cls, value: object) -> WorkerType:
         if isinstance(value, str):
             value = locate(value)
 
@@ -119,13 +120,13 @@ class RepoIndexCacheSettings(BaseModel):
 
 
 class CollectorSettings(BaseModel):
-    local_directory: Optional[DirectoryPath] = None
+    local_directory: DirectoryPath | None = None
     repository_default_interval: timedelta = timedelta(hours=1, minutes=30)
     repositories: dict[HttpUrl, timedelta] = {}
 
     @field_validator("local_directory")
     @classmethod
-    def transform_to_path(cls, value: Optional[DirectoryPath]) -> Optional[DirectoryPath]:
+    def transform_to_path(cls, value: DirectoryPath | None) -> DirectoryPath | None:
         if value is None or value == Path(""):
             return None
         return value.resolve()
@@ -139,8 +140,8 @@ class CollectorSettings(BaseModel):
 
     @field_validator("repositories", mode="before")
     @classmethod
-    def transform_to_set_of_repositories(cls, value: str, info: ValidationInfo) -> dict[str, Union[str, timedelta]]:
-        repositories: dict[str, Union[str, timedelta]] = {}
+    def transform_to_set_of_repositories(cls, value: str, info: ValidationInfo) -> dict[str, str | timedelta]:
+        repositories: dict[str, str | timedelta] = {}
 
         for line in value.splitlines():
             if not line:
@@ -180,8 +181,7 @@ class CollectorSettings(BaseModel):
 
 
 class CustomEnvSettingsSource(EnvSettingsSource):
-    """
-    Loads settings from environment variables and notifies the user if any environment variables are found which
+    """Loads settings from environment variables and notifies the user if any environment variables are found which
     overwrite the settings file.
 
     pydantic-settings v2 tries to parse multi-line ('complex') environment variables as JSON. This subclass overrides
@@ -193,7 +193,7 @@ class CustomEnvSettingsSource(EnvSettingsSource):
     def __init__(self, settings_cls: type[BaseSettings]) -> None:
         super().__init__(settings_cls)
 
-    def _get_settings(self, settings: dict[str, Any], result: Optional[set] = None, parent: str = "") -> set[str]:
+    def _get_settings(self, settings: dict[str, Any], result: set | None = None, parent: str = "") -> set[str]:
         if result is None:
             result = set()
 
@@ -238,7 +238,7 @@ class Settings(BaseSettings):
     # pylint: disable=too-many-arguments
     def settings_customise_sources(
         cls,
-        settings_cls: Type[BaseSettings],
+        settings_cls: type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,

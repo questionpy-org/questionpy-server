@@ -6,4 +6,4 @@ from .attempt import AttemptScoredFactory
 from .package import PackageInfoFactory
 from .question_state import RequestBaseDataFactory
 
-__all__ = ["PackageInfoFactory", "AttemptScoredFactory", "RequestBaseDataFactory"]
+__all__ = ["AttemptScoredFactory", "PackageInfoFactory", "RequestBaseDataFactory"]

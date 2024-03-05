@@ -7,8 +7,8 @@ from posixpath import dirname
 
 from aiohttp import FormData
 from aiohttp.test_utils import TestClient
-from questionpy_common.elements import OptionsFormDefinition
 
+from questionpy_common.elements import OptionsFormDefinition
 from tests.conftest import get_file_hash
 
 PACKAGE = Path(dirname(__file__)) / "test_data" / "package" / "package_1.qpy"

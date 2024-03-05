@@ -25,8 +25,7 @@ class Repository:
         self._log = URLAdapter(logger, {"url": self._url_base})
 
     async def get_meta(self) -> RepoMeta:
-        """
-        Downloads and verifies metadata.
+        """Downloads and verifies metadata.
 
         Returns:
             RepoMeta: Metadata
@@ -36,8 +35,7 @@ class Repository:
         return RepoMeta.model_validate_json(meta)
 
     async def get_packages(self, meta: RepoMeta) -> dict[str, RepoPackage]:
-        """
-        Downloads and verifies package index.
+        """Downloads and verifies package index.
 
         Args:
             meta (RepoMeta): Metadata
@@ -71,8 +69,7 @@ class Repository:
         return packages_dict
 
     async def get_package(self, package: RepoPackage) -> bytes:
-        """
-        Download a specific package from the repository.
+        """Download a specific package from the repository.
 
         Args:
             package (RepoPackage): repository package
@@ -80,7 +77,6 @@ class Repository:
         Returns:
             bytes: raw package bytes
         """
-
         url = urljoin(self._url_base, package.path)
         data = await download(url, size=package.size, expected_hash=package.sha256)
         return data

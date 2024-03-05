@@ -2,19 +2,19 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-import asyncio
 from asyncio import get_running_loop, wait_for
-from os import kill, getpid
+from collections.abc import Callable
+from os import getpid, kill
 from pathlib import Path
 from shutil import copy
 from signal import SIGUSR1
-from typing import Any, Callable
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from _pytest.tmpdir import TempPathFactory
-from questionpy_common.constants import MiB
 
+from questionpy_common.constants import MiB
 from questionpy_server import WorkerPool
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.local_collector import LocalCollector
@@ -31,7 +31,6 @@ def create_local_collector(tmp_path_factory: TempPathFactory) -> tuple[LocalColl
     Returns:
         Local collector and directory.
     """
-
     path = tmp_path_factory.mktemp("qpy")
     indexer = Indexer(WorkerPool(1, 200 * MiB))
     return LocalCollector(path, indexer), path
@@ -64,7 +63,7 @@ class WaitForAsyncFunctionCall:
         """
         try:
             await wait_for(self.fut, timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pytest.fail(f"Function {self.func} has not been called within {timeout} seconds.", False)
 
 

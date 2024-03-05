@@ -3,10 +3,11 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 import logging
-from asyncio import to_thread, Lock
+from asyncio import Lock, to_thread
 from collections import OrderedDict
+from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import NamedTuple, Callable, Awaitable, Optional
+from typing import NamedTuple
 
 from pydantic import ByteSize
 
@@ -25,16 +26,12 @@ class SizeError(Exception):
 
 
 class FileLimitLRU:
-    """
-    Limit file cache size, evicting the least recently accessed file when the specified maximum is exceeded.
+    """Limit file cache size, evicting the least recently accessed file when the specified maximum is exceeded.
     Only `bytes` type values are accepted. Their size is calculated by passing them into the builtin `len()` function.
     """
 
-    def __init__(
-        self, directory: Path, max_size: int, extension: Optional[str] = None, name: Optional[str] = None
-    ) -> None:
+    def __init__(self, directory: Path, max_size: int, extension: str | None = None, name: str | None = None) -> None:
         """A cache should be initialised while starting a server therefore it is not necessary for it to be async."""
-
         self._extension: str = "" if extension is None else "." + extension.lstrip(".")
         self._tmp_extension: str = ".tmp"
         if self._extension == self._tmp_extension:
@@ -91,7 +88,6 @@ class FileLimitLRU:
 
         Additionally, the file is placed to the end ensuring that it is the most recent accessed file.
         """
-
         if key not in self._files:
             return False
 
@@ -110,7 +106,6 @@ class FileLimitLRU:
         Raises:
             FileNotFoundError: If the file does not exist in the cache.
         """
-
         return self._get_file(key).path
 
     async def _remove(self, key: str) -> None:
@@ -123,7 +118,6 @@ class FileLimitLRU:
 
     async def remove(self, key: str) -> None:
         """Removes file from the cache and the filesystem."""
-
         async with self._lock:
             await self._remove(key)
 
@@ -140,7 +134,6 @@ class FileLimitLRU:
             TypeError: If `value` is not a `bytes` object.
             SizeError: If the length/size of the provided `value` exceeds `.max_bytes`.
         """
-
         if not isinstance(value, bytes):
             raise TypeError("Not a bytes object:", repr(value))
 
@@ -160,7 +153,7 @@ class FileLimitLRU:
             tmp_path = path.parent / (path.name + self._tmp_extension)
 
             if size != await to_thread(tmp_path.write_bytes, value):
-                raise IOError("Failed to write bytes to file")
+                raise OSError("Failed to write bytes to file")
 
             await to_thread(tmp_path.rename, path)
 

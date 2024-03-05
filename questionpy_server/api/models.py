@@ -5,9 +5,10 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Any, Optional, Union
+from typing import Annotated, Any
 
-from pydantic import ConfigDict, BaseModel, Field, FilePath, HttpUrl, ByteSize
+from pydantic import BaseModel, ByteSize, ConfigDict, Field, FilePath, HttpUrl
+
 from questionpy_common.api.attempt import AttemptModel
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
@@ -36,13 +37,13 @@ class PackageInfo(BaseModel):
         ),
     ]
     type: PackageType
-    author: Optional[str]
-    url: Optional[HttpUrl]
-    languages: Optional[list[str]]
-    description: Optional[dict[str, str]]
-    icon: Optional[Union[FilePath, HttpUrl]]
-    license: Optional[str]
-    tags: Optional[list[str]]
+    author: str | None
+    url: HttpUrl | None
+    languages: list[str] | None
+    description: dict[str, str] | None
+    icon: FilePath | HttpUrl | None
+    license: str | None
+    tags: list[str] | None
 
 
 class MainBaseModel(BaseModel):
@@ -50,7 +51,7 @@ class MainBaseModel(BaseModel):
 
 
 class RequestBaseData(MainBaseModel):
-    context: Optional[int] = None
+    context: int | None = None
 
 
 class QuestionEditFormResponse(BaseModel):
@@ -80,13 +81,13 @@ class AttemptStarted(AttemptModel):
 
 class AttemptViewArguments(RequestBaseData):
     attempt_state: str
-    scoring_state: Optional[str] = None
-    response: Optional[dict[str, Any]] = None
+    scoring_state: str | None = None
+    response: dict[str, Any] | None = None
 
 
 class AttemptScoreArguments(AttemptViewArguments):
     response: dict[str, Any]
-    responses: Optional[list[dict[str, object]]] = None
+    responses: list[dict[str, object]] | None = None
     generate_hint: bool
 
 
@@ -112,7 +113,7 @@ class QuestionStateMigrationError(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
     code: QuestionStateMigrationErrorCode
-    reason: Optional[str] = None
+    reason: str | None = None
 
 
 class Usage(BaseModel):
@@ -133,4 +134,4 @@ class ServerStatus(BaseModel):
     ]
     allow_lms_packages: bool
     max_package_size: ByteSize
-    usage: Optional[Usage]
+    usage: Usage | None

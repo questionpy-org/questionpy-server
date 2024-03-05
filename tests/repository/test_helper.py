@@ -2,15 +2,14 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import aiohttp
 import pytest
+from aiohttp import ClientError, ClientResponse, ClientSession
 from pytest import MonkeyPatch
 
-from aiohttp import ClientSession, ClientResponse, ClientError
-
-from questionpy_server.repository.helper import download, DownloadError
+from questionpy_server.repository.helper import DownloadError, download
 
 
 async def test_raises_download_error_on_client_error() -> None:

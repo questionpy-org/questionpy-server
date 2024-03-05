@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING
 from questionpy_server.cache import FileLimitLRU
 
 if TYPE_CHECKING:
-    from questionpy_server.package import Package
     from questionpy_server.collector.indexer import Indexer
+    from questionpy_server.package import Package
 
 
 class BaseCollector(ABC):
@@ -43,8 +43,10 @@ class BaseCollector(ABC):
 
         Args:
             package (Package): The package to get the path of.
+
         Raises:
             FileNotFoundError: If the collector does not contain the package.
+
         Returns:
             Path: The path of the package.
         """

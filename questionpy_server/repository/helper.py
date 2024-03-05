@@ -2,9 +2,8 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from typing import Optional
 
-from aiohttp import ClientSession, ClientError
+from aiohttp import ClientError, ClientSession
 
 from questionpy_server.misc import calculate_hash
 
@@ -13,9 +12,8 @@ class DownloadError(Exception):
     pass
 
 
-async def download(url: str, size: int = -1, expected_hash: Optional[str] = None) -> bytes:
-    """
-    Downloads data from the given `url` and validates it if `expected_hash` is not `None`.
+async def download(url: str, size: int = -1, expected_hash: str | None = None) -> bytes:
+    """Downloads data from the given `url` and validates it if `expected_hash` is not `None`.
     The download size can be limited by setting `size`.
 
     Args:

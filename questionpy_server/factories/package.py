@@ -2,7 +2,6 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from typing import Dict, List
 
 from faker import Faker
 from polyfactory.factories.pydantic_factory import ModelFactory
@@ -21,15 +20,15 @@ class PackageInfoFactory(ModelFactory):
         return fake.name()
 
     @staticmethod
-    def languages() -> List[str]:
+    def languages() -> list[str]:
         return languages
 
     @staticmethod
-    def name() -> Dict[str, str]:
+    def name() -> dict[str, str]:
         return {language: fake.text(20) for language in languages}
 
     @staticmethod
-    def description() -> Dict[str, str]:
+    def description() -> dict[str, str]:
         return {language: f"{language}: {fake.text()}" for language in languages}
 
     @staticmethod
