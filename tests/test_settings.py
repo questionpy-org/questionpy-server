@@ -55,11 +55,10 @@ def test_env_settings_source_wrapper(caplog: pytest.LogCaptureFixture) -> None:
     )
 
     logger_name, level, message = caplog.record_tuples[1]
-    assert logger_name == "questionpy-server:settings" and level == logging.DEBUG
+    assert logger_name == "questionpy-server:settings"
+    assert level == logging.DEBUG
     assert message.startswith("Following settings were read from environment variables: ")
-    assert message.endswith("{'test: value', 'nested->test: value'}") or message.endswith(
-        "{'nested->test: value', 'test: value'}"
-    )
+    assert message.endswith(("{'test: value', 'nested->test: value'}", "{'nested->test: value', 'test: value'}"))
 
 
 # pylint: disable=redefined-outer-name
@@ -81,11 +80,10 @@ def test_env_var_has_higher_priority_than_config_file(path_with_empty_config_fil
 
 # pylint: disable=redefined-outer-name
 def test_env_var_get_validated(path_with_empty_config_file: Path) -> None:
-    with patch.dict(environ, {"QPY_WEBSERVICE__LISTEN_PORT": "invalid"}):
-        with pytest.raises(
-            ValidationError, match=r"webservice.listen_port\s*[type=int_parsing, input_value='invalid', input_type=str]"
-        ):
-            Settings(config_files=(path_with_empty_config_file,))
+    with patch.dict(environ, {"QPY_WEBSERVICE__LISTEN_PORT": "invalid"}), pytest.raises(
+        ValidationError, match=r"webservice.listen_port\s*[type=int_parsing, input_value='invalid', input_type=str]"
+    ):
+        Settings(config_files=(path_with_empty_config_file,))
 
 
 # pylint: disable=redefined-outer-name

@@ -57,7 +57,7 @@ class DuplexPipe:
                     # Sometimes, depending on the timing of close and read, this error gets raised instead of EOF
                     # returned. So we we treat it the same.
                     raise EOFError from e
-                raise e
+                raise
 
             if len(read) < size:
                 raise EOFError

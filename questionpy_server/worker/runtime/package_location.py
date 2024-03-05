@@ -86,12 +86,16 @@ class FunctionPackageLocation:
     ) -> "FunctionPackageLocation":
         """Get the module and name of the function and create a :class:`FunctionPackageLocation` targeting it."""
         if not hasattr(function, "__module__") or not hasattr(function, "__name__"):
-            raise ValueError(f"Callable '{function}' is missing __module__ or __name__ attribute")
+            msg = f"Callable '{function}' is missing __module__ or __name__ attribute"
+            raise ValueError(msg)
 
         if not hasattr(sys.modules[function.__module__], function.__name__):
-            raise ValueError(
+            msg = (
                 f"Function '{function.__name__}' must be a global in module '{function.__module__}' to be "
                 f"used as a package."
+            )
+            raise ValueError(
+                msg
             )
 
         return cls(function.__module__, function.__name__, manifest)

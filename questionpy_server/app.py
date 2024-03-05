@@ -56,6 +56,6 @@ class QPyServer:
         port = self.settings.webservice.listen_port
 
         def print_start(_ignore: Any) -> None:
-            print(f"======== Running QuestionPy Application Server {__version__} on port {port} ========")
+            print(f"======== Running QuestionPy Application Server {__version__} on port {port} ========")  # noqa: T201
 
         web.run_app(self.web_app, host=self.settings.webservice.listen_address, port=port, print=print_start)

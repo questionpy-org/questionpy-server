@@ -72,7 +72,8 @@ class PathToHash:
                 return paths.copy()
             return None
 
-        raise TypeError(f"Expected Path or str, got {type(key)}")
+        msg = f"Expected Path or str, got {type(key)}"
+        raise TypeError(msg)
 
     @overload
     def pop(self, key: Path) -> str | None:
@@ -119,7 +120,8 @@ class PathToHash:
                     self.paths.pop(path)
             return paths
 
-        raise TypeError(f"Expected Path or str, got {type(key)}")
+        msg = f"Expected Path or str, got {type(key)}"
+        raise TypeError(msg)
 
 
 class LocalCollector(BaseCollector):

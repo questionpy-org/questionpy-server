@@ -72,7 +72,7 @@ class Indexer:
         Returns:
             set of packages
         """
-        return set(package for packages in self._index_by_identifier.values() for package in packages.values())
+        return {package for packages in self._index_by_identifier.values() for package in packages.values()}
 
     @overload
     async def register_package(

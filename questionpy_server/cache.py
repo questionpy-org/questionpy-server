@@ -35,7 +35,8 @@ class FileLimitLRU:
         self._extension: str = "" if extension is None else "." + extension.lstrip(".")
         self._tmp_extension: str = ".tmp"
         if self._extension == self._tmp_extension:
-            raise ValueError(f'Extension cannot be "{self._tmp_extension}" as it is used internally.')
+            msg = f'Extension cannot be "{self._tmp_extension}" as it is used internally.'
+            raise ValueError(msg)
 
         async def on_remove(_key: str) -> None:
             pass
@@ -135,14 +136,16 @@ class FileLimitLRU:
             SizeError: If the length/size of the provided `value` exceeds `.max_bytes`.
         """
         if not isinstance(value, bytes):
-            raise TypeError("Not a bytes object:", repr(value))
+            msg = "Not a bytes object:"
+            raise TypeError(msg, repr(value))
 
         size = len(value)
         if size > self.max_size:
             # If we allowed this, the loop at the end would remove all items from the dictionary,
             # so we raise an error to allow exceptions for this case.
+            msg = f"Item itself exceeds maximum allowed size of {ByteSize(self.max_size).human_readable()}"
             raise SizeError(
-                f"Item itself exceeds maximum allowed size of {ByteSize(self.max_size).human_readable()}",
+                msg,
                 max_size=self.max_size,
                 actual_size=size,
             )
@@ -153,7 +156,8 @@ class FileLimitLRU:
             tmp_path = path.parent / (path.name + self._tmp_extension)
 
             if size != await to_thread(tmp_path.write_bytes, value):
-                raise OSError("Failed to write bytes to file")
+                msg = "Failed to write bytes to file"
+                raise OSError(msg)
 
             await to_thread(tmp_path.rename, path)
 

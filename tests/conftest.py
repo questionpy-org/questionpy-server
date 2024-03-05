@@ -59,7 +59,7 @@ PACKAGE_2 = TestPackage(package_dir / "package_2.qpy")
 
 @pytest.fixture
 def qpy_server(tmp_path_factory: TempPathFactory) -> QPyServer:
-    server = QPyServer(
+    return QPyServer(
         Settings(
             config_files=(),
             general=GeneralSettings(),
@@ -70,8 +70,6 @@ def qpy_server(tmp_path_factory: TempPathFactory) -> QPyServer:
             collector=CollectorSettings(),
         )
     )
-
-    return server
 
 
 @pytest.fixture

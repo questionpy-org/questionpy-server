@@ -71,8 +71,9 @@ class WorkerManager:
     def bootstrap(self) -> None:
         init_msg = self.server_connection.receive_message()
         if not isinstance(init_msg, InitWorker):
+            msg = f"'{InitWorker.__name__}' message expected, " f"'{type(init_msg).__name__}' received"
             raise WorkerNotInitializedError(
-                f"'{InitWorker.__name__}' message expected, " f"'{type(init_msg).__name__}' received"
+                msg
             )
 
         self.worker_type = init_msg.worker_type
@@ -115,7 +116,8 @@ class WorkerManager:
                 )
             )
             if not isinstance(qtype, BaseQuestionType):
-                raise PackageInitFailedError(f"Package initialization returned '{qtype}', BaseQuestionType expected")
+                msg = f"Package initialization returned '{qtype}', BaseQuestionType expected"
+                raise PackageInitFailedError(msg)
 
             self.main_package = package
             self.question_type = qtype
@@ -193,21 +195,24 @@ class WorkerManager:
 
     def _require_init(self, msg: MessageToWorker) -> None:
         if not self.worker_type:
+            msg = f"'{InitWorker.__name__}' message expected, " f"'{type(msg).__name__}' received"
             raise WorkerNotInitializedError(
-                f"'{InitWorker.__name__}' message expected, " f"'{type(msg).__name__}' received"
+                msg
             )
 
     def _require_main_package_loaded(self, msg: MessageToWorker) -> None:
         if not (self.main_package and self.loaded_packages and self.question_type):
+            msg = f"'{LoadQPyPackage.__name__}(main=True)' message expected, " f"'{type(msg).__name__}' received"
             raise MainPackageNotLoadedError(
-                f"'{LoadQPyPackage.__name__}(main=True)' message expected, " f"'{type(msg).__name__}' received"
+                msg
             )
 
     @contextmanager
     def _with_request_user(self, request_user: RequestUser) -> Generator[None, None, None]:
         env = get_qpy_environment()
         if env.request_user:
-            raise RuntimeError("There is already a request_user in the current environment.")
+            msg = "There is already a request_user in the current environment."
+            raise RuntimeError(msg)
 
         env.request_user = request_user
         try:

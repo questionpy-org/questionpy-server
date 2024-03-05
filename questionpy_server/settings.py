@@ -77,7 +77,8 @@ class WebserviceSettings(BaseModel):
     @classmethod
     def max_package_size_bigger_then_predefined_value(cls, value: ByteSize) -> ByteSize:
         if value < MAX_PACKAGE_SIZE:
-            raise ValueError(f"max_package_size must be bigger than {MAX_PACKAGE_SIZE.human_readable()}")
+            msg = f"max_package_size must be bigger than {MAX_PACKAGE_SIZE.human_readable()}"
+            raise ValueError(msg)
         return value
 
 
@@ -94,7 +95,8 @@ class WorkerSettings(BaseModel):
             value = locate(value)
 
         if not isinstance(value, type) or not issubclass(value, Worker):
-            raise TypeError(f"{value} is not a subclass of Worker")
+            msg = f"{value} is not a subclass of Worker"
+            raise TypeError(msg)
 
         return value
 
@@ -135,7 +137,8 @@ class CollectorSettings(BaseModel):
     @classmethod
     def check_is_bigger_than_minimum_interval(cls, value: timedelta) -> timedelta:
         if value < REPOSITORY_MINIMUM_INTERVAL:
-            raise ValueError(f"must be at least {REPOSITORY_MINIMUM_INTERVAL}")
+            msg = f"must be at least {REPOSITORY_MINIMUM_INTERVAL}"
+            raise ValueError(msg)
         return value
 
     @field_validator("repositories", mode="before")
@@ -160,7 +163,8 @@ class CollectorSettings(BaseModel):
                 url += "/"
 
             if url in repositories:
-                raise ValueError(f"must contain unique repositories: failed for {url}")
+                msg = f"must contain unique repositories: failed for {url}"
+                raise ValueError(msg)
 
             # Either use the custom or default update interval.
             # If no custom interval is specified and the validation for `repository_default_interval` failed, a valid
@@ -176,7 +180,8 @@ class CollectorSettings(BaseModel):
     def check_custom_interval_is_bigger_than_minimum(cls, value: dict[HttpUrl, timedelta]) -> dict[HttpUrl, timedelta]:
         for url, custom_interval in value.items():
             if custom_interval < REPOSITORY_MINIMUM_INTERVAL:
-                raise ValueError(f"update intervals must be at least {REPOSITORY_MINIMUM_INTERVAL}: failed for {url}")
+                msg = f"update intervals must be at least {REPOSITORY_MINIMUM_INTERVAL}: failed for {url}"
+                raise ValueError(msg)
         return value
 
 

@@ -9,11 +9,12 @@ from aiohttp.web_exceptions import HTTPMethodNotAllowed, HTTPNotFound
 
 from questionpy_common.environment import RequestUser
 from questionpy_server import __version__
-from questionpy_server.web import ensure_package_and_question_state_exist, json_response
+from questionpy_server.decorators import ensure_package_and_question_state_exist
+from questionpy_server.package import Package
+from questionpy_server.web import json_response
 from questionpy_server.worker.runtime.package_location import ZipPackageLocation
+from questionpy_server.worker.worker import Worker
 
-from ..package import Package
-from ..worker.worker import Worker
 from .models import (
     AttemptScoreArguments,
     AttemptStartArguments,
@@ -150,7 +151,8 @@ async def post_question(
 
 @routes.post(r"/packages/{package_hash:\w+}/question/migrate")
 async def post_question_migrate(_request: web.Request) -> web.Response:
-    raise HTTPMethodNotAllowed("", "")
+    msg = ""
+    raise HTTPMethodNotAllowed(msg, "")
 
 
 @routes.post(r"/package-extract-info")  # type: ignore[arg-type]
@@ -162,7 +164,7 @@ async def package_extract_info(_request: web.Request, package: Package) -> web.R
 
 @routes.get(r"/status")
 async def get_server_status(request: web.Request) -> web.Response:
-    """Get server status"""
+    """Get server status."""
     qpyserver: "QPyServer" = request.app["qpy_server_app"]
     status = ServerStatus(
         version=__version__,

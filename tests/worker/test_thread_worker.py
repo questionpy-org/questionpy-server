@@ -36,10 +36,9 @@ def just_raise(*_: Any) -> NoReturn:
 
 @pytest.mark.filterwarnings("ignore:Exception in thread qpy-worker-")
 async def test_should_gracefully_handle_error_in_bootstrap(pool: WorkerPool) -> None:
-    with patch.object(WorkerManager, "bootstrap", just_raise):
-        with pytest.raises(WorkerStartError):
-            async with pool.get_worker(PACKAGE, 1, 1):
-                pass
+    with patch.object(WorkerManager, "bootstrap", just_raise), pytest.raises(WorkerStartError):
+        async with pool.get_worker(PACKAGE, 1, 1):
+            pass
 
 
 @pytest.mark.filterwarnings("ignore:Exception in thread qpy-worker-")

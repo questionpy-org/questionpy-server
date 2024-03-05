@@ -32,6 +32,7 @@ async def download(url: str, size: int = -1, expected_hash: str | None = None) -
             raise DownloadError(error) from error
 
     if expected_hash is not None and expected_hash != calculate_hash(data):
-        raise DownloadError("hash does not match expected hash")
+        msg = "hash does not match expected hash"
+        raise DownloadError(msg)
 
     return data

@@ -13,9 +13,8 @@ from questionpy_server.repository.helper import DownloadError, download
 
 
 async def test_raises_download_error_on_client_error() -> None:
-    with patch.object(ClientSession, "get", side_effect=ClientError):
-        with pytest.raises(DownloadError):
-            await download("https://example.com")
+    with patch.object(ClientSession, "get", side_effect=ClientError), pytest.raises(DownloadError):
+        await download("https://example.com")
 
 
 async def test_raises_download_error_on_hash_missmatch(monkeypatch: MonkeyPatch) -> None:
