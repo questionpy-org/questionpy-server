@@ -55,7 +55,6 @@ async def get_package(request: web.Request) -> web.Response:
 
 @routes.post(r"/packages/{package_hash:\w+}/options")  # type: ignore[arg-type]
 @ensure_package_and_question_state_exist
-# pylint: disable=unused-argument
 async def post_options(
     request: web.Request, package: Package, question_state: bytes | None, data: RequestBaseData
 ) -> web.Response:
@@ -74,7 +73,6 @@ async def post_options(
 
 @routes.post(r"/packages/{package_hash:\w+}/attempt/start")  # type: ignore[arg-type]
 @ensure_package_and_question_state_exist
-# pylint: disable=unused-argument
 async def post_attempt_start(
     request: web.Request, package: Package, question_state: bytes, data: AttemptStartArguments
 ) -> web.Response:
@@ -90,7 +88,6 @@ async def post_attempt_start(
 
 @routes.post(r"/packages/{package_hash:\w+}/attempt/view")  # type: ignore[arg-type]
 @ensure_package_and_question_state_exist
-# pylint: disable=unused-argument
 async def post_attempt_view(
     request: web.Request, package: Package, question_state: bytes, data: AttemptViewArguments
 ) -> web.Response:
@@ -112,7 +109,6 @@ async def post_attempt_view(
 
 @routes.post(r"/packages/{package_hash:\w+}/attempt/score")  # type: ignore[arg-type]
 @ensure_package_and_question_state_exist
-# pylint: disable=unused-argument
 async def post_attempt_score(
     request: web.Request, package: Package, question_state: bytes, data: AttemptScoreArguments
 ) -> web.Response:

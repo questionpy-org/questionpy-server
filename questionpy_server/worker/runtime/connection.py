@@ -22,9 +22,9 @@ def send_message(message: Message, out: SupportsWrite) -> None:
 
 
 class WorkerToServerConnection:
-    # pylint: disable=duplicate-code
     """Controls the connection (stdin/stdout pipes) from a worker to the server.
-    stream_in must be buffered as we want to be able to read exactly the given number of bytes.
+
+    `stream_in` must be buffered as we want to be able to read exactly the given number of bytes.
     """
 
     def __init__(self, stream_in: SupportsRead, stream_out: SupportsWrite):

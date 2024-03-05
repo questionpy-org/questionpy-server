@@ -94,9 +94,7 @@ class FunctionPackageLocation:
                 f"Function '{function.__name__}' must be a global in module '{function.__module__}' to be "
                 f"used as a package."
             )
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
         return cls(function.__module__, function.__name__, manifest)
 

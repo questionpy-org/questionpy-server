@@ -51,9 +51,10 @@ class WaitForAsyncFunctionCall:
         try:
             ret = await self.func(*args, **kwargs)
             self.fut.set_result(True)
-            return ret
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:  # noqa: BLE001
             self.fut.set_exception(e)
+        else:
+            return ret
 
     async def wait_for_fn_call(self, timeout: float) -> None:
         """Wait until the function has been called.

@@ -46,7 +46,8 @@ class QPyServer:
 
     async def _start_package_collection(self, _app: web.Application) -> None:
         # The server will not wait until all package collectors are started. This is done in the background.
-        create_task(self.package_collection.start())
+        # TODO: 💣 manage or await this task
+        create_task(self.package_collection.start())  # noqa: RUF006
 
     async def _stop_package_collection(self, _app: web.Application) -> None:
         # Wait until all package collectors are stopped appropriately.

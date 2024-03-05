@@ -29,6 +29,7 @@ class SizeError(Exception):
 
 class FileLimitLRU:
     """Limit file cache size, evicting the least recently accessed file when the specified maximum is exceeded.
+
     Only `bytes` type values are accepted. Their size is calculated by passing them into the builtin `len()` function.
     """
 

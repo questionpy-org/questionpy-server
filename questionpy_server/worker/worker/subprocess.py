@@ -39,6 +39,7 @@ class _StderrBuffer:
 
     async def read_stderr(self) -> None:
         """Read and save data written by the worker to stderr (worker is set up to redirect stdout to stderr).
+
         Only read up to a certain amount due to security reasons and stderr should not be used besides debugging.
         """
         while True:

@@ -77,7 +77,7 @@ class RepoCollector(CachedCollector):
             except DownloadError as error:
                 self._log.error("Download failed on update: %s", error)
 
-    async def update(self, with_log: bool = True) -> None:
+    async def update(self, *, with_log: bool = True) -> None:
         new_meta = await self._repository.get_meta()
 
         # Check if there was an update in the repository.

@@ -61,7 +61,6 @@ def test_env_settings_source_wrapper(caplog: pytest.LogCaptureFixture) -> None:
     assert message.endswith(("{'test: value', 'nested->test: value'}", "{'nested->test: value', 'test: value'}"))
 
 
-# pylint: disable=redefined-outer-name
 def test_env_var_has_higher_priority_than_config_file(path_with_empty_config_file: Path) -> None:
     config = ConfigParser()
     config.read(path_with_empty_config_file)
@@ -78,15 +77,16 @@ def test_env_var_has_higher_priority_than_config_file(path_with_empty_config_fil
         assert settings.general.log_level == "WARNING"
 
 
-# pylint: disable=redefined-outer-name
 def test_env_var_get_validated(path_with_empty_config_file: Path) -> None:
-    with patch.dict(environ, {"QPY_WEBSERVICE__LISTEN_PORT": "invalid"}), pytest.raises(
-        ValidationError, match=r"webservice.listen_port\s*[type=int_parsing, input_value='invalid', input_type=str]"
+    with (
+        patch.dict(environ, {"QPY_WEBSERVICE__LISTEN_PORT": "invalid"}),
+        pytest.raises(
+            ValidationError, match=r"webservice.listen_port\s*[type=int_parsing, input_value='invalid', input_type=str]"
+        ),
     ):
         Settings(config_files=(path_with_empty_config_file,))
 
 
-# pylint: disable=redefined-outer-name
 def test_multiline_env_var_gets_parsed_correctly(path_with_empty_config_file: Path) -> None:
     with patch.dict(
         environ,

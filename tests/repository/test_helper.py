@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, patch
 import aiohttp
 import pytest
 from aiohttp import ClientError, ClientResponse, ClientSession
-from pytest import MonkeyPatch
 
 from questionpy_server.repository.helper import DownloadError, download
 
@@ -17,7 +16,7 @@ async def test_raises_download_error_on_client_error() -> None:
         await download("https://example.com")
 
 
-async def test_raises_download_error_on_hash_missmatch(monkeypatch: MonkeyPatch) -> None:
+async def test_raises_download_error_on_hash_missmatch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(aiohttp, "ClientSession", AsyncMock(spec=ClientSession))
     with patch.object(ClientResponse, "content") as mock:
         mock.return_value = AsyncMock(return_value=b"data")

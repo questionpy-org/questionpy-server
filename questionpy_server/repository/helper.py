@@ -13,12 +13,13 @@ class DownloadError(Exception):
 
 
 async def download(url: str, size: int = -1, expected_hash: str | None = None) -> bytes:
-    """Downloads data from the given `url` and validates it if `expected_hash` is not `None`.
-    The download size can be limited by setting `size`.
+    """Downloads data from the given `url` and validates it.
+
+    Downloads data if `expected_hash` is not `None`. The download size can be limited by setting `size`.
 
     Args:
         url (str): url of the data
-        size (int): maximum amount of bytes to be downloaded
+        size (int): maximum amount of bytes to be
         expected_hash (Optional[str]): data must have this hash. Defaults to None.
 
     Returns:

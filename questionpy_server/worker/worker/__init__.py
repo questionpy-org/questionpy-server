@@ -4,7 +4,6 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import TypeVar
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
 from questionpy_common.elements import OptionsFormDefinition
@@ -12,10 +11,8 @@ from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import WorkerResources
-from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
+from questionpy_server.worker.runtime.messages import MessageToWorker
 from questionpy_server.worker.runtime.package_location import PackageLocation
-
-_T = TypeVar("_T", bound=MessageToServer)
 
 
 class WorkerState(Enum):
@@ -142,4 +139,4 @@ class Worker(ABC):
         scoring_state: str | None = None,
         response: dict,
     ) -> AttemptScoredModel:
-        """"""
+        """TODO: write docstring."""
