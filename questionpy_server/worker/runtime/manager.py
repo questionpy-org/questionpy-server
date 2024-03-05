@@ -99,7 +99,10 @@ class WorkerManager:
 
     def on_msg_load_qpy_package(self, msg: LoadQPyPackage) -> MessageToServer:
         self._require_init(msg)
-        assert self.worker_type
+
+        if not self.worker_type:
+            errmsg = "'worker_type' is not set."
+            raise RuntimeError(errmsg)
 
         package = load_package(msg.location)
         package.setup_imports()
@@ -133,7 +136,10 @@ class WorkerManager:
     def on_msg_get_options_form_definition(self, msg: GetOptionsForm) -> MessageToServer:
         self._require_init(msg)
         self._require_main_package_loaded(msg)
-        assert self.question_type
+
+        if not self.question_type:
+            errmsg = "'question_type' is not set."
+            raise RuntimeError(errmsg)
 
         with self._with_request_user(msg.request_user):
             definition, form_data = self.question_type.get_options_form(msg.question_state)
@@ -143,7 +149,10 @@ class WorkerManager:
     def on_msg_create_question_from_options(self, msg: CreateQuestionFromOptions) -> CreateQuestionFromOptions.Response:
         self._require_init(msg)
         self._require_main_package_loaded(msg)
-        assert self.question_type
+
+        if not self.question_type:
+            errmsg = "'question_type' is not set."
+            raise RuntimeError(errmsg)
 
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_options(msg.question_state, msg.form_data)
@@ -155,7 +164,10 @@ class WorkerManager:
     def on_msg_start_attempt(self, msg: StartAttempt) -> StartAttempt.Response:
         self._require_init(msg)
         self._require_main_package_loaded(msg)
-        assert self.question_type
+
+        if not self.question_type:
+            errmsg = "'question_type' is not set."
+            raise RuntimeError(errmsg)
 
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_state(msg.question_state)
@@ -165,7 +177,10 @@ class WorkerManager:
     def on_msg_view_attempt(self, msg: ViewAttempt) -> ViewAttempt.Response:
         self._require_init(msg)
         self._require_main_package_loaded(msg)
-        assert self.question_type
+
+        if not self.question_type:
+            errmsg = "'question_type' is not set."
+            raise RuntimeError(errmsg)
 
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_state(msg.question_state)
@@ -183,7 +198,10 @@ class WorkerManager:
     def on_msg_score_attempt(self, msg: ScoreAttempt) -> ScoreAttempt.Response:
         self._require_init(msg)
         self._require_main_package_loaded(msg)
-        assert self.question_type
+
+        if not self.question_type:
+            errmsg = "'question_type' is not set."
+            raise RuntimeError(errmsg)
 
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_state(msg.question_state)
