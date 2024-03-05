@@ -16,7 +16,6 @@ pydantic = "^2.4"
 polyfactory = "^2.7.2"
 
 [tool.poetry.group.dev.dependencies]
-tox = "^4.13.0"
 
 [tool.poetry.group.test]
 optional = true
@@ -52,36 +51,3 @@ plugins = "pydantic.mypy"
 disallow_untyped_defs = true
 strict_optional = true
 show_error_codes = true
-
-
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-env_list =
-    py{39,310,311}-pytest
-    pylint
-    flake8
-    mypy
-
-minversion = 4.2.6
-
-[testenv]
-allowlist_externals = poetry
-# tox already installs the package (und thus its main dependencies) for us, so we only install dev dependencies here.
-commands_pre =
-    poetry install --no-root --without main
-commands =
-    coverage run -m pytest {tty:--color=yes} tests {posargs}
-
-[testenv:pylint]
-commands =
-    pylint questionpy_common tests
-
-[testenv:flake8]
-commands =
-    flake8 questionpy_common tests
-
-[testenv:mypy]
-commands =
-    mypy questionpy_common tests
-"""
