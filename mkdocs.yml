@@ -1,0 +1,8 @@
+site_name: reference/server
+
+nav:
+  - api.md
+  - collector.md
+  - factories.md
+  - server.md
+  - worker.md

@@ -1,3 +1,7 @@
+---
+title: questionpy_server.collector
+---
+
 ::: questionpy_server.collector.abc
 
 ::: questionpy_server.collector.indexer
