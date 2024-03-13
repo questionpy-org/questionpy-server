@@ -129,4 +129,16 @@ class Worker(ABC):
     async def score_attempt(self, *, request_user: RequestUser,
                             question_state: str, attempt_state: str, scoring_state: Optional[str] = None,
                             response: dict) -> AttemptScoredModel:
-        """"""
+        """Score an attempt, i.e. score the given response.
+
+        Args:
+            request_user: Information on the user this request is for.
+            question_state: The question the attempt belongs to.
+            attempt_state: The `attempt_state` attribute of an attempt which was previously returned by
+                           :meth:`start_attempt`.
+            scoring_state: If the attempt has already been scored before, that scoring state.
+            response: The response currently entered by the student.
+
+        Returns:
+            Metadata of the scored attempt.
+        """
