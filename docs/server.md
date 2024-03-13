@@ -1,4 +1,6 @@
-
+---
+title: questionpy_server.server
+---
 
 A short description of the QuestionPy Server can be put here. 
 This can also be automated with mkdocstrings, if the questionpy_server
