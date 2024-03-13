@@ -1,0 +1,13 @@
+site_name: reference/common
+
+nav:
+  - index.md
+  - conditions.md
+  - constants.md
+  - elements.md
+  - manifest.md
+  - api:
+    - api/index.md
+    - api/attempt.md
+    - api/question.md
+    - api/qtype.md
