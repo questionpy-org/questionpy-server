@@ -6,7 +6,6 @@ from typing import Final
 
 from pydantic import ByteSize
 
-
 # General.
 KiB: Final[int] = 1024  # pylint: disable=invalid-name
 MiB: Final[int] = 1024 * KiB  # pylint: disable=invalid-name

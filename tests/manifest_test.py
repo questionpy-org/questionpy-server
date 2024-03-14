@@ -2,14 +2,14 @@
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
 
 from questionpy_common.manifest import Manifest, PackageType
 
-minimal_manifest: Dict[str, Any] = {
+minimal_manifest: dict[str, Any] = {
     "short_name": "short_name",
     "version": "0.1.0",
     "api_version": "0.1",

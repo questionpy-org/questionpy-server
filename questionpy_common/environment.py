@@ -2,27 +2,25 @@
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 from abc import abstractmethod
-from collections.abc import Sequence, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass
 from importlib.abc import Traversable
-from typing import Union, Literal, Callable, Optional, Protocol
-
-from typing_extensions import TypeAlias
+from typing import Literal, Protocol, TypeAlias
 
 from questionpy_common.api.qtype import BaseQuestionType
 from questionpy_common.manifest import Manifest
 
 __all__ = [
+    "Environment",
+    "NoEnvironmentError",
+    "OnRequestCallback",
+    "Package",
+    "PackageInitFunction",
     "RequestUser",
     "WorkerResourceLimits",
-    "Package",
-    "OnRequestCallback",
-    "Environment",
-    "PackageInitFunction",
     "get_qpy_environment",
     "set_qpy_environment",
-    "NoEnvironmentError",
 ]
 
 
@@ -61,7 +59,7 @@ OnRequestCallback: TypeAlias = Callable[[RequestUser], None]
 
 
 class Environment(Protocol):
-    type: Union[Literal["process", "thread", "container"], str]
+    type: Literal["process", "thread", "container"] | str
     """The kind of worker we are running in.
 
     The well-known values are:
@@ -73,9 +71,9 @@ class Environment(Protocol):
 
     Other worker types may be added in future. (Hence the :class:`str` type.)
     """
-    limits: Optional[WorkerResourceLimits]
+    limits: WorkerResourceLimits | None
     """The resource limits imposed on the worker, if any."""
-    request_user: Optional[RequestUser]
+    request_user: RequestUser | None
     """If the worker is currently processing a request, information about the user that it is being processed for.
 
     When no request is being processed (such as during a call to the package's `init` function), this will be None.
@@ -95,10 +93,10 @@ class Environment(Protocol):
         """
 
 
-PackageInitFunction: TypeAlias = Union[Callable[[Environment], BaseQuestionType], Callable[[], BaseQuestionType]]
+PackageInitFunction: TypeAlias = Callable[[Environment], BaseQuestionType] | Callable[[], BaseQuestionType]
 """Signature of the "init"-function expected in the main package."""
 
-_current_env: ContextVar[Union[Environment, None]] = ContextVar("_current_env")
+_current_env: ContextVar[Environment | None] = ContextVar("_current_env")
 
 
 def get_qpy_environment() -> Environment:
@@ -114,7 +112,7 @@ def get_qpy_environment() -> Environment:
     return env
 
 
-def set_qpy_environment(env: Optional[Environment]) -> None:
+def set_qpy_environment(env: Environment | None) -> None:
     _current_env.set(env)
 
 

@@ -2,28 +2,27 @@
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from typing import List, Literal, Union, Optional, get_args, Annotated
+from typing import Annotated, Literal, TypeAlias, TypeGuard, get_args
 
-from pydantic import BaseModel, PositiveInt, Field
-from typing_extensions import TypeGuard, TypeAlias
+from pydantic import BaseModel, Field, PositiveInt
 
 from questionpy_common.conditions import Condition
 
 __all__ = [
     "CanHaveConditions",
-    "StaticTextElement",
-    "TextInputElement",
     "CheckboxElement",
     "CheckboxGroupElement",
-    "Option",
-    "RadioGroupElement",
-    "SelectElement",
-    "HiddenElement",
-    "GroupElement",
-    "RepetitionElement",
     "FormElement",
     "FormSection",
+    "GroupElement",
+    "HiddenElement",
+    "Option",
     "OptionsFormDefinition",
+    "RadioGroupElement",
+    "RepetitionElement",
+    "SelectElement",
+    "StaticTextElement",
+    "TextInputElement",
     "is_form_element",
 ]
 
@@ -52,7 +51,7 @@ class CanHaveConditions(BaseModel):
 class CanHaveHelp(BaseModel):
     """Mixin class for elements that can have a help text hidden behind a button."""
 
-    help: Optional[str] = None
+    help: str | None = None
     """Text to be shown when the help button is clicked."""
 
 
@@ -67,17 +66,17 @@ class TextInputElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     kind: Literal["input"] = "input"
     required: bool = False
     """Require some non-empty input to be entered before the form can be submitted."""
-    default: Optional[str] = None
+    default: str | None = None
     """Default value of the input when first loading the form. Part of the submitted form data."""
-    placeholder: Optional[str] = None
+    placeholder: str | None = None
     """Placeholder to show when no value has been entered yet. Not part of the submitted form data."""
 
 
 class CheckboxElement(_BaseElement, CanHaveConditions, CanHaveHelp):
     kind: Literal["checkbox"] = "checkbox"
-    left_label: Optional[str] = None
+    left_label: str | None = None
     """Label shown the same way as labels on other element types."""
-    right_label: Optional[str] = None
+    right_label: str | None = None
     """Additional label shown to the right of the checkbox."""
     required: bool = False
     """Require this checkbox to be selected before the form can be submitted."""
@@ -89,7 +88,7 @@ class CheckboxGroupElement(_BaseElement):
     """Adds a 'Select all/none' button after multiple checkboxes."""
 
     kind: Literal["checkbox_group"] = "checkbox_group"
-    checkboxes: List[CheckboxElement]
+    checkboxes: list[CheckboxElement]
 
 
 class Option(BaseModel):
@@ -107,7 +106,7 @@ class RadioGroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp)
     """Group of radio buttons, of which at most one can be selected at a time."""
 
     kind: Literal["radio_group"] = "radio_group"
-    options: List[Option]
+    options: list[Option]
     """Selectable options."""
     required: bool = False
     """Require one of the options to be selected before the form can be submitted."""
@@ -119,7 +118,7 @@ class SelectElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     kind: Literal["select"] = "select"
     multiple: bool = False
     """Allow the selection of multiple options."""
-    options: List[Option]
+    options: list[Option]
     """Selectable options."""
     required: bool = False
     """Require at least one of the options to be selected before the form can be submitted."""
@@ -136,7 +135,7 @@ class GroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     """Groups multiple elements horizontally with a common label."""
 
     kind: Literal["group"] = "group"
-    elements: List["FormElement"]
+    elements: list["FormElement"]
 
 
 class RepetitionElement(_BaseElement):
@@ -150,7 +149,7 @@ class RepetitionElement(_BaseElement):
     """Minimum number of repetitions, at or below which removal is not possible."""
     increment: PositiveInt
     """Number of repetitions to add with each click of the button."""
-    button_label: Optional[str] = None
+    button_label: str | None = None
     """Label for the button that adds more repetitions, or None to use default provided by LMS."""
 
     elements: list["FormElement"]
@@ -158,17 +157,7 @@ class RepetitionElement(_BaseElement):
 
 
 FormElement: TypeAlias = Annotated[
-    Union[
-        StaticTextElement,
-        TextInputElement,
-        CheckboxElement,
-        CheckboxGroupElement,
-        RadioGroupElement,
-        SelectElement,
-        HiddenElement,
-        GroupElement,
-        RepetitionElement,
-    ],
+    StaticTextElement | TextInputElement | CheckboxElement | CheckboxGroupElement | RadioGroupElement | SelectElement | HiddenElement | GroupElement | RepetitionElement,
     Field(discriminator="kind"),
 ]
 
@@ -180,14 +169,14 @@ class FormSection(BaseModel):
     """Name that will later identify the element in submitted form data."""
     header: str
     """Header to be shown at the top of the section."""
-    elements: List[FormElement] = []
+    elements: list[FormElement] = []
     """Elements contained in the section."""
 
 
 class OptionsFormDefinition(BaseModel):
-    general: List[FormElement] = []
+    general: list[FormElement] = []
     """Elements to add to the main section, after the LMS' own elements."""
-    sections: List[FormSection] = []
+    sections: list[FormSection] = []
     """Sections to add after the main section."""
 
 

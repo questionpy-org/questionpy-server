@@ -3,21 +3,22 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from enum import Enum
-from typing import Optional, Sequence, Annotated
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 
 __all__ = [
-    "CacheControl",
-    "UiFile",
-    "AttemptUi",
     "AttemptModel",
-    "ScoringCode",
+    "AttemptScoredModel",
+    "AttemptUi",
+    "BaseAttempt",
+    "CacheControl",
     "ClassifiedResponse",
     "ScoreModel",
-    "AttemptScoredModel",
-    "BaseAttempt",
+    "ScoringCode",
+    "UiFile",
 ]
 
 
@@ -30,7 +31,7 @@ class CacheControl(Enum):
 class UiFile(BaseModel):
     name: str
     data: str
-    mime_type: Optional[str] = None
+    mime_type: str | None = None
 
 
 class AttemptUi(BaseModel):
@@ -38,8 +39,8 @@ class AttemptUi(BaseModel):
     """X(H)ML markup of the question UI."""
     placeholders: dict[str, str] = {}
     """Names and values of the ``<?p`` placeholders that appear in content."""
-    include_inline_css: Optional[str] = None
-    include_css_file: Optional[str] = None
+    include_inline_css: str | None = None
+    include_css_file: str | None = None
     cache_control: CacheControl = CacheControl.PRIVATE_CACHE
     files: list[UiFile] = []
 
@@ -66,9 +67,9 @@ class ClassifiedResponse(BaseModel):
 class ScoreModel(BaseModel):
     scoring_state: str = "{}"
     scoring_code: ScoringCode
-    score: Optional[float]
+    score: float | None
     """The total score for this question attempt, as a fraction of the default mark set by the LMS."""
-    classification: Optional[Sequence[ClassifiedResponse]] = None
+    classification: Sequence[ClassifiedResponse] | None = None
 
 
 class AttemptScoredModel(AttemptModel, ScoreModel):
