@@ -62,7 +62,7 @@ class _StderrBuffer:
             msg = "Worker wrote following data to stdout/stderr."
             if self._skipped_bytes:
                 msg += f" (Additional {ByteSize(self._skipped_bytes).human_readable()} were skipped.)"
-            indented_data = "\n".join("\t" + line for line in self._buffer.decode(errors='replace').split("\n"))
+            indented_data = "\n".join("\t" + line for line in self._buffer.decode(errors="replace").split("\n"))
             log.debug("%s\n%s", msg, indented_data)
 
         self._buffer = bytearray()
@@ -86,8 +86,10 @@ class SubprocessWorker(BaseWorker):
         python_flags = [] if __debug__ else ["-O"]
 
         self._proc = await asyncio.create_subprocess_exec(
-            sys.executable, *python_flags,
-            '-m', 'questionpy_server.worker.runtime',
+            sys.executable,
+            *python_flags,
+            "-m",
+            "questionpy_server.worker.runtime",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -131,7 +133,7 @@ class SubprocessWorker(BaseWorker):
         return (
             *super()._get_observation_tasks(),
             asyncio.create_task(self._proc.wait(), name="wait for worker process"),
-            asyncio.create_task(self._stderr_buffer.read_stderr(), name="receive stderr from worker")
+            asyncio.create_task(self._stderr_buffer.read_stderr(), name="receive stderr from worker"),
         )
 
     async def kill(self) -> None:

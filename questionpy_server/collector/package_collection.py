@@ -26,8 +26,14 @@ if TYPE_CHECKING:
 class PackageCollection:
     """Handles packages from a local directory, remote repositories, and packages received by an LMS."""
 
-    def __init__(self, local_dir: Optional[Path], repos: dict[HttpUrl, timedelta], repo_index_cache: FileLimitLRU,
-                 package_cache: FileLimitLRU, worker_pool: WorkerPool):
+    def __init__(
+        self,
+        local_dir: Optional[Path],
+        repos: dict[HttpUrl, timedelta],
+        repo_index_cache: FileLimitLRU,
+        package_cache: FileLimitLRU,
+        worker_pool: WorkerPool,
+    ):
         self._indexer = Indexer(worker_pool)
         self._collectors: list[BaseCollector] = []
 
@@ -64,7 +70,7 @@ class PackageCollection:
 
         await self._indexer.unregister_package(package_hash, self._lms_collector)
 
-    async def put(self, package_container: 'HashContainer') -> 'Package':
+    async def put(self, package_container: "HashContainer") -> "Package":
         """Handles a package sent by an LMS.
 
         Args:
@@ -76,7 +82,7 @@ class PackageCollection:
 
         return await self._lms_collector.put(package_container)
 
-    def get(self, package_hash: str) -> 'Package':
+    def get(self, package_hash: str) -> "Package":
         """Returns a package if it exists.
 
         Args:
@@ -92,7 +98,7 @@ class PackageCollection:
 
         raise FileNotFoundError
 
-    def get_by_identifier(self, identifier: str) -> dict[SemVer, 'Package']:
+    def get_by_identifier(self, identifier: str) -> dict[SemVer, "Package"]:
         """Returns a dict of packages with the given identifier and available versions.
 
         Args:
@@ -104,7 +110,7 @@ class PackageCollection:
 
         return self._indexer.get_by_identifier(identifier)
 
-    def get_by_identifier_and_version(self, identifier: str, version: SemVer) -> 'Package':
+    def get_by_identifier_and_version(self, identifier: str, version: SemVer) -> "Package":
         """Returns a package with the given identifier and version.
 
         Args:
@@ -120,7 +126,7 @@ class PackageCollection:
 
         raise FileNotFoundError
 
-    def get_packages(self) -> set['Package']:
+    def get_packages(self) -> set["Package"]:
         """Returns a set of all available packages.
 
         Returns:

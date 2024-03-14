@@ -6,21 +6,31 @@ import asyncio
 import contextlib
 import logging
 from abc import ABC
-from typing import Optional, Type, TypeVar, Sequence
+from typing import Optional, Sequence, Type, TypeVar
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import WorkerResourceLimits, RequestUser
-
+from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
-from questionpy_server.worker.runtime.messages import MessageToWorker, MessageToServer, MessageIds, WorkerError, \
-    InitWorker, LoadQPyPackage, Exit, GetQPyPackageManifest, GetOptionsForm, CreateQuestionFromOptions, StartAttempt, \
-    ViewAttempt, ScoreAttempt
-from questionpy_server.worker.runtime.package_location import PackageLocation
-from questionpy_server.worker.worker import WorkerState, Worker
+from questionpy_server.worker.runtime.messages import (
+    CreateQuestionFromOptions,
+    Exit,
+    GetOptionsForm,
+    GetQPyPackageManifest,
+    InitWorker,
+    LoadQPyPackage,
+    MessageIds,
+    MessageToServer,
+    MessageToWorker,
+    ScoreAttempt,
+    StartAttempt,
+    ViewAttempt,
+    WorkerError,
+)
+from questionpy_server.worker.worker import Worker, WorkerState
 
 log = logging.getLogger(__name__)
 _T = TypeVar("_T", bound=MessageToServer)
@@ -45,15 +55,19 @@ class BaseWorker(Worker, ABC):
         Should be called by subclasses in :meth:`start` after they have started the worker itself.
         """
         self.state = WorkerState.IDLE
-        self._observe_task = asyncio.create_task(self._observe(), name='observe worker task')
+        self._observe_task = asyncio.create_task(self._observe(), name="observe worker task")
 
         try:
-            await self._send_and_wait_response(InitWorker(
-                limits=self.limits,
-                worker_type=self._worker_type,
-            ), InitWorker.Response)
-            await self._send_and_wait_response(LoadQPyPackage(location=self.package, main=True),
-                                               LoadQPyPackage.Response)
+            await self._send_and_wait_response(
+                InitWorker(
+                    limits=self.limits,
+                    worker_type=self._worker_type,
+                ),
+                InitWorker.Response,
+            )
+            await self._send_and_wait_response(
+                LoadQPyPackage(location=self.package, main=True), LoadQPyPackage.Response
+            )
         except WorkerNotRunningError as e:
             raise WorkerStartError("Worker has exited before or during initialization.") from e
 
@@ -81,14 +95,16 @@ class BaseWorker(Worker, ABC):
                 if isinstance(message, WorkerError):
                     cause_id = message.expected_response_id
                     exception = message.to_exception()
-                    for future in [fut for expected_id, fut in self._expected_incoming_messages if
-                                   expected_id == cause_id]:
+                    for future in [
+                        fut for expected_id, fut in self._expected_incoming_messages if expected_id == cause_id
+                    ]:
                         future.set_exception(exception)
                         self._expected_incoming_messages.remove((cause_id, future))
                 else:
                     cur_id = message.message_id
-                    for future in [fut for expected_id, fut in self._expected_incoming_messages if
-                                   expected_id == cur_id]:
+                    for future in [
+                        fut for expected_id, fut in self._expected_incoming_messages if expected_id == cur_id
+                    ]:
                         future.set_result(message)
                         self._expected_incoming_messages.remove((cur_id, future))
         finally:
@@ -142,45 +158,63 @@ class BaseWorker(Worker, ABC):
         ret = await self._send_and_wait_response(msg, GetQPyPackageManifest.Response)
         return ComparableManifest(**ret.manifest.model_dump())
 
-    async def get_options_form(self, request_user: RequestUser, question_state: Optional[str]) \
-            -> tuple[OptionsFormDefinition, dict[str, object]]:
+    async def get_options_form(
+        self, request_user: RequestUser, question_state: Optional[str]
+    ) -> tuple[OptionsFormDefinition, dict[str, object]]:
         msg = GetOptionsForm(question_state=question_state, request_user=request_user)
         ret = await self._send_and_wait_response(msg, GetOptionsForm.Response)
         return ret.definition, ret.form_data
 
-    async def create_question_from_options(self, request_user: RequestUser, old_state: Optional[str],
-                                           form_data: dict[str, object]) -> QuestionCreated:
-        msg = CreateQuestionFromOptions(question_state=old_state, form_data=form_data,
-                                        request_user=request_user)
+    async def create_question_from_options(
+        self, request_user: RequestUser, old_state: Optional[str], form_data: dict[str, object]
+    ) -> QuestionCreated:
+        msg = CreateQuestionFromOptions(question_state=old_state, form_data=form_data, request_user=request_user)
         ret = await self._send_and_wait_response(msg, CreateQuestionFromOptions.Response)
 
-        return QuestionCreated(
-            question_state=ret.question_state,
-            **ret.question_model.model_dump()
-        )
+        return QuestionCreated(question_state=ret.question_state, **ret.question_model.model_dump())
 
     async def start_attempt(self, request_user: RequestUser, question_state: str, variant: int) -> AttemptStarted:
         msg = StartAttempt(question_state=question_state, variant=variant, request_user=request_user)
         ret = await self._send_and_wait_response(msg, StartAttempt.Response)
 
-        return AttemptStarted(
-            attempt_state=ret.attempt_state,
-            **ret.attempt_model.model_dump()
-        )
+        return AttemptStarted(attempt_state=ret.attempt_state, **ret.attempt_model.model_dump())
 
-    async def get_attempt(self, *, request_user: RequestUser, question_state: str, attempt_state: str,
-                          scoring_state: Optional[str] = None, response: Optional[dict] = None) -> AttemptModel:
-        msg = ViewAttempt(question_state=question_state, attempt_state=attempt_state, scoring_state=scoring_state,
-                          response=response, request_user=request_user)
+    async def get_attempt(
+        self,
+        *,
+        request_user: RequestUser,
+        question_state: str,
+        attempt_state: str,
+        scoring_state: Optional[str] = None,
+        response: Optional[dict] = None,
+    ) -> AttemptModel:
+        msg = ViewAttempt(
+            question_state=question_state,
+            attempt_state=attempt_state,
+            scoring_state=scoring_state,
+            response=response,
+            request_user=request_user,
+        )
         ret = await self._send_and_wait_response(msg, ViewAttempt.Response)
 
         return ret.attempt_model
 
-    async def score_attempt(self, *, request_user: RequestUser,
-                            question_state: str, attempt_state: str, scoring_state: Optional[str] = None,
-                            response: dict) -> AttemptScoredModel:
-        msg = ScoreAttempt(question_state=question_state, attempt_state=attempt_state, scoring_state=scoring_state,
-                           response=response, request_user=request_user)
+    async def score_attempt(
+        self,
+        *,
+        request_user: RequestUser,
+        question_state: str,
+        attempt_state: str,
+        scoring_state: Optional[str] = None,
+        response: dict,
+    ) -> AttemptScoredModel:
+        msg = ScoreAttempt(
+            question_state=question_state,
+            attempt_state=attempt_state,
+            scoring_state=scoring_state,
+            response=response,
+            request_user=request_user,
+        )
         ret = await self._send_and_wait_response(msg, ScoreAttempt.Response)
 
         return ret.attempt_scored_model

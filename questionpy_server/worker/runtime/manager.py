@@ -9,13 +9,30 @@ from dataclasses import dataclass
 from typing import Optional, Callable, Union, Literal, Any, Generator
 
 from questionpy_common.api.qtype import BaseQuestionType
-from questionpy_common.environment import Environment, RequestUser, WorkerResourceLimits, OnRequestCallback, \
-    get_qpy_environment
+from questionpy_common.environment import (
+    Environment,
+    RequestUser,
+    WorkerResourceLimits,
+    OnRequestCallback,
+    get_qpy_environment,
+)
 
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
-from questionpy_server.worker.runtime.messages import MessageToServer, MessageIds, LoadQPyPackage, \
-    GetQPyPackageManifest, GetOptionsForm, CreateQuestionFromOptions, InitWorker, Exit, WorkerError, StartAttempt, \
-    ViewAttempt, MessageToWorker, ScoreAttempt
+from questionpy_server.worker.runtime.messages import (
+    MessageToServer,
+    MessageIds,
+    LoadQPyPackage,
+    GetQPyPackageManifest,
+    GetOptionsForm,
+    CreateQuestionFromOptions,
+    InitWorker,
+    Exit,
+    WorkerError,
+    StartAttempt,
+    ViewAttempt,
+    MessageToWorker,
+    ScoreAttempt,
+)
 from questionpy_server.worker.runtime.package import ImportablePackage, load_package
 
 
@@ -47,15 +64,16 @@ class WorkerManager:
             CreateQuestionFromOptions.message_id: self.on_msg_create_question_from_options,
             StartAttempt.message_id: self.on_msg_start_attempt,
             ViewAttempt.message_id: self.on_msg_view_attempt,
-            ScoreAttempt.message_id: self.on_msg_score_attempt
+            ScoreAttempt.message_id: self.on_msg_score_attempt,
         }
         self._on_request_callbacks: list[OnRequestCallback] = []
 
     def bootstrap(self) -> None:
         init_msg = self.server_connection.receive_message()
         if not isinstance(init_msg, InitWorker):
-            raise WorkerNotInitializedError(f"'{InitWorker.__name__}' message expected, "
-                                            f"'{type(init_msg).__name__}' received")
+            raise WorkerNotInitializedError(
+                f"'{InitWorker.__name__}' message expected, " f"'{type(init_msg).__name__}' received"
+            )
 
         self.worker_type = init_msg.worker_type
         self.limits = init_msg.limits
@@ -87,13 +105,15 @@ class WorkerManager:
         self.loaded_packages[str(msg.location)] = package
 
         if msg.main:
-            qtype = package.init_as_main(EnvironmentImpl(
-                type=self.worker_type,
-                limits=self.limits,
-                packages=self.loaded_packages,
-                main_package=package,
-                _on_request_callbacks=self._on_request_callbacks
-            ))
+            qtype = package.init_as_main(
+                EnvironmentImpl(
+                    type=self.worker_type,
+                    limits=self.limits,
+                    packages=self.loaded_packages,
+                    main_package=package,
+                    _on_request_callbacks=self._on_request_callbacks,
+                )
+            )
             if not isinstance(qtype, BaseQuestionType):
                 raise PackageInitFailedError(f"Package initialization returned '{qtype}', BaseQuestionType expected")
 
@@ -126,8 +146,9 @@ class WorkerManager:
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_options(msg.question_state, msg.form_data)
 
-            return CreateQuestionFromOptions.Response(question_state=question.export_question_state(),
-                                                      question_model=question.export())
+            return CreateQuestionFromOptions.Response(
+                question_state=question.export_question_state(), question_model=question.export()
+            )
 
     def on_msg_start_attempt(self, msg: StartAttempt) -> StartAttempt.Response:
         self._require_init(msg)
@@ -146,11 +167,14 @@ class WorkerManager:
 
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_state(msg.question_state)
-            attempt = question.get_attempt(msg.attempt_state, msg.scoring_state, msg.response,
-                                           compute_score=False, generate_hint=False)
+            attempt = question.get_attempt(
+                msg.attempt_state, msg.scoring_state, msg.response, compute_score=False, generate_hint=False
+            )
             if __debug__ and msg.attempt_state != attempt.export_attempt_state():
-                warnings.warn("The attempt state has been changed by viewing the attempt, which has no effect and "
-                              "should not happen.")
+                warnings.warn(
+                    "The attempt state has been changed by viewing the attempt, which has no effect and "
+                    "should not happen."
+                )
 
             return ViewAttempt.Response(attempt_model=attempt.export())
 
@@ -161,20 +185,23 @@ class WorkerManager:
 
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_state(msg.question_state)
-            attempt = question.get_attempt(msg.attempt_state, msg.scoring_state, msg.response,
-                                           compute_score=True, generate_hint=False)
+            attempt = question.get_attempt(
+                msg.attempt_state, msg.scoring_state, msg.response, compute_score=True, generate_hint=False
+            )
             scored_model = attempt.export_scored_attempt()
             return ScoreAttempt.Response(attempt_scored_model=scored_model)
 
     def _require_init(self, msg: MessageToWorker) -> None:
         if not self.worker_type:
-            raise WorkerNotInitializedError(f"'{InitWorker.__name__}' message expected, "
-                                            f"'{type(msg).__name__}' received")
+            raise WorkerNotInitializedError(
+                f"'{InitWorker.__name__}' message expected, " f"'{type(msg).__name__}' received"
+            )
 
     def _require_main_package_loaded(self, msg: MessageToWorker) -> None:
         if not (self.main_package and self.loaded_packages and self.question_type):
-            raise MainPackageNotLoadedError(f"'{LoadQPyPackage.__name__}(main=True)' message expected, "
-                                            f"'{type(msg).__name__}' received")
+            raise MainPackageNotLoadedError(
+                f"'{LoadQPyPackage.__name__}(main=True)' message expected, " f"'{type(msg).__name__}' received"
+            )
 
     @contextmanager
     def _with_request_user(self, request_user: RequestUser) -> Generator[None, None, None]:

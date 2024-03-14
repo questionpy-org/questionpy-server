@@ -15,13 +15,14 @@ from questionpy_common.manifest import Manifest
 
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
-messages_header_struct: Struct = Struct('=LL')
+messages_header_struct: Struct = Struct("=LL")
 """4 bytes unsigned long int message id and 4 bytes unsigned long int payload length"""
 
 
 @unique
 class MessageIds(IntEnum):
     """Message ids between worker and application server."""
+
     # Server to worker.
     INIT_WORKER = 0
     ENABLE_SANDBOX = 1
@@ -54,12 +55,14 @@ class MessageIds(IntEnum):
 
 class Message(BaseModel):
     """Message base class."""
+
     message_id: ClassVar[MessageIds]
     Response: ClassVar[Type["Message"]]
 
 
 class MessageToWorker(Message):
     """A message from server to worker."""
+
     types: ClassVar[dict[int, Type["MessageToWorker"]]] = {}
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
@@ -69,6 +72,7 @@ class MessageToWorker(Message):
 
 class MessageToServer(Message):
     """A message from worker to server."""
+
     types: ClassVar[dict[int, Type["MessageToServer"]]] = {}
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
@@ -78,22 +82,26 @@ class MessageToServer(Message):
 
 class InitWorker(MessageToWorker):
     """Give worker some basic information."""
+
     message_id: ClassVar[MessageIds] = MessageIds.INIT_WORKER
     limits: Optional[WorkerResourceLimits] = None
     worker_type: str
 
     class Response(MessageToServer):
         """Success message in return to InitWorker."""
+
         message_id: ClassVar[MessageIds] = MessageIds.WORKER_STARTED
 
 
 class Exit(MessageToWorker):
     """Command from server to gracefully exit the worker process."""
+
     message_id: ClassVar[MessageIds] = MessageIds.EXIT
 
 
 class LoadQPyPackage(MessageToWorker):
     """Load/import a QuestionPy package."""
+
     message_id: ClassVar[MessageIds] = MessageIds.LOAD_QPY_PACKAGE
     location: PackageLocation
     main: bool
@@ -101,22 +109,26 @@ class LoadQPyPackage(MessageToWorker):
 
     class Response(MessageToServer):
         """Success message in return to LoadQPyPackage."""
+
         message_id: ClassVar[MessageIds] = MessageIds.LOADED_QPY_PACKAGE
 
 
 class GetQPyPackageManifest(MessageToWorker):
     """Get the manifest data of the main package, which must previously have been loaded."""
+
     message_id: ClassVar[MessageIds] = MessageIds.GET_QPY_PACKAGE_MANIFEST
     path: str
 
     class Response(MessageToServer):
         """Execute a QuestionPy package."""
+
         message_id: ClassVar[MessageIds] = MessageIds.RETURN_QPY_PACKAGE_MANIFEST
         manifest: Manifest
 
 
 class GetOptionsForm(MessageToWorker):
     """Execute a QuestionPy package."""
+
     message_id: ClassVar[MessageIds] = MessageIds.GET_OPTIONS_FORM_DEFINITION
     request_user: RequestUser
     question_state: Optional[str]
@@ -124,6 +136,7 @@ class GetOptionsForm(MessageToWorker):
 
     class Response(MessageToServer):
         """Execute a QuestionPy package."""
+
         message_id: ClassVar[MessageIds] = MessageIds.RETURN_OPTIONS_FORM_DEFINITION
         definition: OptionsFormDefinition
         form_data: dict[str, object]
@@ -186,6 +199,7 @@ class WorkerError(MessageToServer):
 
     class ErrorType(IntEnum):
         """Error types."""
+
         UNKNOWN = 0
         MEMORY_EXCEEDED = 1
 

@@ -16,13 +16,13 @@ from questionpy_server.utils.logger import URLAdapter
 class Repository:
     def __init__(self, url: str, cache: FileLimitLRU):
         self._url_base = url
-        self._url_index = urljoin(self._url_base, 'PACKAGES.json.gz')
-        self._url_meta = urljoin(self._url_base, 'META.json')
+        self._url_index = urljoin(self._url_base, "PACKAGES.json.gz")
+        self._url_meta = urljoin(self._url_base, "META.json")
 
         self._cache = cache
 
-        logger = logging.getLogger('questionpy-server:repository')
-        self._log = URLAdapter(logger, {'url': self._url_base})
+        logger = logging.getLogger("questionpy-server:repository")
+        self._log = URLAdapter(logger, {"url": self._url_base})
 
     async def get_meta(self) -> RepoMeta:
         """
@@ -55,7 +55,7 @@ class Repository:
             try:
                 await self._cache.put(meta.sha256, raw_index_zip)
             except SizeError:
-                self._log.warning('Package index is too big to be cached.')
+                self._log.warning("Package index is too big to be cached.")
 
         raw_index = decompress(raw_index_zip)
         index = RepoPackageIndex.model_validate_json(raw_index)

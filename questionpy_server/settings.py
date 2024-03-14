@@ -11,8 +11,13 @@ from typing import Any, Optional, Type, Literal, Union, Final, ClassVar
 
 from pydantic import field_validator, BaseModel, DirectoryPath, ByteSize, HttpUrl, ValidationInfo
 from pydantic.fields import FieldInfo
-from pydantic_settings import BaseSettings, InitSettingsSource, EnvSettingsSource, PydanticBaseSettingsSource, \
-    SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    InitSettingsSource,
+    EnvSettingsSource,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 from questionpy_common.constants import MAX_PACKAGE_SIZE, MiB
 
 from questionpy_server.worker.worker import Worker
@@ -20,7 +25,7 @@ from questionpy_server.worker.worker.subprocess import SubprocessWorker
 
 REPOSITORY_MINIMUM_INTERVAL: Final[timedelta] = timedelta(minutes=5)
 
-_log = logging.getLogger('questionpy-server:settings')
+_log = logging.getLogger("questionpy-server:settings")
 
 
 class IniFileSettingsSource(PydanticBaseSettingsSource):
@@ -42,23 +47,23 @@ class IniFileSettingsSource(PydanticBaseSettingsSource):
 
             parser = ConfigParser()
             parser.read(path)
-            return {key: dict(section) for key, section in parser.items() if key != 'DEFAULT'}
+            return {key: dict(section) for key, section in parser.items() if key != "DEFAULT"}
 
-        _log.warning('No config file found!')
+        _log.warning("No config file found!")
         return {}
 
 
 class GeneralSettings(BaseModel):
-    log_level: Literal['NONE', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'] = 'INFO'
+    log_level: Literal["NONE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
-    @field_validator('log_level', mode="before")
+    @field_validator("log_level", mode="before")
     @classmethod
     def logging_level_to_upper(cls, value: str) -> str:
         return value.upper()
 
 
 class WebserviceSettings(BaseModel):
-    listen_address: str = '127.0.0.1'
+    listen_address: str = "127.0.0.1"
     listen_port: int = 9020
     allow_lms_packages: bool = True
 
@@ -67,11 +72,11 @@ class WebserviceSettings(BaseModel):
 
     max_package_size: ByteSize = MAX_PACKAGE_SIZE
 
-    @field_validator('max_package_size')
+    @field_validator("max_package_size")
     @classmethod
     def max_package_size_bigger_then_predefined_value(cls, value: ByteSize) -> ByteSize:
         if value < MAX_PACKAGE_SIZE:
-            raise ValueError(f'max_package_size must be bigger than {MAX_PACKAGE_SIZE.human_readable()}')
+            raise ValueError(f"max_package_size must be bigger than {MAX_PACKAGE_SIZE.human_readable()}")
         return value
 
 
@@ -95,9 +100,9 @@ class WorkerSettings(BaseModel):
 
 class PackageCacheSettings(BaseModel):
     size: ByteSize = ByteSize(5 * MiB)
-    directory: DirectoryPath = Path('cache/packages').resolve()
+    directory: DirectoryPath = Path("cache/packages").resolve()
 
-    @field_validator('directory')
+    @field_validator("directory")
     @classmethod
     def resolve_path(cls, value: Path) -> Path:
         return value.resolve()
@@ -105,9 +110,9 @@ class PackageCacheSettings(BaseModel):
 
 class RepoIndexCacheSettings(BaseModel):
     size: ByteSize = ByteSize(200 * MiB)
-    directory: DirectoryPath = Path('cache/repo_index').resolve()
+    directory: DirectoryPath = Path("cache/repo_index").resolve()
 
-    @field_validator('directory')
+    @field_validator("directory")
     @classmethod
     def resolve_path(cls, value: Path) -> Path:
         return value.resolve()
@@ -118,24 +123,23 @@ class CollectorSettings(BaseModel):
     repository_default_interval: timedelta = timedelta(hours=1, minutes=30)
     repositories: dict[HttpUrl, timedelta] = {}
 
-    @field_validator('local_directory')
+    @field_validator("local_directory")
     @classmethod
     def transform_to_path(cls, value: Optional[DirectoryPath]) -> Optional[DirectoryPath]:
-        if value is None or value == Path(''):
+        if value is None or value == Path(""):
             return None
         return value.resolve()
 
-    @field_validator('repository_default_interval')
+    @field_validator("repository_default_interval")
     @classmethod
     def check_is_bigger_than_minimum_interval(cls, value: timedelta) -> timedelta:
         if value < REPOSITORY_MINIMUM_INTERVAL:
             raise ValueError(f"must be at least {REPOSITORY_MINIMUM_INTERVAL}")
         return value
 
-    @field_validator('repositories', mode="before")
+    @field_validator("repositories", mode="before")
     @classmethod
-    def transform_to_set_of_repositories(cls, value: str,
-                                         info: ValidationInfo) -> dict[str, Union[str, timedelta]]:
+    def transform_to_set_of_repositories(cls, value: str, info: ValidationInfo) -> dict[str, Union[str, timedelta]]:
         repositories: dict[str, Union[str, timedelta]] = {}
 
         for line in value.splitlines():
@@ -151,8 +155,8 @@ class CollectorSettings(BaseModel):
             else:
                 url, custom_interval = data
 
-            if not url.endswith('/'):
-                url += '/'
+            if not url.endswith("/"):
+                url += "/"
 
             if url in repositories:
                 raise ValueError(f"must contain unique repositories: failed for {url}")
@@ -160,13 +164,13 @@ class CollectorSettings(BaseModel):
             # Either use the custom or default update interval.
             # If no custom interval is specified and the validation for `repository_default_interval` failed, a valid
             # interval (the minimum) is provided to ensure that the validation continues to take place.
-            repositories[url] = custom_interval \
-                or info.data.get('repository_default_interval') \
-                or REPOSITORY_MINIMUM_INTERVAL
+            repositories[url] = (
+                custom_interval or info.data.get("repository_default_interval") or REPOSITORY_MINIMUM_INTERVAL
+            )
 
         return repositories
 
-    @field_validator('repositories')
+    @field_validator("repositories")
     @classmethod
     def check_custom_interval_is_bigger_than_minimum(cls, value: dict[HttpUrl, timedelta]) -> dict[HttpUrl, timedelta]:
         for url, custom_interval in value.items():
@@ -189,15 +193,15 @@ class CustomEnvSettingsSource(EnvSettingsSource):
     def __init__(self, settings_cls: type[BaseSettings]) -> None:
         super().__init__(settings_cls)
 
-    def _get_settings(self, settings: dict[str, Any], result: Optional[set] = None, parent: str = '') -> set[str]:
+    def _get_settings(self, settings: dict[str, Any], result: Optional[set] = None, parent: str = "") -> set[str]:
         if result is None:
             result = set()
 
         for key, value in settings.items():
             if isinstance(value, dict):
-                self._get_settings(value, result, f'{parent}{key}->')
+                self._get_settings(value, result, f"{parent}{key}->")
             else:
-                result.add(f'{parent}{key}: {value}')
+                result.add(f"{parent}{key}: {value}")
 
         return result
 
@@ -209,14 +213,17 @@ class CustomEnvSettingsSource(EnvSettingsSource):
     def __call__(self) -> dict[str, Any]:
         env_settings = super().__call__()
         if env_settings:
-            _log.info("Reading settings from environment variables, %s in total. Environment variables overwrite "
-                      "settings from the config file.", len(env_settings))
+            _log.info(
+                "Reading settings from environment variables, %s in total. Environment variables overwrite "
+                "settings from the config file.",
+                len(env_settings),
+            )
             _log.debug("Following settings were read from environment variables: %s", self._get_settings(env_settings))
         return env_settings
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix='qpy_', env_nested_delimiter='__')
+    model_config = SettingsConfigDict(env_prefix="qpy_", env_nested_delimiter="__")
 
     general: GeneralSettings
     webservice: WebserviceSettings
@@ -230,11 +237,12 @@ class Settings(BaseSettings):
     @classmethod
     # pylint: disable=too-many-arguments
     def settings_customise_sources(
-            cls, settings_cls: Type[BaseSettings],
-            init_settings: PydanticBaseSettingsSource,
-            env_settings: PydanticBaseSettingsSource,
-            dotenv_settings: PydanticBaseSettingsSource,
-            file_secret_settings: PydanticBaseSettingsSource
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         assert isinstance(init_settings, InitSettingsSource)
         if "config_files" in init_settings.init_kwargs:

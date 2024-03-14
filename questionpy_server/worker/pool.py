@@ -17,8 +17,7 @@ from .worker.subprocess import SubprocessWorker
 
 
 class WorkerPool:
-    def __init__(self, max_workers: int, max_memory: int,
-                 worker_type: Type[Worker] = SubprocessWorker):
+    def __init__(self, max_workers: int, max_memory: int, worker_type: Type[Worker] = SubprocessWorker):
         """Initialize the worker pool.
 
         Args:
@@ -71,8 +70,7 @@ class WorkerPool:
             worker = None
             reserved_memory = False
             try:
-                limits = WorkerResourceLimits(max_memory=200 * MiB,
-                                              max_cpu_time_seconds_per_call=10)  # TODO
+                limits = WorkerResourceLimits(max_memory=200 * MiB, max_cpu_time_seconds_per_call=10)  # TODO
                 if self.max_memory < limits.max_memory:
                     raise WorkerStartError("The worker needs more memory than available.")
 

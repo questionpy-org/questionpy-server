@@ -72,7 +72,7 @@ class PathToHash:
                 return paths.copy()
             return None
 
-        raise TypeError(f'Expected Path or str, got {type(key)}')
+        raise TypeError(f"Expected Path or str, got {type(key)}")
 
     @overload
     def pop(self, key: Path) -> Optional[str]:
@@ -119,13 +119,13 @@ class PathToHash:
                     self.paths.pop(path)
             return paths
 
-        raise TypeError(f'Expected Path or str, got {type(key)}')
+        raise TypeError(f"Expected Path or str, got {type(key)}")
 
 
 class LocalCollector(BaseCollector):
     """Handles packages located in a local directory."""
 
-    def __init__(self, directory: Path, indexer: 'Indexer'):
+    def __init__(self, directory: Path, indexer: "Indexer"):
         super().__init__(indexer)
 
         self.directory: Path = directory
@@ -133,7 +133,7 @@ class LocalCollector(BaseCollector):
 
         self._lock: Optional[Lock] = None
         self._snapshot: Optional[DirectorySnapshot] = None
-        self._log = logging.getLogger('questionpy-server:local-collector')
+        self._log = logging.getLogger("questionpy-server:local-collector")
 
     async def start(self) -> None:
         # Remove possibly outdated snapshot and update.
@@ -167,7 +167,7 @@ class LocalCollector(BaseCollector):
                 A generator of paths.
             """
 
-            for file in Path(directory).glob('*.qpy'):
+            for file in Path(directory).glob("*.qpy"):
                 if file.is_file():
                     yield file
 
@@ -201,8 +201,9 @@ class LocalCollector(BaseCollector):
         async with self._lock:
             # If no snapshot exists, use EmptyDirectorySnapshot to get all files as created.
             old_snapshot = self._snapshot or EmptyDirectorySnapshot()
-            new_snapshot = await to_thread(DirectorySnapshot, str(self.directory), recursive=False,
-                                           listdir=directory_iterator)
+            new_snapshot = await to_thread(
+                DirectorySnapshot, str(self.directory), recursive=False, listdir=directory_iterator
+            )
             difference = DirectorySnapshotDiff(old_snapshot, new_snapshot)
 
             for path in difference.files_created:
@@ -220,8 +221,11 @@ class LocalCollector(BaseCollector):
                 await remove_package(package_path)
                 await add_package(package_hash, package_path)
 
-                self._log.warning("Package %s was modified. This will cause unexpected behavior if the package is "
-                                  "currently read by a worker.", package_path)
+                self._log.warning(
+                    "Package %s was modified. This will cause unexpected behavior if the package is "
+                    "currently read by a worker.",
+                    package_path,
+                )
 
             # We need to remove every old path before inserting new ones to avoid conflicts when paths get swapped.
             entries = []
@@ -237,11 +241,15 @@ class LocalCollector(BaseCollector):
             self._snapshot = new_snapshot
 
         if with_log:
-            self._log.info("Updated packages: %d created, %d deleted, %d modified, %d moved.",
-                           len(difference.files_created), len(difference.files_deleted), len(difference.files_modified),
-                           len(difference.files_moved))
+            self._log.info(
+                "Updated packages: %d created, %d deleted, %d modified, %d moved.",
+                len(difference.files_created),
+                len(difference.files_deleted),
+                len(difference.files_modified),
+                len(difference.files_moved),
+            )
 
-    async def get_path(self, package: 'Package') -> Path:
+    async def get_path(self, package: "Package") -> Path:
         files = self.map.get(package.hash)
 
         if files is not None:

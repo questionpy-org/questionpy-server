@@ -68,8 +68,9 @@ class Worker(ABC):
         """Get manifest of the main package in the worker."""
 
     @abstractmethod
-    async def get_options_form(self, request_user: RequestUser, question_state: Optional[str]) -> \
-            tuple[OptionsFormDefinition, dict[str, object]]:
+    async def get_options_form(
+        self, request_user: RequestUser, question_state: Optional[str]
+    ) -> tuple[OptionsFormDefinition, dict[str, object]]:
         """Get the form used to create a new or edit an existing question.
 
         Args:
@@ -81,8 +82,9 @@ class Worker(ABC):
         """
 
     @abstractmethod
-    async def create_question_from_options(self, request_user: RequestUser, old_state: Optional[str],
-                                           form_data: dict[str, object]) -> QuestionCreated:
+    async def create_question_from_options(
+        self, request_user: RequestUser, old_state: Optional[str], form_data: dict[str, object]
+    ) -> QuestionCreated:
         """Create or update the question (state) with the form data from a submitted question edit form.
 
         Args:
@@ -108,9 +110,15 @@ class Worker(ABC):
         """
 
     @abstractmethod
-    async def get_attempt(self, *, request_user: RequestUser,
-                          question_state: str, attempt_state: str, scoring_state: Optional[str] = None,
-                          response: Optional[dict] = None) -> AttemptModel:
+    async def get_attempt(
+        self,
+        *,
+        request_user: RequestUser,
+        question_state: str,
+        attempt_state: str,
+        scoring_state: Optional[str] = None,
+        response: Optional[dict] = None,
+    ) -> AttemptModel:
         """Create an attempt object for a previously started attempt.
 
         Args:
@@ -126,7 +134,13 @@ class Worker(ABC):
         """
 
     @abstractmethod
-    async def score_attempt(self, *, request_user: RequestUser,
-                            question_state: str, attempt_state: str, scoring_state: Optional[str] = None,
-                            response: dict) -> AttemptScoredModel:
+    async def score_attempt(
+        self,
+        *,
+        request_user: RequestUser,
+        question_state: str,
+        attempt_state: str,
+        scoring_state: Optional[str] = None,
+        response: dict,
+    ) -> AttemptScoredModel:
         """"""

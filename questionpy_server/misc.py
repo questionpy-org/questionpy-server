@@ -23,7 +23,7 @@ def calculate_hash(source: Union[bytes, Path]) -> str:
     if isinstance(source, bytes):
         sha.update(source)
     else:
-        with source.open('rb') as file:
+        with source.open("rb") as file:
             while chunk := file.read(5 * MiB):
                 sha.update(chunk)
 

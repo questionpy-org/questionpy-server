@@ -20,18 +20,26 @@ class QPyServer:
         self.settings: Settings = settings
         self.web_app = web.Application(client_max_size=settings.webservice.max_main_size)
         self.web_app.add_routes(routes)
-        self.web_app['qpy_server_app'] = self
+        self.web_app["qpy_server_app"] = self
 
-        self.worker_pool = WorkerPool(settings.worker.max_workers, settings.worker.max_memory,
-                                      worker_type=settings.worker.type)
+        self.worker_pool = WorkerPool(
+            settings.worker.max_workers, settings.worker.max_memory, worker_type=settings.worker.type
+        )
 
-        self.package_cache = FileLimitLRU(settings.cache_package.directory, settings.cache_package.size,
-                                          extension='.qpy', name='PackageCache')
-        self.repo_index_cache = FileLimitLRU(settings.cache_repo_index.directory, settings.cache_repo_index.size,
-                                             name='RepoIndexCache')
+        self.package_cache = FileLimitLRU(
+            settings.cache_package.directory, settings.cache_package.size, extension=".qpy", name="PackageCache"
+        )
+        self.repo_index_cache = FileLimitLRU(
+            settings.cache_repo_index.directory, settings.cache_repo_index.size, name="RepoIndexCache"
+        )
 
-        self.package_collection = PackageCollection(settings.collector.local_directory, settings.collector.repositories,
-                                                    self.repo_index_cache, self.package_cache, self.worker_pool)
+        self.package_collection = PackageCollection(
+            settings.collector.local_directory,
+            settings.collector.repositories,
+            self.repo_index_cache,
+            self.package_cache,
+            self.worker_pool,
+        )
 
         self.web_app.on_startup.append(self._start_package_collection)
         self.web_app.on_shutdown.append(self._stop_package_collection)

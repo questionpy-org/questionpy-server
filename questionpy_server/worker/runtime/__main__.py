@@ -14,8 +14,8 @@ def setup_server_communication() -> WorkerToServerConnection:
     The application server communicates with its worker through stdin/stdout, which means only this class is allowed to
     read from and write to these pipes. Other output should go through stderr.
     """
-    file_stdin = FileIO(sys.stdin.buffer.fileno(), 'r', closefd=False)
-    file_stdout = FileIO(sys.stdout.fileno(), 'w', closefd=False)
+    file_stdin = FileIO(sys.stdin.buffer.fileno(), "r", closefd=False)
+    file_stdout = FileIO(sys.stdout.fileno(), "w", closefd=False)
     connection = WorkerToServerConnection(BufferedReader(file_stdin), file_stdout)
 
     sys.stdin = StringIO()
@@ -23,7 +23,7 @@ def setup_server_communication() -> WorkerToServerConnection:
     return connection
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.dont_write_bytecode = True
     con = setup_server_communication()
     manager = WorkerManager(con)

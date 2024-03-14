@@ -9,6 +9,6 @@ from pydantic import BaseModel
 
 AwaitFuncT = Callable[..., Awaitable[Any]]
 
-RouteHandler = TypeVar('RouteHandler', bound=AwaitFuncT)
+RouteHandler = TypeVar("RouteHandler", bound=AwaitFuncT)
 
-M = TypeVar('M', bound=BaseModel)
+M = TypeVar("M", bound=BaseModel)

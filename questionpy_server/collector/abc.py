@@ -16,9 +16,9 @@ if TYPE_CHECKING:
 class BaseCollector(ABC):
     """A collector responsible for getting packages from a source."""
 
-    indexer: 'Indexer'
+    indexer: "Indexer"
 
-    def __init__(self, indexer: 'Indexer'):
+    def __init__(self, indexer: "Indexer"):
         self.indexer = indexer
 
     @abstractmethod
@@ -30,7 +30,7 @@ class BaseCollector(ABC):
         """Stops the collector."""
         return
 
-    async def __aenter__(self) -> 'BaseCollector':
+    async def __aenter__(self) -> "BaseCollector":
         await self.start()
         return self
 
@@ -38,7 +38,7 @@ class BaseCollector(ABC):
         await self.stop()
 
     @abstractmethod
-    async def get_path(self, package: 'Package') -> Path:
+    async def get_path(self, package: "Package") -> Path:
         """Get the path of a package.
 
         Args:
@@ -56,6 +56,6 @@ class CachedCollector(BaseCollector, ABC):
 
     _cache: FileLimitLRU
 
-    def __init__(self, cache: FileLimitLRU, indexer: 'Indexer'):
+    def __init__(self, cache: FileLimitLRU, indexer: "Indexer"):
         super().__init__(indexer=indexer)
         self._cache = cache

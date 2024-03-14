@@ -14,7 +14,7 @@ from tests.conftest import PACKAGE
 
 
 async def test_packages(client: TestClient) -> None:
-    res = await client.request('GET', '/packages')
+    res = await client.request("GET", "/packages")
 
     assert res.status == 200
     data = await res.json()
@@ -22,11 +22,11 @@ async def test_packages(client: TestClient) -> None:
 
 
 async def test_extract_info(client: TestClient) -> None:
-    with PACKAGE.path.open('rb') as file:
+    with PACKAGE.path.open("rb") as file:
         payload = FormData()
-        payload.add_field('package', file)
+        payload.add_field("package", file)
 
-        res = await client.request('POST', '/package-extract-info', data=payload)
+        res = await client.request("POST", "/package-extract-info", data=payload)
 
     assert res.status == 201
     data = await res.json()
@@ -36,10 +36,10 @@ async def test_extract_info(client: TestClient) -> None:
 async def test_extract_info_faulty(client: TestClient) -> None:
     # Request without package in payload.
     payload = FormData()
-    payload.add_field('ignore', BytesIO())
+    payload.add_field("ignore", BytesIO())
 
-    res = await client.request('POST', '/package-extract-info', data=payload)
+    res = await client.request("POST", "/package-extract-info", data=payload)
 
     assert res.status == 400
     text = await res.text()
-    assert text == 'No package found in multipart/form-data'
+    assert text == "No package found in multipart/form-data"
