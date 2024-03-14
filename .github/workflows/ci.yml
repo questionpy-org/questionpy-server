@@ -13,5 +13,5 @@ jobs:
     uses: questionpy-org/.github/.github/workflows/python-ci.yml@v7
     with:
       # GitHub workflow inputs do not support lists, so we pass JSON.
-      pytest-python-versions: '["3.9", "3.10", "3.11"]'
+      pytest-python-versions: '["3.11", "3.12"]'
       packages: questionpy_common tests
