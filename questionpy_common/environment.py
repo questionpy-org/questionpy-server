@@ -13,19 +13,30 @@ from typing_extensions import TypeAlias
 from questionpy_common.api.qtype import BaseQuestionType
 from questionpy_common.manifest import Manifest
 
-__all__ = ["RequestUser", "WorkerResourceLimits", "Package", "OnRequestCallback", "Environment", "PackageInitFunction",
-           "get_qpy_environment", "set_qpy_environment", "NoEnvironmentError"]
+__all__ = [
+    "RequestUser",
+    "WorkerResourceLimits",
+    "Package",
+    "OnRequestCallback",
+    "Environment",
+    "PackageInitFunction",
+    "get_qpy_environment",
+    "set_qpy_environment",
+    "NoEnvironmentError",
+]
 
 
 @dataclass
 class RequestUser:
     """Preferences of the user that a request is being processed for."""
+
     preferred_languages: Sequence[str]
 
 
 @dataclass
 class WorkerResourceLimits:
     """Maximum resources that a worker process is allowed to consume."""
+
     max_memory: int
     max_cpu_time_seconds_per_call: float
 
@@ -33,8 +44,7 @@ class WorkerResourceLimits:
 class Package(Protocol):
     @property
     @abstractmethod
-    def manifest(self) -> Manifest:
-        ...
+    def manifest(self) -> Manifest: ...
 
     @abstractmethod
     def get_path(self, path: str) -> Traversable:

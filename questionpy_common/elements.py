@@ -9,9 +9,23 @@ from typing_extensions import TypeGuard, TypeAlias
 
 from questionpy_common.conditions import Condition
 
-__all__ = ["CanHaveConditions", "StaticTextElement", "TextInputElement", "CheckboxElement", "CheckboxGroupElement",
-           "Option", "RadioGroupElement", "SelectElement", "HiddenElement", "GroupElement", "RepetitionElement",
-           "FormElement", "FormSection", "OptionsFormDefinition", "is_form_element"]
+__all__ = [
+    "CanHaveConditions",
+    "StaticTextElement",
+    "TextInputElement",
+    "CheckboxElement",
+    "CheckboxGroupElement",
+    "Option",
+    "RadioGroupElement",
+    "SelectElement",
+    "HiddenElement",
+    "GroupElement",
+    "RepetitionElement",
+    "FormElement",
+    "FormSection",
+    "OptionsFormDefinition",
+    "is_form_element",
+]
 
 
 class _BaseElement(BaseModel):
@@ -28,6 +42,7 @@ class _Labelled(BaseModel):
 
 class CanHaveConditions(BaseModel):
     """Mixin class for elements that can have conditions on other elements."""
+
     disable_if: list[Condition] = []
     """Disable this element if any of these conditions match."""
     hide_if: list[Condition] = []
@@ -36,12 +51,14 @@ class CanHaveConditions(BaseModel):
 
 class CanHaveHelp(BaseModel):
     """Mixin class for elements that can have a help text hidden behind a button."""
+
     help: Optional[str] = None
     """Text to be shown when the help button is clicked."""
 
 
 class StaticTextElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     """Some static text with a label."""
+
     kind: Literal["static_text"] = "static_text"
     text: str
 
@@ -70,12 +87,14 @@ class CheckboxElement(_BaseElement, CanHaveConditions, CanHaveHelp):
 
 class CheckboxGroupElement(_BaseElement):
     """Adds a 'Select all/none' button after multiple checkboxes."""
+
     kind: Literal["checkbox_group"] = "checkbox_group"
     checkboxes: List[CheckboxElement]
 
 
 class Option(BaseModel):
     """A possible option for radio groups and drop-downs."""
+
     label: str
     """Text describing the option, shown verbatim."""
     value: str
@@ -86,6 +105,7 @@ class Option(BaseModel):
 
 class RadioGroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     """Group of radio buttons, of which at most one can be selected at a time."""
+
     kind: Literal["radio_group"] = "radio_group"
     options: List[Option]
     """Selectable options."""
@@ -95,6 +115,7 @@ class RadioGroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp)
 
 class SelectElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     """A drop-down list."""
+
     kind: Literal["select"] = "select"
     multiple: bool = False
     """Allow the selection of multiple options."""
@@ -106,18 +127,21 @@ class SelectElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
 
 class HiddenElement(_BaseElement, CanHaveConditions):
     """An element that isn't shown to the user but still submits its fixed value."""
+
     kind: Literal["hidden"] = "hidden"
     value: str
 
 
 class GroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     """Groups multiple elements horizontally with a common label."""
+
     kind: Literal["group"] = "group"
     elements: List["FormElement"]
 
 
 class RepetitionElement(_BaseElement):
     """Repeats a number of elements, allowing the user to add new repetitions with the click of a button."""
+
     kind: Literal["repetition"] = "repetition"
 
     initial_repetitions: PositiveInt
@@ -133,14 +157,25 @@ class RepetitionElement(_BaseElement):
     """Elements that will be repeated."""
 
 
-FormElement: TypeAlias = Annotated[Union[
-    StaticTextElement, TextInputElement, CheckboxElement, CheckboxGroupElement,
-    RadioGroupElement, SelectElement, HiddenElement, GroupElement, RepetitionElement
-], Field(discriminator="kind")]
+FormElement: TypeAlias = Annotated[
+    Union[
+        StaticTextElement,
+        TextInputElement,
+        CheckboxElement,
+        CheckboxGroupElement,
+        RadioGroupElement,
+        SelectElement,
+        HiddenElement,
+        GroupElement,
+        RepetitionElement,
+    ],
+    Field(discriminator="kind"),
+]
 
 
 class FormSection(BaseModel):
     """Form section that can be expanded and collapsed."""
+
     name: str
     """Name that will later identify the element in submitted form data."""
     header: str
