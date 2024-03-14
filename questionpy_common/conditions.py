@@ -3,12 +3,11 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from abc import ABC
-from typing import Literal, Union, Annotated
+from typing import Annotated, Literal, TypeAlias, Union
 
 from pydantic import BaseModel, Field
-from typing_extensions import TypeAlias
 
-_Value: TypeAlias = Union[str, int, bool]
+_Value: TypeAlias = str | int | bool
 
 
 class _BaseCondition(ABC, BaseModel):

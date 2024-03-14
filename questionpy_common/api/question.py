@@ -3,13 +3,13 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Optional, Annotated
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 
 from .attempt import BaseAttempt
 
-__all__ = ["ScoringMethod", "PossibleResponse", "SubquestionModel", "QuestionModel", "BaseQuestion"]
+__all__ = ["BaseQuestion", "PossibleResponse", "QuestionModel", "ScoringMethod", "SubquestionModel"]
 
 
 class ScoringMethod(Enum):
@@ -25,8 +25,8 @@ class PossibleResponse(BaseModel):
 
 class SubquestionModel(BaseModel):
     subquestion_id: Annotated[str, Field(max_length=30, strict=True)]
-    score_max: Optional[float]
-    response_classes: Optional[list[PossibleResponse]]
+    score_max: float | None
+    response_classes: list[PossibleResponse] | None
 
 
 class QuestionModel(BaseModel):
@@ -36,11 +36,11 @@ class QuestionModel(BaseModel):
     score_max: float = 1
     """Highest score used by this question, as a fraction of the default mark set by the LMS."""
     scoring_method: ScoringMethod
-    penalty: Optional[float] = None
-    random_guess_score: Optional[float] = None
+    penalty: float | None = None
+    random_guess_score: float | None = None
     response_analysis_by_variant: bool = True
 
-    subquestions: Optional[list[SubquestionModel]] = None
+    subquestions: list[SubquestionModel] | None = None
 
 
 class BaseQuestion(ABC):
@@ -59,8 +59,8 @@ class BaseQuestion(ABC):
     def get_attempt(
         self,
         attempt_state: str,
-        scoring_state: Optional[str] = None,
-        response: Optional[dict] = None,
+        scoring_state: str | None = None,
+        response: dict | None = None,
         compute_score: bool = False,
         generate_hint: bool = False,
     ) -> BaseAttempt:

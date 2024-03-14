@@ -3,17 +3,16 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from abc import ABC, abstractmethod
-from typing import Optional
 
-from .question import BaseQuestion
 from ..elements import OptionsFormDefinition
+from .question import BaseQuestion
 
 __all__ = ["BaseQuestionType", "OptionsFormValidationError"]
 
 
 class BaseQuestionType(ABC):
     @abstractmethod
-    def get_options_form(self, question_state: Optional[str]) -> tuple[OptionsFormDefinition, dict[str, object]]:
+    def get_options_form(self, question_state: str | None) -> tuple[OptionsFormDefinition, dict[str, object]]:
         """Get the form used to create a new or edit an existing question.
 
         Args:
@@ -24,7 +23,7 @@ class BaseQuestionType(ABC):
         """
 
     @abstractmethod
-    def create_question_from_options(self, old_state: Optional[str], form_data: dict[str, object]) -> BaseQuestion:
+    def create_question_from_options(self, old_state: str | None, form_data: dict[str, object]) -> BaseQuestion:
         """Create or update the question (state) with the form data from a submitted question edit form.
 
         Args:

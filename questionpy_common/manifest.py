@@ -5,7 +5,7 @@
 import re
 from enum import Enum
 from keyword import iskeyword, issoftkeyword
-from typing import Optional, Union, Annotated
+from typing import Annotated
 
 from pydantic import BaseModel, field_validator
 from pydantic.fields import Field
@@ -73,16 +73,16 @@ class Manifest(BaseModel):
     api_version: Annotated[str, Field(pattern=RE_API)]
     author: str
     name: dict[str, str] = {}
-    entrypoint: Optional[str] = None
-    url: Optional[str] = None
+    entrypoint: str | None = None
+    url: str | None = None
     languages: set[str] = set()
     description: dict[str, str] = {}
-    icon: Optional[str] = None
+    icon: str | None = None
     type: PackageType = DEFAULT_PACKAGETYPE
-    license: Optional[str] = None
+    license: str | None = None
     permissions: set[str] = set()
     tags: set[str] = set()
-    requirements: Optional[Union[str, list[str]]] = None
+    requirements: str | list[str] | None = None
 
     @field_validator("short_name", "namespace")
     @classmethod

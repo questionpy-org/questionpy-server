@@ -2,39 +2,38 @@
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from typing import Type
 
 import pytest
 from polyfactory.factories.pydantic_factory import ModelFactory
 from pydantic import BaseModel
 
 from questionpy_common.dev.factories import (
-    StaticTextElementFactory,
-    TextInputElementFactory,
     CheckboxElementFactory,
     CheckboxGroupElementFactory,
+    FormSectionFactory,
+    GroupElementFactory,
+    HiddenElementFactory,
     OptionFactory,
+    OptionsFormDefinitionFactory,
     RadioGroupElementFactory,
     SelectElementFactory,
-    HiddenElementFactory,
-    GroupElementFactory,
-    FormSectionFactory,
-    OptionsFormDefinitionFactory,
+    StaticTextElementFactory,
+    TextInputElementFactory,
 )
 from questionpy_common.elements import (
-    StaticTextElement,
-    TextInputElement,
+    CanHaveConditions,
     CheckboxElement,
     CheckboxGroupElement,
+    FormSection,
+    GroupElement,
+    HiddenElement,
     Option,
+    OptionsFormDefinition,
     RadioGroupElement,
     SelectElement,
-    HiddenElement,
-    GroupElement,
-    FormSection,
-    OptionsFormDefinition,
+    StaticTextElement,
+    TextInputElement,
     is_form_element,
-    CanHaveConditions,
 )
 
 
@@ -54,7 +53,7 @@ from questionpy_common.elements import (
         [OptionsFormDefinitionFactory, OptionsFormDefinition],
     ),
 )
-def test_factory_builds_valid_model(factory: ModelFactory, model: Type[BaseModel]) -> None:
+def test_factory_builds_valid_model(factory: ModelFactory, model: type[BaseModel]) -> None:
     fake_model = factory.build()
     assert isinstance(fake_model, model)
 
@@ -75,7 +74,7 @@ def test_factory_builds_valid_model(factory: ModelFactory, model: Type[BaseModel
         [OptionsFormDefinitionFactory, OptionsFormDefinition],
     ),
 )
-def test_ignore_additional_properties(factory: ModelFactory, model: Type[BaseModel]) -> None:
+def test_ignore_additional_properties(factory: ModelFactory, model: type[BaseModel]) -> None:
     data = factory.build().model_dump()
     created_model = model(**data, additional_property="test")
     assert not hasattr(created_model, "additional_property")
