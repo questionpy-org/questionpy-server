@@ -157,7 +157,15 @@ class RepetitionElement(_BaseElement):
 
 
 FormElement: TypeAlias = Annotated[
-    StaticTextElement | TextInputElement | CheckboxElement | CheckboxGroupElement | RadioGroupElement | SelectElement | HiddenElement | GroupElement | RepetitionElement,
+    CheckboxElement
+    | CheckboxGroupElement
+    | GroupElement
+    | HiddenElement
+    | RadioGroupElement
+    | RepetitionElement
+    | SelectElement
+    | StaticTextElement
+    | TextInputElement,
     Field(discriminator="kind"),
 ]
 
