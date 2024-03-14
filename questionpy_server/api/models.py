@@ -14,9 +14,9 @@ from questionpy_common.elements import OptionsFormDefinition
 
 
 class PackageType(Enum):
-    LIBRARY = 'LIBRARY'
-    QUESTIONTYPE = 'QUESTIONTYPE'
-    QUESTION = 'QUESTION'
+    LIBRARY = "LIBRARY"
+    QUESTIONTYPE = "QUESTIONTYPE"
+    QUESTION = "QUESTION"
 
 
 class PackageInfo(BaseModel):
@@ -26,10 +26,15 @@ class PackageInfo(BaseModel):
     short_name: str
     namespace: str
     name: dict[str, str]
-    version: Annotated[str, Field(pattern=r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)'
-                                          r'(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'
-                                          r'(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?'
-                                          r'(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$')]
+    version: Annotated[
+        str,
+        Field(
+            pattern=r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+            r"(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)"
+            r"(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
+            r"(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$"
+        ),
+    ]
     type: PackageType
     author: Optional[str]
     url: Optional[HttpUrl]
@@ -86,8 +91,8 @@ class AttemptScoreArguments(AttemptViewArguments):
 
 
 class NotFoundStatusWhat(Enum):
-    PACKAGE = 'PACKAGE'
-    QUESTION_STATE = 'QUESTION_STATE'
+    PACKAGE = "PACKAGE"
+    QUESTION_STATE = "QUESTION_STATE"
 
 
 class NotFoundStatus(BaseModel):
@@ -95,12 +100,12 @@ class NotFoundStatus(BaseModel):
 
 
 class QuestionStateMigrationErrorCode(Enum):
-    NOT_IMPLEMENTED = 'NOT_IMPLEMENTED'
-    DOWNGRADE_NOT_POSSIBLE = 'DOWNGRADE_NOT_POSSIBLE'
-    PACKAGE_MISMATCH = 'PACKAGE_MISMATCH'
-    CURRENT_QUESTION_STATE_INVALID = 'CURRENT_QUESTION_STATE_INVALID'
-    MAJOR_VERSION_MISMATCH = 'MAJOR_VERSION_MISMATCH'
-    OTHER_ERROR = 'OTHER_ERROR'
+    NOT_IMPLEMENTED = "NOT_IMPLEMENTED"
+    DOWNGRADE_NOT_POSSIBLE = "DOWNGRADE_NOT_POSSIBLE"
+    PACKAGE_MISMATCH = "PACKAGE_MISMATCH"
+    CURRENT_QUESTION_STATE_INVALID = "CURRENT_QUESTION_STATE_INVALID"
+    MAJOR_VERSION_MISMATCH = "MAJOR_VERSION_MISMATCH"
+    OTHER_ERROR = "OTHER_ERROR"
 
 
 class QuestionStateMigrationError(BaseModel):
@@ -116,11 +121,16 @@ class Usage(BaseModel):
 
 
 class ServerStatus(BaseModel):
-    name: str = 'questionpy-server'
-    version: Annotated[str, Field(pattern=r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)'
-                                          r'(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'
-                                          r'(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?'
-                                          r'(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$')]
+    name: str = "questionpy-server"
+    version: Annotated[
+        str,
+        Field(
+            pattern=r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+            r"(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)"
+            r"(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
+            r"(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$"
+        ),
+    ]
     allow_lms_packages: bool
     max_package_size: ByteSize
     usage: Optional[Usage]

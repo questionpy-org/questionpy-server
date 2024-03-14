@@ -22,7 +22,7 @@ class ItemSettings:
     num_of_items: int
 
     def __post_init__(self) -> None:
-        self.list = [(char, self.size_per_item * char.encode()) for char in ascii_lowercase[:self.num_of_items]]
+        self.list = [(char, self.size_per_item * char.encode()) for char in ascii_lowercase[: self.num_of_items]]
         self.total_size = self.size_per_item * self.num_of_items
 
 
@@ -41,12 +41,9 @@ def settings(tmp_path_factory: TempPathFactory) -> Settings:
     return Settings(
         cache=CacheSettings(
             size=100,
-            directory=tmp_path_factory.mktemp('qpy'),
+            directory=tmp_path_factory.mktemp("qpy"),
         ),
-        items=ItemSettings(
-            size_per_item=15,
-            num_of_items=6
-        )
+        items=ItemSettings(size_per_item=15, num_of_items=6),
     )
 
 
@@ -89,11 +86,11 @@ def get_directory_size(directory: str) -> int:
 
 @pytest.fixture
 def path_with_too_many_bytes(tmp_path_factory: TempPathFactory, settings: Settings) -> Path:
-    directory = tmp_path_factory.mktemp('qpy')
+    directory = tmp_path_factory.mktemp("qpy")
     write_files_to_directory(settings.items.list, directory)
 
-    large_item_path = directory / 'large_item'
-    large_item_path.write_bytes(b'.' * (settings.cache.size - settings.items.total_size + 1))
+    large_item_path = directory / "large_item"
+    large_item_path.write_bytes(b"." * (settings.cache.size - settings.items.total_size + 1))
 
     return directory
 
@@ -120,7 +117,7 @@ def test_init(cache: FileLimitLRU, settings: Settings, path_with_too_many_bytes:
 
     # Remove files with temporary extension.
     tmp_file = Path(settings.cache.directory) / ("file.txt" + cache._tmp_extension)
-    tmp_file.write_bytes(b'.')
+    tmp_file.write_bytes(b".")
     new_cache = FileLimitLRU(settings.cache.directory, settings.cache.size)
     assert not tmp_file.is_file()
     assert get_file_count(settings.cache.directory) == settings.items.num_of_items
@@ -136,7 +133,7 @@ async def test_remove(cache: FileLimitLRU, settings: Settings) -> None:
     assert cache.total_size == expected_total_size
 
     # Removing a file should fire the callback.
-    with patch.object(cache, 'on_remove') as mock:
+    with patch.object(cache, "on_remove") as mock:
         file, _ = settings.items.list[-1]
         await cache.remove(file)
         expected_total_size = settings.items.total_size - 2 * settings.items.size_per_item
@@ -151,7 +148,7 @@ async def test_remove(cache: FileLimitLRU, settings: Settings) -> None:
 
     # Remove not existing file.
     with pytest.raises(FileNotFoundError):
-        await cache.remove('doesnotexist')
+        await cache.remove("doesnotexist")
     assert cache.total_size == expected_total_size
 
 
@@ -170,7 +167,7 @@ def test_get(cache: FileLimitLRU, settings: Settings) -> None:
 
     # Get not existing item.
     with pytest.raises(FileNotFoundError):
-        cache.get('doesnotexist')
+        cache.get("doesnotexist")
 
 
 def test_contains(cache: FileLimitLRU, settings: Settings) -> None:
@@ -183,38 +180,38 @@ def test_contains(cache: FileLimitLRU, settings: Settings) -> None:
     assert cache.contains(file)
 
     # Check not existing file.
-    assert not cache.contains('doesnotexist')
+    assert not cache.contains("doesnotexist")
 
 
 async def test_put(cache: FileLimitLRU, settings: Settings) -> None:
     # Content type is not bytes.
     with pytest.raises(TypeError):
-        await cache.put('new', 'string')  # type: ignore[arg-type]
+        await cache.put("new", "string")  # type: ignore[arg-type]
     assert cache.total_size == settings.items.total_size
     assert get_file_count(settings.cache.directory) == settings.items.num_of_items
 
     # Content size is bigger than cache size.
     with pytest.raises(SizeError):
-        await cache.put('new', b'.' * (settings.cache.size + 1))
+        await cache.put("new", b"." * (settings.cache.size + 1))
 
     # Replace existing file.
     file, _ = settings.items.list[0]
-    new_content = b'.' * settings.items.size_per_item
+    new_content = b"." * settings.items.size_per_item
     await cache.put(file, new_content)
     assert (Path(settings.cache.directory) / file).read_bytes() == new_content
     assert cache.total_size == settings.items.total_size
 
     # Put max sized content into cache.
-    file, content = 'A', b'.' * settings.cache.size
+    file, content = "A", b"." * settings.cache.size
     await cache.put(file, content)
     assert (Path(settings.cache.directory) / file).is_file()
     assert cache.total_size == settings.cache.size
     assert get_file_count(settings.cache.directory) == 1
 
     # Partially written file raises error.
-    with patch('questionpy_server.cache.Path.write_bytes', return_value=-1):
+    with patch("questionpy_server.cache.Path.write_bytes", return_value=-1):
         with pytest.raises(IOError):
-            await cache.put('B', b'.')
+            await cache.put("B", b".")
 
     # Delete every file in directory.
     for filepath in Path(settings.cache.directory).iterdir():
@@ -223,7 +220,7 @@ async def test_put(cache: FileLimitLRU, settings: Settings) -> None:
     # Remove the oldest file in cache.
     filecount = 3
     datasize = settings.cache.size // filecount
-    files, content = [str(i) for i in range(filecount)], b'.' * datasize
+    files, content = [str(i) for i in range(filecount)], b"." * datasize
 
     for file in files:
         await cache.put(file, content)

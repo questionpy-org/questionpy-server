@@ -3,8 +3,14 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from questionpy_server.worker.runtime.streams import SupportsWrite, SupportsRead
-from questionpy_server.worker.runtime.messages import Message, get_message_bytes, MessageToServer, MessageToWorker, \
-    messages_header_struct, InvalidMessageIdError
+from questionpy_server.worker.runtime.messages import (
+    Message,
+    get_message_bytes,
+    MessageToServer,
+    MessageToWorker,
+    messages_header_struct,
+    InvalidMessageIdError,
+)
 
 
 def send_message(message: Message, out: SupportsWrite) -> None:

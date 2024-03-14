@@ -12,6 +12,7 @@ from typing_extensions import TypeAlias
 @dataclass
 class ZipPackageLocation:
     """The path to a 'regular', zip-formatted QuestionPy package."""
+
     path: Path
     kind: Literal["zip"] = field(default="zip", init=False)
 
@@ -69,7 +70,7 @@ class FunctionPackageLocation:
                 namespace=module_name.replace(".", "_"),
                 version="0.1.0-debug",
                 api_version="0.1",
-                author="Debug Modulovitch"
+                author="Debug Modulovitch",
             )
 
         self.module_name = module_name
@@ -80,23 +81,25 @@ class FunctionPackageLocation:
         return f"{self.module_name}:{self.function_name}"
 
     @classmethod
-    def from_function(cls, function: PackageInitFunction,
-                      manifest: Optional[Manifest] = None) -> "FunctionPackageLocation":
+    def from_function(
+        cls, function: PackageInitFunction, manifest: Optional[Manifest] = None
+    ) -> "FunctionPackageLocation":
         """Get the module and name of the function and create a :class:`FunctionPackageLocation` targeting it."""
 
         if not hasattr(function, "__module__") or not hasattr(function, "__name__"):
             raise ValueError(f"Callable '{function}' is missing __module__ or __name__ attribute")
 
         if not hasattr(sys.modules[function.__module__], function.__name__):
-            raise ValueError(f"Function '{function.__name__}' must be a global in module '{function.__module__}' to be "
-                             f"used as a package.")
+            raise ValueError(
+                f"Function '{function.__name__}' must be a global in module '{function.__module__}' to be "
+                f"used as a package."
+            )
 
         return cls(function.__module__, function.__name__, manifest)
 
 
 PackageLocation: TypeAlias = Annotated[
-    Union[ZipPackageLocation, DirPackageLocation, FunctionPackageLocation],
-    Field(discriminator="kind")
+    Union[ZipPackageLocation, DirPackageLocation, FunctionPackageLocation], Field(discriminator="kind")
 ]
 """Identifies how to load a package.
 

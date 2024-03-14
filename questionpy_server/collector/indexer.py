@@ -79,8 +79,9 @@ class Indexer:
         return set(package for packages in self._index_by_identifier.values() for package in packages.values())
 
     @overload
-    async def register_package(self, package_hash: str, path_or_manifest: ComparableManifest,
-                               source: BaseCollector) -> Package:
+    async def register_package(
+        self, package_hash: str, path_or_manifest: ComparableManifest, source: BaseCollector
+    ) -> Package:
         """Registers a package in the index.
 
         Args:
@@ -99,8 +100,9 @@ class Indexer:
             source (BaseCollector): The source of the package.
         """
 
-    async def register_package(self, package_hash: str, path_or_manifest: Union[Path, ComparableManifest],
-                               source: BaseCollector) -> Package:
+    async def register_package(
+        self, package_hash: str, path_or_manifest: Union[Path, ComparableManifest], source: BaseCollector
+    ) -> Package:
         if not self._lock:
             self._lock = Lock()
 
@@ -126,10 +128,14 @@ class Indexer:
                 existing_package = package_versions.get(package.manifest.version, None)
                 if existing_package and existing_package != package:
                     # Package with the same identifier and version already exists; log a warning.
-                    log = logging.getLogger('questionpy-server:indexer')
-                    log.warning("The package %s (%s) with hash: %s already exists with a different hash: %s.",
-                                package.manifest.identifier, package.manifest.version, package.hash,
-                                existing_package.hash)
+                    log = logging.getLogger("questionpy-server:indexer")
+                    log.warning(
+                        "The package %s (%s) with hash: %s already exists with a different hash: %s.",
+                        package.manifest.identifier,
+                        package.manifest.version,
+                        package.hash,
+                        existing_package.hash,
+                    )
                 else:
                     package_versions[package.manifest.version] = package
 

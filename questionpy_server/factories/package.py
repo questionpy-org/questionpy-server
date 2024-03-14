@@ -9,7 +9,7 @@ from polyfactory.factories.pydantic_factory import ModelFactory
 
 from questionpy_server.api.models import PackageInfo
 
-languages = ['en', 'de']
+languages = ["en", "de"]
 fake = Faker()
 
 
@@ -30,8 +30,8 @@ class PackageInfoFactory(ModelFactory):
 
     @staticmethod
     def description() -> Dict[str, str]:
-        return {language: f'{language}: {fake.text()}' for language in languages}
+        return {language: f"{language}: {fake.text()}" for language in languages}
 
     @staticmethod
     def icon() -> str:
-        return f'https://placehold.jp/{fake.hex_color()[1:]}/{fake.hex_color()[1:]}/150x150.png'
+        return f"https://placehold.jp/{fake.hex_color()[1:]}/{fake.hex_color()[1:]}/150x150.png"

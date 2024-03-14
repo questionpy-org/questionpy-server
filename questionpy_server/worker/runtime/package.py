@@ -19,8 +19,12 @@ from questionpy_common.constants import MANIFEST_FILENAME
 from questionpy_common.environment import Environment, Package, set_qpy_environment
 from questionpy_common.manifest import Manifest
 
-from questionpy_server.worker.runtime.package_location import PackageLocation, ZipPackageLocation, DirPackageLocation, \
-    FunctionPackageLocation
+from questionpy_server.worker.runtime.package_location import (
+    PackageLocation,
+    ZipPackageLocation,
+    DirPackageLocation,
+    FunctionPackageLocation,
+)
 
 
 class NoInitFunctionError(Exception):
@@ -44,8 +48,9 @@ class ImportablePackage(ABC, Package):
 
         main_module: ModuleType
         if self.manifest.entrypoint:
-            main_module = import_module(f"{self.manifest.namespace}.{self.manifest.short_name}."
-                                        f"{self.manifest.entrypoint}")
+            main_module = import_module(
+                f"{self.manifest.namespace}.{self.manifest.short_name}." f"{self.manifest.entrypoint}"
+            )
         else:
             main_module = import_module(f"{self.manifest.namespace}.{self.manifest.short_name}")
 

@@ -22,10 +22,11 @@ from questionpy_server.utils.manifest import ComparableManifest
 from tests.conftest import PACKAGE
 
 
-@pytest.mark.parametrize('kind', [PACKAGE.path, PACKAGE.manifest])
-@patch('questionpy_server.collector.lms_collector.LMSCollector', spec=LMSCollector)
-async def test_register_package_with_path_and_manifest(collector: LMSCollector,
-                                                       kind: Union[Path, ComparableManifest]) -> None:
+@pytest.mark.parametrize("kind", [PACKAGE.path, PACKAGE.manifest])
+@patch("questionpy_server.collector.lms_collector.LMSCollector", spec=LMSCollector)
+async def test_register_package_with_path_and_manifest(
+    collector: LMSCollector, kind: Union[Path, ComparableManifest]
+) -> None:
     indexer = Indexer(WorkerPool(1, 200 * MiB))
     await indexer.register_package(PACKAGE.hash, kind, collector)
 
@@ -36,7 +37,7 @@ async def test_register_package_with_path_and_manifest(collector: LMSCollector,
     assert package.manifest == PACKAGE.manifest
 
 
-@patch('questionpy_server.collector.lms_collector.LMSCollector', spec=LMSCollector)
+@patch("questionpy_server.collector.lms_collector.LMSCollector", spec=LMSCollector)
 async def test_register_package_from_lms(collector: LMSCollector) -> None:
     indexer = Indexer(WorkerPool(1, 200 * MiB))
     await indexer.register_package(PACKAGE.hash, PACKAGE.manifest, collector)
@@ -54,7 +55,7 @@ async def test_register_package_from_lms(collector: LMSCollector) -> None:
     assert len(packages) == 0
 
 
-@pytest.mark.parametrize('collector', [LocalCollector, RepoCollector])
+@pytest.mark.parametrize("collector", [LocalCollector, RepoCollector])
 async def test_register_package_from_local_and_repo_collector(collector: BaseCollector) -> None:
     # Create mock.
     collector = patch(collector.__module__, spec=collector).start()
@@ -97,7 +98,7 @@ async def test_register_package_with_same_hash_as_existing_package() -> None:
     assert package is package_2
 
     # Register package from LMS collector.
-    with patch.object(PackageSources, 'add') as add:
+    with patch.object(PackageSources, "add") as add:
         lms_collector = patch(LMSCollector.__module__, spec=LMSCollector).start()
         package_3 = await indexer.register_package(PACKAGE.hash, PACKAGE.path, lms_collector)
         assert package is package_3
@@ -127,9 +128,11 @@ async def test_register_two_packages_with_same_manifest_but_different_hashes(cap
         # Register same package with different hash and same manifest.
         await indexer.register_package("different_hash", PACKAGE.manifest, collector)
 
-    message = f'The package {PACKAGE.manifest.identifier} ({PACKAGE.manifest.version}) with hash: ' \
-              f'different_hash already exists with a different hash: {PACKAGE.hash}.'
-    assert caplog.record_tuples == [('questionpy-server:indexer', logging.WARNING, message)]
+    message = (
+        f"The package {PACKAGE.manifest.identifier} ({PACKAGE.manifest.version}) with hash: "
+        f"different_hash already exists with a different hash: {PACKAGE.hash}."
+    )
+    assert caplog.record_tuples == [("questionpy-server:indexer", logging.WARNING, message)]
 
 
 async def test_unregister_package_with_lms_source() -> None:
@@ -144,7 +147,7 @@ async def test_unregister_package_with_lms_source() -> None:
     assert package is None
 
 
-@pytest.mark.parametrize('collector', [LocalCollector, RepoCollector])
+@pytest.mark.parametrize("collector", [LocalCollector, RepoCollector])
 async def test_unregister_package_with_local_and_repo_source(collector: BaseCollector) -> None:
     indexer = Indexer(WorkerPool(1, 200 * MiB))
     collector = patch(collector.__module__, spec=collector).start()

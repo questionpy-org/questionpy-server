@@ -32,7 +32,7 @@ def create_local_collector(tmp_path_factory: TempPathFactory) -> tuple[LocalColl
         Local collector and directory.
     """
 
-    path = tmp_path_factory.mktemp('qpy')
+    path = tmp_path_factory.mktemp("qpy")
     indexer = Indexer(WorkerPool(1, 200 * MiB))
     return LocalCollector(path, indexer), path
 
@@ -74,7 +74,7 @@ async def test_run_update_on_signal(tmp_path_factory: TempPathFactory) -> None:
     async with local_collector:
         # Check that the update function is called on SIGUSR1.
         update = WaitForAsyncFunctionCall(local_collector.update)
-        with patch.object(local_collector, 'update', side_effect=update.wrap) as mock_update:
+        with patch.object(local_collector, "update", side_effect=update.wrap) as mock_update:
             # Send signal.
             kill(getpid(), SIGUSR1)
             # Wait for signal handler to be called.
@@ -84,8 +84,8 @@ async def test_run_update_on_signal(tmp_path_factory: TempPathFactory) -> None:
 
 async def test_ignore_files_with_wrong_extension(tmp_path_factory: TempPathFactory) -> None:
     # File exists before initializing.
-    directory = tmp_path_factory.mktemp('qpy')
-    ignore_file = directory / 'wrong.extension'
+    directory = tmp_path_factory.mktemp("qpy")
+    ignore_file = directory / "wrong.extension"
     ignore_file.touch()
 
     indexer = Indexer(WorkerPool(1, 200 * MiB))
@@ -97,13 +97,13 @@ async def test_ignore_files_with_wrong_extension(tmp_path_factory: TempPathFacto
     # File gets created after initialization.
     local_collector, directory = create_local_collector(tmp_path_factory)
     async with local_collector:
-        ignore_file = directory / 'wrong.extension'
+        ignore_file = directory / "wrong.extension"
         ignore_file.touch()
         assert len(local_collector.map.paths) == 0
 
 
 async def test_package_exists_before_init(tmp_path_factory: TempPathFactory) -> None:
-    path = tmp_path_factory.mktemp('qpy')
+    path = tmp_path_factory.mktemp("qpy")
     indexer = Indexer(WorkerPool(1, 200 * MiB))
     local_collector = LocalCollector(path, indexer)
 
@@ -124,7 +124,7 @@ async def test_package_gets_created(tmp_path_factory: TempPathFactory) -> None:
     package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
-        with patch.object(local_collector.indexer, 'register_package') as mock_register:
+        with patch.object(local_collector.indexer, "register_package") as mock_register:
             # Copy a package to the directory.
             package_path = Path(copy(PACKAGE.path, directory))
             await local_collector.update()
@@ -142,8 +142,10 @@ async def test_package_gets_modified(tmp_path_factory: TempPathFactory) -> None:
     package_2 = Package(PACKAGE_2.hash, PACKAGE_2.manifest)
 
     async with local_collector:
-        with patch.object(local_collector.indexer, 'register_package') as mock_register, \
-                patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
+        with (
+            patch.object(local_collector.indexer, "register_package") as mock_register,
+            patch.object(local_collector.indexer, "unregister_package") as mock_unregister,
+        ):
             # Modify the package.
             package_path.write_bytes(PACKAGE_2.path.read_bytes())
             await local_collector.update()
@@ -165,7 +167,7 @@ async def test_package_gets_deleted(tmp_path_factory: TempPathFactory) -> None:
     package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
-        with patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
+        with patch.object(local_collector.indexer, "unregister_package") as mock_unregister:
             # Remove package from the directory.
             package_path.unlink()
             await local_collector.update()
@@ -181,12 +183,14 @@ async def test_package_gets_moved_from_package_to_package(tmp_path_factory: Temp
 
     # Create a package in the directory.
     src_path = Path(copy(PACKAGE.path, directory))
-    dest_path = src_path.with_suffix('.renamed.qpy')
+    dest_path = src_path.with_suffix(".renamed.qpy")
     package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
-        with patch.object(local_collector.indexer, 'register_package') as mock_register, \
-                patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
+        with (
+            patch.object(local_collector.indexer, "register_package") as mock_register,
+            patch.object(local_collector.indexer, "unregister_package") as mock_unregister,
+        ):
             # Rename the package.
             src_path.rename(dest_path)
             await local_collector.update()
@@ -203,12 +207,12 @@ async def test_package_gets_moved_from_non_package_to_package(tmp_path_factory: 
     local_collector, directory = create_local_collector(tmp_path_factory)
 
     # Create a package in the directory.
-    src_path = Path(copy(PACKAGE.path, directory / 'non.package'))
-    dest_path = src_path.with_suffix('.qpy')
+    src_path = Path(copy(PACKAGE.path, directory / "non.package"))
+    dest_path = src_path.with_suffix(".qpy")
     package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
-        with patch.object(local_collector.indexer, 'register_package') as mock_register:
+        with patch.object(local_collector.indexer, "register_package") as mock_register:
             # Rename the package.
             src_path.rename(dest_path)
             await local_collector.update()
@@ -223,11 +227,11 @@ async def test_package_gets_moved_from_package_to_non_package(tmp_path_factory: 
 
     # Create a package in the directory.
     src_path = Path(copy(PACKAGE.path, directory))
-    dest_path = src_path.with_suffix('.notqpy')
+    dest_path = src_path.with_suffix(".notqpy")
     package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
-        with patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
+        with patch.object(local_collector.indexer, "unregister_package") as mock_unregister:
             # Rename the package.
             Path(src_path).rename(dest_path)
             await local_collector.update()
@@ -238,14 +242,11 @@ async def test_package_gets_moved_from_package_to_non_package(tmp_path_factory: 
                 await local_collector.get_path(package)
 
 
-@pytest.mark.parametrize('inside', [
-    True,
-    False
-])
+@pytest.mark.parametrize("inside", [True, False])
 async def test_package_gets_moved_to_different_folder(tmp_path_factory: TempPathFactory, inside: bool) -> None:
     # Create directories.
-    directory = tmp_path_factory.mktemp('qpy')
-    new_directory = directory / 'new'
+    directory = tmp_path_factory.mktemp("qpy")
+    new_directory = directory / "new"
     new_directory.mkdir()
 
     if not inside:
@@ -260,7 +261,7 @@ async def test_package_gets_moved_to_different_folder(tmp_path_factory: TempPath
     package = Package(PACKAGE.hash, PACKAGE.manifest)
 
     async with local_collector:
-        with patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
+        with patch.object(local_collector.indexer, "unregister_package") as mock_unregister:
             # Move the package.
             src_path.rename(new_directory / src_path.name)
             await local_collector.update()
@@ -281,10 +282,12 @@ async def test_package_filenames_get_swapped(tmp_path_factory: TempPathFactory) 
     package_2 = Package(PACKAGE_2.hash, PACKAGE_2.manifest)
 
     async with local_collector:
-        with patch.object(local_collector.indexer, 'register_package') as mock_register, \
-                patch.object(local_collector.indexer, 'unregister_package') as mock_unregister:
+        with (
+            patch.object(local_collector.indexer, "register_package") as mock_register,
+            patch.object(local_collector.indexer, "unregister_package") as mock_unregister,
+        ):
             # Swap the package filenames.
-            temporary_path = directory / 'temporary_path'
+            temporary_path = directory / "temporary_path"
             package_1_path.rename(temporary_path)
             package_2_path.rename(package_1_path)
             temporary_path.rename(package_2_path)

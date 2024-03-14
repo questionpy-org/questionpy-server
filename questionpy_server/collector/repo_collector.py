@@ -25,8 +25,14 @@ class RepoCollector(CachedCollector):
     This collector is responsible for downloading packages from a remote repository and caching them locally.
     """
 
-    def __init__(self, url: str, update_interval: timedelta, package_cache: FileLimitLRU,
-                 repo_index_cache: FileLimitLRU, indexer: 'Indexer'):
+    def __init__(
+        self,
+        url: str,
+        update_interval: timedelta,
+        package_cache: FileLimitLRU,
+        repo_index_cache: FileLimitLRU,
+        indexer: "Indexer",
+    ):
         super().__init__(cache=package_cache, indexer=indexer)
 
         self._url = url
@@ -39,19 +45,22 @@ class RepoCollector(CachedCollector):
 
         self._task: Optional[Task] = None
 
-        logger = logging.getLogger('questionpy-server:repo-collector')
-        self._log = URLAdapter(logger, {'url': self._url})
+        logger = logging.getLogger("questionpy-server:repo-collector")
+        self._log = URLAdapter(logger, {"url": self._url})
 
     async def start(self) -> None:
         try:
             await self.update(with_log=False)
-            self._log.info('Started with %s unique package(s) and an update interval of %s.', len(self._index),
-                           self._update_interval)
+            self._log.info(
+                "Started with %s unique package(s) and an update interval of %s.",
+                len(self._index),
+                self._update_interval,
+            )
         except DownloadError as error:
-            self._log.error('Download failed on startup: %s', error)
+            self._log.error("Download failed on startup: %s", error)
 
         # Create updater task even if the initial update failed.
-        self._task = create_task(self._updater(), name=f'RepoCollector updater for {self._url}')
+        self._task = create_task(self._updater(), name=f"RepoCollector updater for {self._url}")
 
     async def stop(self) -> None:
         if self._task:
@@ -66,7 +75,7 @@ class RepoCollector(CachedCollector):
                 # TODO: retry after a failed update?
                 await self.update()
             except DownloadError as error:
-                self._log.error('Download failed on update: %s', error)
+                self._log.error("Download failed on update: %s", error)
 
     async def update(self, with_log: bool = True) -> None:
         new_meta = await self._repository.get_meta()
@@ -96,10 +105,14 @@ class RepoCollector(CachedCollector):
         self._index = new_packages
 
         if with_log:
-            self._log.info('Updated package index: %d created, %d deleted (total: %d)', len(added_package_hashes),
-                           len(removed_package_hashes), len(self._index))
+            self._log.info(
+                "Updated package index: %d created, %d deleted (total: %d)",
+                len(added_package_hashes),
+                len(removed_package_hashes),
+                len(self._index),
+            )
 
-    async def get_path(self, package: 'Package') -> Path:
+    async def get_path(self, package: "Package") -> Path:
         if not (repo_package := self._index.get(package.hash, None)):
             raise FileNotFoundError
 

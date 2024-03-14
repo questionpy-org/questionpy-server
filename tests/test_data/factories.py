@@ -13,14 +13,12 @@ from questionpy_server.utils.manifest import ComparableManifest
 
 class CustomFactory(ModelFactory[Any]):
     """Custom factory base class adding support for :class:`Version` fields."""
+
     __is_base_factory__ = True
 
     @classmethod
     def get_provider_map(cls) -> dict[Any, Callable[[], Any]]:
-        return {
-            **super().get_provider_map(),
-            Version: lambda: cls.__faker__.numerify(text='#.#.#')
-        }
+        return {**super().get_provider_map(), Version: lambda: cls.__faker__.numerify(text="#.#.#")}
 
 
 class RepoMetaFactory(ModelFactory):

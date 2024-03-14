@@ -6,8 +6,20 @@ import functools
 from hashlib import sha256
 from io import BytesIO
 from json import loads, JSONDecodeError
-from typing import Optional, Union, Callable, Any, cast, Type, TYPE_CHECKING, overload, Literal, NamedTuple, Sequence, \
-    get_type_hints
+from typing import (
+    Optional,
+    Union,
+    Callable,
+    Any,
+    cast,
+    Type,
+    TYPE_CHECKING,
+    overload,
+    Literal,
+    NamedTuple,
+    Sequence,
+    get_type_hints,
+)
 
 from aiohttp import BodyPartReader
 from aiohttp.abc import Request
@@ -41,8 +53,8 @@ def json_response(data: Union[Sequence[BaseModel], BaseModel], status: int = 200
 
     if isinstance(data, Sequence):
         json_list = f'[{",".join(x.json() for x in data)}]'
-        return Response(text=json_list, status=status, content_type='application/json')
-    return Response(text=data.model_dump_json(), status=status, content_type='application/json')
+        return Response(text=json_list, status=status, content_type="application/json")
+    return Response(text=data.model_dump_json(), status=status, content_type="application/json")
 
 
 def create_model_from_json(json: Union[object, str], param_class: Type[M]) -> M:
@@ -61,10 +73,10 @@ def create_model_from_json(json: Union[object, str], param_class: Type[M]) -> M:
             json = loads(json)
         model = param_class.model_validate(json)
     except ValidationError as error:
-        web_logger.warning('JSON does not match model: %s', error)
+        web_logger.warning("JSON does not match model: %s", error)
         raise HTTPBadRequest from error
     except JSONDecodeError as error:
-        web_logger.warning('Invalid JSON in request')
+        web_logger.warning("Invalid JSON in request")
         raise HTTPBadRequest from error
     return model
 
@@ -75,13 +87,11 @@ class HashContainer(NamedTuple):
 
 
 @overload
-async def read_part(part: BodyPartReader, max_size: int, calculate_hash: Literal[True]) -> HashContainer:
-    ...
+async def read_part(part: BodyPartReader, max_size: int, calculate_hash: Literal[True]) -> HashContainer: ...
 
 
 @overload
-async def read_part(part: BodyPartReader, max_size: int, calculate_hash: Literal[False]) -> bytes:
-    ...
+async def read_part(part: BodyPartReader, max_size: int, calculate_hash: Literal[False]) -> bytes: ...
 
 
 async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = False) -> Union[HashContainer, bytes]:
@@ -121,8 +131,7 @@ async def read_part(part: BodyPartReader, max_size: int, calculate_hash: bool = 
     return buffer.getvalue()
 
 
-async def parse_form_data(request: Request) \
-        -> tuple[Optional[bytes], Optional[HashContainer], Optional[bytes]]:
+async def parse_form_data(request: Request) -> tuple[Optional[bytes], Optional[HashContainer], Optional[bytes]]:
     """Parses a multipart/form-data request.
 
     Args:
@@ -132,7 +141,7 @@ async def parse_form_data(request: Request) \
         tuple of main field, package, and question state
     """
 
-    server: 'QPyServer' = request.app['qpy_server_app']
+    server: "QPyServer" = request.app["qpy_server_app"]
     main = package = question_state = None
 
     reader = await request.multipart()
@@ -140,18 +149,19 @@ async def parse_form_data(request: Request) \
         if not isinstance(part, BodyPartReader):
             continue
 
-        if part.name == 'main':
+        if part.name == "main":
             main = await read_part(part, server.settings.webservice.max_main_size, calculate_hash=False)
-        elif part.name == 'package':
+        elif part.name == "package":
             package = await read_part(part, server.settings.webservice.max_package_size, calculate_hash=True)
-        elif part.name == 'question_state':
+        elif part.name == "question_state":
             question_state = await read_part(part, constants.MAX_QUESTION_STATE_SIZE, calculate_hash=False)
 
     return main, package, question_state
 
 
-async def get_or_save_package(collection: PackageCollection, hash_value: str, container: Optional[HashContainer]) \
-        -> Optional[Package]:
+async def get_or_save_package(
+    collection: PackageCollection, hash_value: str, container: Optional[HashContainer]
+) -> Optional[Package]:
     """Gets a package from or saves it in the package collection.
 
     Args:
@@ -169,15 +179,17 @@ async def get_or_save_package(collection: PackageCollection, hash_value: str, co
         else:
             package = await collection.put(container)
     except SizeError as error:
-        raise HTTPRequestEntityTooLarge(max_size=error.max_size, actual_size=error.actual_size,
-                                        text=str(error)) from error
+        raise HTTPRequestEntityTooLarge(
+            max_size=error.max_size, actual_size=error.actual_size, text=str(error)
+        ) from error
     except FileNotFoundError:
         return None
     return package
 
 
-def ensure_package_and_question_state_exist(_func: Optional[RouteHandler] = None) \
-        -> Union[RouteHandler, Callable[[RouteHandler], RouteHandler]]:
+def ensure_package_and_question_state_exist(
+    _func: Optional[RouteHandler] = None,
+) -> Union[RouteHandler, Callable[[RouteHandler], RouteHandler]]:
     """Decorator function used to ensure that the package and question state exist (if needed by func) and that the json
     corresponds to the model given as a type annotation in func.
 
@@ -196,29 +208,29 @@ def ensure_package_and_question_state_exist(_func: Optional[RouteHandler] = None
         """Internal decorator function."""
 
         type_hints = get_type_hints(function)
-        question_state_type = type_hints.get('question_state')
+        question_state_type = type_hints.get("question_state")
         takes_question_state = question_state_type is not None
         require_question_state = question_state_type is bytes
-        main_part_json_model: Optional[Type[MainBaseModel]] = type_hints.get('data')
+        main_part_json_model: Optional[Type[MainBaseModel]] = type_hints.get("data")
 
         if main_part_json_model:
-            assert issubclass(main_part_json_model, MainBaseModel), \
-                f"Parameter 'data' of function {function.__name__} has unexpected type."
+            assert issubclass(
+                main_part_json_model, MainBaseModel
+            ), f"Parameter 'data' of function {function.__name__} has unexpected type."
 
         @functools.wraps(function)
         async def wrapper(request: Request, *args: Any, **kwargs: Any) -> Any:
             """Wrapper around the actual function call."""
 
-            server: 'QPyServer' = request.app['qpy_server_app']
-            package_hash: str = request.match_info.get('package_hash', '')
+            server: "QPyServer" = request.app["qpy_server_app"]
+            package_hash: str = request.match_info.get("package_hash", "")
 
-            if request.content_type == 'multipart/form-data':
+            if request.content_type == "multipart/form-data":
                 main, sent_package, sent_question_state = await parse_form_data(request)
-            elif request.content_type == 'application/json':
+            elif request.content_type == "application/json":
                 main, sent_package, sent_question_state = await request.read(), None, None
             else:
-                web_logger.info('Wrong content type, multipart/form-data expected, got %s',
-                                request.content_type)
+                web_logger.info("Wrong content type, multipart/form-data expected, got %s", request.content_type)
                 raise HTTPUnsupportedMediaType
 
             if main_part_json_model:
@@ -228,7 +240,7 @@ def ensure_package_and_question_state_exist(_func: Optional[RouteHandler] = None
                     raise HTTPBadRequest(text=msg)
 
                 model = create_model_from_json(main.decode(), main_part_json_model)
-                kwargs['data'] = model
+                kwargs["data"] = model
 
             # Check if func wants a question state and if it is provided.
             if takes_question_state:
@@ -236,11 +248,11 @@ def ensure_package_and_question_state_exist(_func: Optional[RouteHandler] = None
                     msg = "Multipart/form-data field 'question_state' is not set"
                     web_logger.warning(msg)
                     raise HTTPBadRequest(text=msg)
-                kwargs['question_state'] = sent_question_state
+                kwargs["question_state"] = sent_question_state
 
             # Check if a package is provided and if it matches the optional hash given in the URL.
             if sent_package and package_hash and package_hash != sent_package.hash:
-                msg = f'Package hash does not match: {package_hash} != {sent_package.hash}'
+                msg = f"Package hash does not match: {package_hash} != {sent_package.hash}"
                 web_logger.warning(msg)
                 raise HTTPBadRequest(text=msg)
 
@@ -249,14 +261,14 @@ def ensure_package_and_question_state_exist(_func: Optional[RouteHandler] = None
                 if package_hash:
                     raise HTTPNotFound(
                         text=NotFoundStatus(what=NotFoundStatusWhat.PACKAGE).model_dump_json(),
-                        content_type='application/json'
+                        content_type="application/json",
                     )
 
-                msg = 'No package found in multipart/form-data'
+                msg = "No package found in multipart/form-data"
                 web_logger.warning(msg)
                 raise HTTPBadRequest(text=msg)
 
-            kwargs['package'] = package
+            kwargs["package"] = package
             return await function(request, *args, **kwargs)
 
         return cast(RouteHandler, wrapper)

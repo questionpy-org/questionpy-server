@@ -17,7 +17,7 @@ class File(NamedTuple):
 
 
 class SizeError(Exception):
-    def __init__(self, message: str = '', max_size: int = 0, actual_size: int = 0):
+    def __init__(self, message: str = "", max_size: int = 0, actual_size: int = 0):
         super().__init__(message)
 
         self.max_size = max_size
@@ -30,12 +30,13 @@ class FileLimitLRU:
     Only `bytes` type values are accepted. Their size is calculated by passing them into the builtin `len()` function.
     """
 
-    def __init__(self, directory: Path, max_size: int, extension: Optional[str] = None,
-                 name: Optional[str] = None) -> None:
+    def __init__(
+        self, directory: Path, max_size: int, extension: Optional[str] = None, name: Optional[str] = None
+    ) -> None:
         """A cache should be initialised while starting a server therefore it is not necessary for it to be async."""
 
-        self._extension: str = '' if extension is None else '.' + extension.lstrip('.')
-        self._tmp_extension: str = '.tmp'
+        self._extension: str = "" if extension is None else "." + extension.lstrip(".")
+        self._tmp_extension: str = ".tmp"
         if self._extension == self._tmp_extension:
             raise ValueError(f'Extension cannot be "{self._tmp_extension}" as it is used internally.')
 
@@ -50,7 +51,7 @@ class FileLimitLRU:
         self.max_size = max_size
         self._total_size: int = 0
 
-        self._name = name or 'Cache'
+        self._name = name or "Cache"
 
         self._files: OrderedDict[str, File] = OrderedDict()
 
@@ -75,9 +76,15 @@ class FileLimitLRU:
             self._total_size = total
             self._files[path.stem] = File(path, size)
 
-        log = logging.getLogger('questionpy-server')
-        log.info('%s initialised at %s with %d file(s) and %s/%s.', self._name, self.directory, len(self._files),
-                 ByteSize(self._total_size).human_readable(), ByteSize(self.max_size).human_readable())
+        log = logging.getLogger("questionpy-server")
+        log.info(
+            "%s initialised at %s with %d file(s) and %s/%s.",
+            self._name,
+            self.directory,
+            len(self._files),
+            ByteSize(self._total_size).human_readable(),
+            ByteSize(self.max_size).human_readable(),
+        )
 
     def contains(self, key: str) -> bool:
         """Checks if the file exists in cache.
@@ -141,8 +148,11 @@ class FileLimitLRU:
         if size > self.max_size:
             # If we allowed this, the loop at the end would remove all items from the dictionary,
             # so we raise an error to allow exceptions for this case.
-            raise SizeError(f"Item itself exceeds maximum allowed size of {ByteSize(self.max_size).human_readable()}",
-                            max_size=self.max_size, actual_size=size)
+            raise SizeError(
+                f"Item itself exceeds maximum allowed size of {ByteSize(self.max_size).human_readable()}",
+                max_size=self.max_size,
+                actual_size=size,
+            )
 
         async with self._lock:
             # Save the bytes on filesystem.

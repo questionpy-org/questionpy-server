@@ -17,7 +17,7 @@ from questionpy_server.utils.manifest import ComparableManifest
 class PackageSources:
     """A container for all package sources."""
 
-    def __init__(self, package: 'Package'):
+    def __init__(self, package: "Package"):
         self._package = package
 
         self._local_collector: Optional[LocalCollector] = None
@@ -43,10 +43,10 @@ class PackageSources:
         elif isinstance(collector, LMSCollector):
             self._lms_collector = collector
         else:
-            raise TypeError(f'Invalid collector type: {type(collector)}')
+            raise TypeError(f"Invalid collector type: {type(collector)}")
 
     def remove(self, collector: BaseCollector) -> None:
-        """ Removes a collector from the package sources.
+        """Removes a collector from the package sources.
 
         Args:
             collector (BaseCollector): The collector to remove.
@@ -62,7 +62,7 @@ class PackageSources:
         elif isinstance(collector, LMSCollector):
             self._lms_collector = None
         else:
-            raise TypeError(f'Invalid collector type: {type(collector)}')
+            raise TypeError(f"Invalid collector type: {type(collector)}")
 
     async def get_path(self) -> Path:
         """Returns the path to the package.
@@ -106,8 +106,13 @@ class Package:
     _info: Optional[PackageInfo]
     _path: Optional[Path]
 
-    def __init__(self, package_hash: str, manifest: ComparableManifest, source: Optional[BaseCollector] = None,
-                 path: Optional[Path] = None):
+    def __init__(
+        self,
+        package_hash: str,
+        manifest: ComparableManifest,
+        source: Optional[BaseCollector] = None,
+        path: Optional[Path] = None,
+    ):
         self.hash = package_hash
         self.manifest = manifest
 
@@ -135,7 +140,7 @@ class Package:
 
         if not self._info:
             tmp = self.manifest.model_dump()
-            tmp['version'] = str(tmp['version'])
+            tmp["version"] = str(tmp["version"])
             self._info = PackageInfo(**tmp, package_hash=self.hash)
         return self._info
 

@@ -9,11 +9,7 @@ from questionpy_common.manifest import Manifest
 from semver import VersionInfo as _Version
 from typing_extensions import TypeAlias
 
-SemVer: TypeAlias = Annotated[
-    _Version,
-    PlainValidator(_Version.parse),
-    PlainSerializer(_Version.__str__)
-]
+SemVer: TypeAlias = Annotated[_Version, PlainValidator(_Version.parse), PlainSerializer(_Version.__str__)]
 
 
 class ComparableManifest(Manifest):

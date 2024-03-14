@@ -12,6 +12,7 @@ from questionpy_server.utils.manifest import ComparableManifest, SemVer
 
 class RepoMeta(BaseModel):
     """Metadata of the repository."""
+
     repository_schema_version: int
     """Version of the repository index schema."""
     timestamp: datetime
@@ -25,6 +26,7 @@ class RepoMeta(BaseModel):
 @total_ordering
 class RepoPackageVersion(BaseModel):
     """Represents a specific version of a package in the repository."""
+
     version: SemVer
     """Version of the package."""
     api_version: str
@@ -50,6 +52,7 @@ class RepoPackageVersion(BaseModel):
 
 class RepoPackageVersions(BaseModel):
     """Represents a package with all its versions in the repository."""
+
     manifest: ComparableManifest
     """Manifest of the most recent version of the package."""
     versions: list[RepoPackageVersion]
@@ -58,6 +61,7 @@ class RepoPackageVersions(BaseModel):
 
 class RepoPackageIndex(BaseModel):
     """Represents the index of the repository."""
+
     packages: list[RepoPackageVersions]
     """List of all available packages in the repository."""
 
@@ -65,6 +69,7 @@ class RepoPackageIndex(BaseModel):
 @dataclass
 class RepoPackage:
     """Represents a package in the repository."""
+
     manifest: ComparableManifest
     """Manifest of the package."""
 
@@ -76,7 +81,7 @@ class RepoPackage:
     """SHA256 hash of the package."""
 
     @classmethod
-    def combine(cls, manifest: ComparableManifest, repo_package_version: RepoPackageVersion) -> 'RepoPackage':
+    def combine(cls, manifest: ComparableManifest, repo_package_version: RepoPackageVersion) -> "RepoPackage":
         """
         Combines the manifest of a package with a specific version of that package.
 
@@ -93,5 +98,5 @@ class RepoPackage:
             manifest=modified_manifest,
             path=repo_package_version.path,
             size=repo_package_version.size,
-            sha256=repo_package_version.sha256
+            sha256=repo_package_version.sha256,
         )

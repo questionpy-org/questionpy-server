@@ -23,7 +23,7 @@ class LMSCollector(CachedCollector):
     a cache, and can be retrieved exclusively by their hash.
     """
 
-    def __init__(self, cache: FileLimitLRU, indexer: 'Indexer'):
+    def __init__(self, cache: FileLimitLRU, indexer: "Indexer"):
         super().__init__(cache=cache, indexer=indexer)
 
     async def start(self) -> None:
@@ -34,13 +34,13 @@ class LMSCollector(CachedCollector):
             await self.indexer.register_package(package_hash, file.path, self)
             count += 1
 
-        log = logging.getLogger('questionpy-server:lms-collector')
+        log = logging.getLogger("questionpy-server:lms-collector")
         log.info("Started with %s package(s).", count)
 
-    async def get_path(self, package: 'Package') -> Path:
+    async def get_path(self, package: "Package") -> Path:
         return self._cache.get(package.hash)
 
-    async def put(self, package_container: 'HashContainer') -> 'Package':
+    async def put(self, package_container: "HashContainer") -> "Package":
         try:
             # Try to get package from cache.
             package_path = self._cache.get(package_container.hash)
