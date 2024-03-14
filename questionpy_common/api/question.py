@@ -13,9 +13,9 @@ __all__ = ["ScoringMethod", "PossibleResponse", "SubquestionModel", "QuestionMod
 
 
 class ScoringMethod(Enum):
-    ALWAYS_MANUAL_SCORING_REQUIRED = 'ALWAYS_MANUAL_SCORING_REQUIRED'
-    AUTOMATICALLY_SCORABLE = 'AUTOMATICALLY_SCORABLE'
-    AUTOMATICALLY_SCORABLE_WITH_COUNTBACK = 'AUTOMATICALLY_SCORABLE_WITH_COUNTBACK'
+    ALWAYS_MANUAL_SCORING_REQUIRED = "ALWAYS_MANUAL_SCORING_REQUIRED"
+    AUTOMATICALLY_SCORABLE = "AUTOMATICALLY_SCORABLE"
+    AUTOMATICALLY_SCORABLE_WITH_COUNTBACK = "AUTOMATICALLY_SCORABLE_WITH_COUNTBACK"
 
 
 class PossibleResponse(BaseModel):
@@ -56,9 +56,14 @@ class BaseQuestion(ABC):
         """
 
     @abstractmethod
-    def get_attempt(self, attempt_state: str, scoring_state: Optional[str] = None,
-                    response: Optional[dict] = None, compute_score: bool = False,
-                    generate_hint: bool = False) -> BaseAttempt:
+    def get_attempt(
+        self,
+        attempt_state: str,
+        scoring_state: Optional[str] = None,
+        response: Optional[dict] = None,
+        compute_score: bool = False,
+        generate_hint: bool = False,
+    ) -> BaseAttempt:
         """Create an attempt object for a previously started attempt.
 
         Args:

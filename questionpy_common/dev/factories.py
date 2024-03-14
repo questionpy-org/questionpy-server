@@ -44,10 +44,18 @@ class HiddenElementFactory(_ModelFactory):
 def _one_of_each_element() -> list[_elements.FormElement]:
     # This used to work without a custom factory method, but doesn't anymore.
     # Maybe the same bug as https://github.com/litestar-org/polyfactory/issues/317?
-    one_of_each = [factory.build() for factory in (
-        StaticTextElementFactory, TextInputElementFactory, CheckboxElementFactory, CheckboxGroupElementFactory,
-        RadioGroupElementFactory, SelectElementFactory, HiddenElementFactory
-    )]
+    one_of_each = [
+        factory.build()
+        for factory in (
+            StaticTextElementFactory,
+            TextInputElementFactory,
+            CheckboxElementFactory,
+            CheckboxGroupElementFactory,
+            RadioGroupElementFactory,
+            SelectElementFactory,
+            HiddenElementFactory,
+        )
+    ]
     random.shuffle(one_of_each)
     return one_of_each
 

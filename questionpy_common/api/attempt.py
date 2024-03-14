@@ -8,8 +8,17 @@ from typing import Optional, Sequence, Annotated
 
 from pydantic import BaseModel, Field
 
-__all__ = ["CacheControl", "UiFile", "AttemptUi", "AttemptModel", "ScoringCode", "ClassifiedResponse",
-           "ScoreModel", "AttemptScoredModel", "BaseAttempt"]
+__all__ = [
+    "CacheControl",
+    "UiFile",
+    "AttemptUi",
+    "AttemptModel",
+    "ScoringCode",
+    "ClassifiedResponse",
+    "ScoreModel",
+    "AttemptScoredModel",
+    "BaseAttempt",
+]
 
 
 class CacheControl(Enum):
@@ -41,10 +50,10 @@ class AttemptModel(BaseModel):
 
 
 class ScoringCode(Enum):
-    AUTOMATICALLY_SCORED = 'AUTOMATICALLY_SCORED'
-    NEEDS_MANUAL_SCORING = 'NEEDS_MANUAL_SCORING'
-    RESPONSE_NOT_SCORABLE = 'RESPONSE_NOT_SCORABLE'
-    INVALID_RESPONSE = 'INVALID_RESPONSE'
+    AUTOMATICALLY_SCORED = "AUTOMATICALLY_SCORED"
+    NEEDS_MANUAL_SCORING = "NEEDS_MANUAL_SCORING"
+    RESPONSE_NOT_SCORABLE = "RESPONSE_NOT_SCORABLE"
+    INVALID_RESPONSE = "INVALID_RESPONSE"
 
 
 class ClassifiedResponse(BaseModel):
@@ -67,7 +76,6 @@ class AttemptScoredModel(AttemptModel, ScoreModel):
 
 
 class BaseAttempt(ABC):
-
     @abstractmethod
     def export_attempt_state(self) -> str:
         """Serialize this attempt's relevant data.
