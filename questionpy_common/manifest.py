@@ -31,6 +31,8 @@ RE_API = r"^(0|[1-9]\d*)\.(0|[1-9]\d*)$"
 # no sense. We match RE_VALID_CHARS_NAME in Python though, so here it does.
 RE_VALID_CHARS_NAME = re.compile(r"^[a-z\d_]+$")
 
+NAME_MAX_LENGTH = 127
+
 
 # Validators.
 def ensure_is_valid_name(name: str) -> str:
@@ -53,14 +55,14 @@ def ensure_is_valid_name(name: str) -> str:
         raise ValueError("can not be empty")
     if not RE_VALID_CHARS_NAME.match(name):
         raise ValueError("can only contain lowercase alphanumeric characters and underscores")
-    if length > 127:
-        raise ValueError("can have at most 127 characters")
+    if length > NAME_MAX_LENGTH:
+        raise ValueError(f"can have at most {NAME_MAX_LENGTH} characters")
     if name[0].isdigit():
         raise ValueError("can not start with a digit")
     if not name.isidentifier():
         # This check should be redundant - we keep it just in case.
         raise ValueError("is not a valid Python identifier")
-    if iskeyword(name) or issoftkeyword(name) or name in ["_", "case", "match"]:
+    if iskeyword(name) or issoftkeyword(name) or name in {"_", "case", "match"}:
         raise ValueError("can not be a Python keyword")
 
     return name
