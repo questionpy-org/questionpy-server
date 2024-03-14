@@ -1,6 +1,6 @@
 # Partly based on https://github.com/pypa/hatch/blob/master/ruff_defaults.toml
 
-target-version = "py39"
+target-version = "py311"
 line-length = 120
 output-format = "concise"
 preview = true
