@@ -3,7 +3,7 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from abc import ABC
-from typing import Annotated, Literal, TypeAlias, Union
+from typing import Annotated, Literal, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -38,4 +38,4 @@ class In(_BaseCondition):
     value: list[_Value]
 
 
-Condition = Annotated[Union[IsChecked, IsNotChecked, Equals, DoesNotEqual, In], Field(discriminator="kind")]
+Condition = Annotated[IsChecked | IsNotChecked | Equals | DoesNotEqual | In, Field(discriminator="kind")]

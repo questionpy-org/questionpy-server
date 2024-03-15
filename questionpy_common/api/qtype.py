@@ -4,7 +4,8 @@
 
 from abc import ABC, abstractmethod
 
-from ..elements import OptionsFormDefinition
+from questionpy_common.elements import OptionsFormDefinition
+
 from .question import BaseQuestion
 
 __all__ = ["BaseQuestionType", "OptionsFormValidationError"]

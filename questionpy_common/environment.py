@@ -6,7 +6,7 @@ from collections.abc import Callable, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass
 from importlib.abc import Traversable
-from typing import Literal, Protocol, TypeAlias
+from typing import Protocol, TypeAlias
 
 from questionpy_common.api.qtype import BaseQuestionType
 from questionpy_common.manifest import Manifest
@@ -59,7 +59,7 @@ OnRequestCallback: TypeAlias = Callable[[RequestUser], None]
 
 
 class Environment(Protocol):
-    type: Literal["process", "thread", "container"] | str
+    type: str
     """The kind of worker we are running in.
 
     The well-known values are:
@@ -108,7 +108,8 @@ def get_qpy_environment() -> Environment:
     """
     env = _current_env.get(None)
     if not env:
-        raise NoEnvironmentError("No QPy environment is set in the current context")
+        msg = "No QPy environment is set in the current context"
+        raise NoEnvironmentError(msg)
     return env
 
 

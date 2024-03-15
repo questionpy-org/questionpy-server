@@ -36,34 +36,46 @@ NAME_MAX_LENGTH = 127
 
 # Validators.
 def ensure_is_valid_name(name: str) -> str:
-    """Raises ValueError if the given name does not match the following conditions:
-        - contains only lowercase alphanumeric characters and underscores
-        - is 1 - 127 characters long
-        - does not start with a number
-        - is a valid Python identifier
-        - is NOT a Python keyword
+    """Ensures valid package name.
+
+    Checks that `name`
+
+      - contains only lowercase alphanumeric characters and underscores,
+      - is 1 - 127 characters long,
+      - does not start with a number,
+      - is a valid Python identifier and
+      - is NOT a Python keyword.
 
     Args:
-      name (str): the name to be checked
+      name: the name to be checked
 
     Returns:
       name
+
+    Raises:
+      ValueError: If the given name does not match the conditions.
     """
     length = len(name)
 
     if length < 1:
-        raise ValueError("can not be empty")
+        msg = "can not be empty"
+        raise ValueError(msg)
     if not RE_VALID_CHARS_NAME.match(name):
-        raise ValueError("can only contain lowercase alphanumeric characters and underscores")
+        msg = "can only contain lowercase alphanumeric characters and underscores"
+        raise ValueError(msg)
     if length > NAME_MAX_LENGTH:
-        raise ValueError(f"can have at most {NAME_MAX_LENGTH} characters")
+        msg = f"can have at most {NAME_MAX_LENGTH} characters"
+        raise ValueError(msg)
     if name[0].isdigit():
-        raise ValueError("can not start with a digit")
+        msg = "can not start with a digit"
+        raise ValueError(msg)
     if not name.isidentifier():
         # This check should be redundant - we keep it just in case.
-        raise ValueError("is not a valid Python identifier")
+        msg = "is not a valid Python identifier"
+        raise ValueError(msg)
     if iskeyword(name) or issoftkeyword(name) or name in {"_", "case", "match"}:
-        raise ValueError("can not be a Python keyword")
+        msg = "can not be a Python keyword"
+        raise ValueError(msg)
 
     return name
 

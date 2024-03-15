@@ -61,6 +61,7 @@ class BaseQuestion(ABC):
         attempt_state: str,
         scoring_state: str | None = None,
         response: dict | None = None,
+        *,
         compute_score: bool = False,
         generate_hint: bool = False,
     ) -> BaseAttempt:
