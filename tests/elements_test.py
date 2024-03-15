@@ -38,20 +38,20 @@ from questionpy_common.elements import (
 
 
 @pytest.mark.parametrize(
-    "factory, model",
-    (
-        [StaticTextElementFactory, StaticTextElement],
-        [TextInputElementFactory, TextInputElement],
-        [CheckboxElementFactory, CheckboxElement],
-        [CheckboxGroupElementFactory, CheckboxGroupElement],
-        [OptionFactory, Option],
-        [RadioGroupElementFactory, RadioGroupElement],
-        [SelectElementFactory, SelectElement],
-        [HiddenElementFactory, HiddenElement],
-        [GroupElementFactory, GroupElement],
-        [FormSectionFactory, FormSection],
-        [OptionsFormDefinitionFactory, OptionsFormDefinition],
-    ),
+    ("factory", "model"),
+    [
+        (StaticTextElementFactory, StaticTextElement),
+        (TextInputElementFactory, TextInputElement),
+        (CheckboxElementFactory, CheckboxElement),
+        (CheckboxGroupElementFactory, CheckboxGroupElement),
+        (OptionFactory, Option),
+        (RadioGroupElementFactory, RadioGroupElement),
+        (SelectElementFactory, SelectElement),
+        (HiddenElementFactory, HiddenElement),
+        (GroupElementFactory, GroupElement),
+        (FormSectionFactory, FormSection),
+        (OptionsFormDefinitionFactory, OptionsFormDefinition),
+    ],
 )
 def test_factory_builds_valid_model(factory: ModelFactory, model: type[BaseModel]) -> None:
     fake_model = factory.build()
@@ -59,20 +59,20 @@ def test_factory_builds_valid_model(factory: ModelFactory, model: type[BaseModel
 
 
 @pytest.mark.parametrize(
-    "factory, model",
-    (
-        [StaticTextElementFactory, StaticTextElement],
-        [TextInputElementFactory, TextInputElement],
-        [CheckboxElementFactory, CheckboxElement],
-        [CheckboxGroupElementFactory, CheckboxGroupElement],
-        [OptionFactory, Option],
-        [RadioGroupElementFactory, RadioGroupElement],
-        [SelectElementFactory, SelectElement],
-        [HiddenElementFactory, HiddenElement],
-        [GroupElementFactory, GroupElement],
-        [FormSectionFactory, FormSection],
-        [OptionsFormDefinitionFactory, OptionsFormDefinition],
-    ),
+    ("factory", "model"),
+    [
+        (StaticTextElementFactory, StaticTextElement),
+        (TextInputElementFactory, TextInputElement),
+        (CheckboxElementFactory, CheckboxElement),
+        (CheckboxGroupElementFactory, CheckboxGroupElement),
+        (OptionFactory, Option),
+        (RadioGroupElementFactory, RadioGroupElement),
+        (SelectElementFactory, SelectElement),
+        (HiddenElementFactory, HiddenElement),
+        (GroupElementFactory, GroupElement),
+        (FormSectionFactory, FormSection),
+        (OptionsFormDefinitionFactory, OptionsFormDefinition),
+    ],
 )
 def test_ignore_additional_properties(factory: ModelFactory, model: type[BaseModel]) -> None:
     data = factory.build().model_dump()
@@ -82,7 +82,7 @@ def test_ignore_additional_properties(factory: ModelFactory, model: type[BaseMod
 
 @pytest.mark.parametrize(
     "factory",
-    (
+    [
         StaticTextElementFactory,
         TextInputElementFactory,
         CheckboxElementFactory,
@@ -91,7 +91,7 @@ def test_ignore_additional_properties(factory: ModelFactory, model: type[BaseMod
         SelectElementFactory,
         HiddenElementFactory,
         GroupElementFactory,
-    ),
+    ],
 )
 def test_is_form_element_should_return_true(factory: ModelFactory) -> None:
     assert is_form_element(factory.build())
@@ -99,13 +99,13 @@ def test_is_form_element_should_return_true(factory: ModelFactory) -> None:
 
 @pytest.mark.parametrize(
     "instance",
-    (
+    [
         object(),
         CanHaveConditions(),
         Option(label="", value=""),
         FormSection(name="", header="", elements=[]),
         OptionsFormDefinition(),
-    ),
+    ],
 )
 def test_is_form_element_should_return_false(instance: object) -> None:
     assert not is_form_element(instance)
