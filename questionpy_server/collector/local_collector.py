@@ -5,6 +5,7 @@
 import logging
 from asyncio import Lock, create_task, get_running_loop, to_thread
 from collections.abc import Generator
+from os import DirEntry, scandir
 from pathlib import Path
 from signal import SIGUSR1
 from typing import TYPE_CHECKING, Any, overload
@@ -138,20 +139,21 @@ class LocalCollector(BaseCollector):
             with_log (bool): Whether to log the changes.
         """
 
-        def directory_iterator(directory: str) -> Generator[Path, Any, None]:
+        def directory_iterator(directory: str | None) -> Generator[DirEntry, Any, None]:
             """Iterate over all packages in the directory.
 
             Used as the custom directory iterator for DirectorySnapshot.
 
             Args:
-                directory (str): The directory.
+                directory: The directory.
 
             Returns:
-                A generator of paths.
+                A generator of directory entries.
             """
-            for file in Path(directory).glob("*.qpy"):
-                if file.is_file():
-                    yield file
+            if directory is not None:
+                for entry in scandir(directory):
+                    if entry.is_file() and entry.name.endswith(".qpy"):
+                        yield entry
 
         async def add_package(pkg_hash: str, pkg_path: Path) -> None:
             """Adds a package to the map and registers it in the indexer.
