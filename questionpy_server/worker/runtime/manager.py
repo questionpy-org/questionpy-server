@@ -7,7 +7,7 @@ import warnings
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, NoReturn
 
 from questionpy_common.api.qtype import BaseQuestionType
 from questionpy_common.environment import (
@@ -71,8 +71,7 @@ class WorkerManager:
     def bootstrap(self) -> None:
         init_msg = self.server_connection.receive_message()
         if not isinstance(init_msg, InitWorker):
-            msg = f"'{InitWorker.__name__}' message expected, '{type(init_msg).__name__}' received"
-            raise WorkerNotInitializedError(msg)
+            raise self._raise_not_initialized(init_msg)
 
         self.worker_type = init_msg.worker_type
         self.limits = init_msg.limits
@@ -96,11 +95,8 @@ class WorkerManager:
             self.server_connection.send_message(response)
 
     def on_msg_load_qpy_package(self, msg: LoadQPyPackage) -> MessageToServer:
-        self._require_init(msg)
-
         if not self.worker_type:
-            errmsg = "'worker_type' is not set."
-            raise RuntimeError(errmsg)
+            self._raise_not_initialized(msg)
 
         package = load_package(msg.location)
         package.setup_imports()
@@ -126,18 +122,17 @@ class WorkerManager:
         return LoadQPyPackage.Response()
 
     def on_msg_get_qpy_package_manifest(self, msg: GetQPyPackageManifest) -> MessageToServer:
-        self._require_init(msg)
+        if not self.worker_type:
+            self._raise_not_initialized(msg)
 
         package = self.loaded_packages[msg.path]
         return GetQPyPackageManifest.Response(manifest=package.manifest)
 
     def on_msg_get_options_form_definition(self, msg: GetOptionsForm) -> MessageToServer:
-        self._require_init(msg)
-        self._require_main_package_loaded(msg)
-
+        if not self.worker_type:
+            self._raise_not_initialized(msg)
         if not self.question_type:
-            errmsg = "'question_type' is not set."
-            raise RuntimeError(errmsg)
+            self._raise_no_main_package_loaded(msg)
 
         with self._with_request_user(msg.request_user):
             definition, form_data = self.question_type.get_options_form(msg.question_state)
@@ -145,12 +140,10 @@ class WorkerManager:
             return GetOptionsForm.Response(definition=definition, form_data=form_data)
 
     def on_msg_create_question_from_options(self, msg: CreateQuestionFromOptions) -> CreateQuestionFromOptions.Response:
-        self._require_init(msg)
-        self._require_main_package_loaded(msg)
-
+        if not self.worker_type:
+            self._raise_not_initialized(msg)
         if not self.question_type:
-            errmsg = "'question_type' is not set."
-            raise RuntimeError(errmsg)
+            self._raise_no_main_package_loaded(msg)
 
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_options(msg.question_state, msg.form_data)
@@ -160,12 +153,10 @@ class WorkerManager:
             )
 
     def on_msg_start_attempt(self, msg: StartAttempt) -> StartAttempt.Response:
-        self._require_init(msg)
-        self._require_main_package_loaded(msg)
-
+        if not self.worker_type:
+            self._raise_not_initialized(msg)
         if not self.question_type:
-            errmsg = "'question_type' is not set."
-            raise RuntimeError(errmsg)
+            self._raise_no_main_package_loaded(msg)
 
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_state(msg.question_state)
@@ -173,12 +164,10 @@ class WorkerManager:
             return StartAttempt.Response(attempt_state=attempt.export_attempt_state(), attempt_model=attempt.export())
 
     def on_msg_view_attempt(self, msg: ViewAttempt) -> ViewAttempt.Response:
-        self._require_init(msg)
-        self._require_main_package_loaded(msg)
-
+        if not self.worker_type:
+            self._raise_not_initialized(msg)
         if not self.question_type:
-            errmsg = "'question_type' is not set."
-            raise RuntimeError(errmsg)
+            self._raise_no_main_package_loaded(msg)
 
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_state(msg.question_state)
@@ -195,12 +184,10 @@ class WorkerManager:
             return ViewAttempt.Response(attempt_model=attempt.export())
 
     def on_msg_score_attempt(self, msg: ScoreAttempt) -> ScoreAttempt.Response:
-        self._require_init(msg)
-        self._require_main_package_loaded(msg)
-
+        if not self.worker_type:
+            self._raise_not_initialized(msg)
         if not self.question_type:
-            errmsg = "'question_type' is not set."
-            raise RuntimeError(errmsg)
+            self._raise_no_main_package_loaded(msg)
 
         with self._with_request_user(msg.request_user):
             question = self.question_type.create_question_from_state(msg.question_state)
@@ -210,15 +197,15 @@ class WorkerManager:
             scored_model = attempt.export_scored_attempt()
             return ScoreAttempt.Response(attempt_scored_model=scored_model)
 
-    def _require_init(self, msg: MessageToWorker) -> None:
-        if not self.worker_type:
-            errmsg = f"'{InitWorker.__name__}' message expected, '{type(msg).__name__}' received"
-            raise WorkerNotInitializedError(errmsg)
+    @staticmethod
+    def _raise_not_initialized(msg: MessageToWorker) -> NoReturn:
+        errmsg = f"'{InitWorker.__name__}' message expected, '{type(msg).__name__}' received"
+        raise WorkerNotInitializedError(errmsg)
 
-    def _require_main_package_loaded(self, msg: MessageToWorker) -> None:
-        if not (self.main_package and self.loaded_packages and self.question_type):
-            errmsg = f"'{LoadQPyPackage.__name__}(main=True)' message expected, '{type(msg).__name__}' received"
-            raise MainPackageNotLoadedError(errmsg)
+    @staticmethod
+    def _raise_no_main_package_loaded(msg: MessageToWorker) -> NoReturn:
+        errmsg = f"'{LoadQPyPackage.__name__}(main=True)' message expected, '{type(msg).__name__}' received"
+        raise MainPackageNotLoadedError(errmsg)
 
     @contextmanager
     def _with_request_user(self, request_user: RequestUser) -> Generator[None, None, None]:
