@@ -48,7 +48,7 @@ class ImportablePackage(ABC, Package):
         main_module: ModuleType
         if self.manifest.entrypoint:
             main_module = import_module(
-                f"{self.manifest.namespace}.{self.manifest.short_name}." f"{self.manifest.entrypoint}"
+                f"{self.manifest.namespace}.{self.manifest.short_name}.{self.manifest.entrypoint}"
             )
         else:
             main_module = import_module(f"{self.manifest.namespace}.{self.manifest.short_name}")

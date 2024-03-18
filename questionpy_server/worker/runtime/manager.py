@@ -71,7 +71,7 @@ class WorkerManager:
     def bootstrap(self) -> None:
         init_msg = self.server_connection.receive_message()
         if not isinstance(init_msg, InitWorker):
-            msg = f"'{InitWorker.__name__}' message expected, " f"'{type(init_msg).__name__}' received"
+            msg = f"'{InitWorker.__name__}' message expected, '{type(init_msg).__name__}' received"
             raise WorkerNotInitializedError(msg)
 
         self.worker_type = init_msg.worker_type
@@ -212,12 +212,12 @@ class WorkerManager:
 
     def _require_init(self, msg: MessageToWorker) -> None:
         if not self.worker_type:
-            errmsg = f"'{InitWorker.__name__}' message expected, " f"'{type(msg).__name__}' received"
+            errmsg = f"'{InitWorker.__name__}' message expected, '{type(msg).__name__}' received"
             raise WorkerNotInitializedError(errmsg)
 
     def _require_main_package_loaded(self, msg: MessageToWorker) -> None:
         if not (self.main_package and self.loaded_packages and self.question_type):
-            errmsg = f"'{LoadQPyPackage.__name__}(main=True)' message expected, " f"'{type(msg).__name__}' received"
+            errmsg = f"'{LoadQPyPackage.__name__}(main=True)' message expected, '{type(msg).__name__}' received"
             raise MainPackageNotLoadedError(errmsg)
 
     @contextmanager
