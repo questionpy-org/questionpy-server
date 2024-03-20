@@ -889,7 +889,7 @@ name = "questionpy-common"
 version = "0.2.0"
 description = "Common classes and functions for QuestionPy"
 optional = false
-python-versions = "^3.9"
+python-versions = "^3.11"
 files = []
 develop = false
 
@@ -900,8 +900,8 @@ pydantic = "^2.4"
 [package.source]
 type = "git"
 url = "https://github.com/questionpy-org/questionpy-common.git"
-reference = "fcaad57b2165ba3e6cd6bcd554cf410473f88818"
-resolved_reference = "fcaad57b2165ba3e6cd6bcd554cf410473f88818"
+reference = "e3eee74ea7b13eded95148b761ca4f2cc73656b7"
+resolved_reference = "e3eee74ea7b13eded95148b761ca4f2cc73656b7"
 
 [[package]]
 name = "ruff"
@@ -1120,4 +1120,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "158ffabc8f5653d9d9b15fef263737956b9121175bd496410edbc5973a093388"
+content-hash = "6fc251efd600f1e6d71d143ece2b24f5bdb2ba1e03b6949bfbc2e3b661c92c6a"

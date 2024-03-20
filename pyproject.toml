@@ -15,7 +15,7 @@ python = "^3.11"
 aiohttp = "^3.8.1"
 # 2.6.0 breaks us because of <https://github.com/pydantic/pydantic/issues/8697>.
 pydantic = "^2.4, !=2.6.0"
-questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "fcaad57b2165ba3e6cd6bcd554cf410473f88818" }
+questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "e3eee74ea7b13eded95148b761ca4f2cc73656b7" }
 polyfactory = "^2.7.2"
 pydantic-settings = "^2.0.2"
 watchdog = "^4.0.0"
