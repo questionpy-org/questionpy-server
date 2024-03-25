@@ -90,13 +90,27 @@ ignore = [
 
   # seems to produce a lot of false positives
   "PLR6301",
+
+  # bandit
+  "S404", # allow `subprocess`
+  "S410", # lxml has been removed from block list
+  "S311", # don't flag `random.*`
+  "S320", # allow XML parsing using lxml
+
+  # ruff doesn't track inheritance across files, disabling to prevent false positives
+  # https://github.com/astral-sh/ruff/issues/5243#issuecomment-1860862939
+  "RUF012",
 ]
 
 pydocstyle = { convention = "google" }
 
 [lint.per-file-ignores]
 "**/scripts/*" = ["INP001", "T201"]
-"**/tests/**/*" = ["PLC1901", "PLR2004", "S", "TID252", "FBT"]
+"**/tests/**/*" = ["PLC1901", "PLC2701", "PLR2004", "S", "TID252", "FBT"]
+
+[lint.flake8-builtins]
+# help: (guess it's ok since built-in `help()` is for interactive use and no collisions are expected)
+builtins-ignorelist = ["help"]
 
 [lint.pyupgrade]
 # Ensure we can still parse type hints at runtime.
