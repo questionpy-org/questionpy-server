@@ -7,8 +7,8 @@ from typing import Final
 from pydantic import ByteSize
 
 # General.
-KiB: Final[int] = 1024  # pylint: disable=invalid-name
-MiB: Final[int] = 1024 * KiB  # pylint: disable=invalid-name
+KiB: Final[int] = 1024
+MiB: Final[int] = 1024 * KiB
 
 # Request.
 MAX_PACKAGE_SIZE: Final[ByteSize] = ByteSize(20 * MiB)
