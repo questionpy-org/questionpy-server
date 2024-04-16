@@ -10,6 +10,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 __all__ = [
+    "AttemptFile",
     "AttemptModel",
     "AttemptScoredModel",
     "AttemptUi",
@@ -18,7 +19,6 @@ __all__ = [
     "ClassifiedResponse",
     "ScoreModel",
     "ScoringCode",
-    "UiFile",
 ]
 
 
@@ -28,20 +28,27 @@ class CacheControl(Enum):
     NO_CACHE = "NO_CACHE"
 
 
-class UiFile(BaseModel):
+class AttemptFile(BaseModel):
     name: str
-    data: str
     mime_type: str | None = None
+    data: str
 
 
 class AttemptUi(BaseModel):
-    content: str
-    """X(H)ML markup of the question UI."""
+    formulation: str
+    """X(H)ML markup of the formulation part of the question."""
+    general_feedback: str | None = None
+    """X(H)ML markup of the general feedback part of the question."""
+    specific_feedback: str | None = None
+    """X(H)ML markup of the response-specific feedback part of the question."""
+    right_answer: str | None = None
+    """X(H)ML markup of the part of the question which explains the correct answer."""
+
     placeholders: dict[str, str] = {}
     """Names and values of the ``<?p`` placeholders that appear in content."""
-    include_css_file: str | None = None
+    css_files: list[str]
+    files: dict[str, AttemptFile] = {}
     cache_control: CacheControl = CacheControl.PRIVATE_CACHE
-    files: list[UiFile] = []
 
 
 class AttemptModel(BaseModel):
