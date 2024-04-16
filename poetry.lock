@@ -900,8 +900,8 @@ pydantic = "^2.6.4"
 [package.source]
 type = "git"
 url = "https://github.com/questionpy-org/questionpy-common.git"
-reference = "b33e6241c7ceb09d64f2bc160ee018c3b90a64be"
-resolved_reference = "b33e6241c7ceb09d64f2bc160ee018c3b90a64be"
+reference = "5fcb89fbaa3d6349f0036c9d9ae26b656ebd7fda"
+resolved_reference = "5fcb89fbaa3d6349f0036c9d9ae26b656ebd7fda"
 
 [[package]]
 name = "ruff"
@@ -1120,4 +1120,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "94d4e8de97125072429b8dffb5274246d93941a316af8e4ca2930fc0a179fbe2"
+content-hash = "4b7312347c364d7d7aed9c748bdff76f58286822b75c7b6ee4d460d8911e704f"
