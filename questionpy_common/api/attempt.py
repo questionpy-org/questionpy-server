@@ -39,7 +39,6 @@ class AttemptUi(BaseModel):
     """X(H)ML markup of the question UI."""
     placeholders: dict[str, str] = {}
     """Names and values of the ``<?p`` placeholders that appear in content."""
-    include_inline_css: str | None = None
     include_css_file: str | None = None
     cache_control: CacheControl = CacheControl.PRIVATE_CACHE
     files: list[UiFile] = []
