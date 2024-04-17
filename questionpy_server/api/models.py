@@ -10,12 +10,7 @@ from pydantic import BaseModel, ByteSize, ConfigDict, Field, FilePath, HttpUrl
 from questionpy_common.api.attempt import AttemptModel
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
-
-
-class PackageType(Enum):
-    LIBRARY = "LIBRARY"
-    QUESTIONTYPE = "QUESTIONTYPE"
-    QUESTION = "QUESTION"
+from questionpy_common.manifest import PackageType
 
 
 class PackageInfo(BaseModel):
