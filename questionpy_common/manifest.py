@@ -3,7 +3,7 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 import re
-from enum import Enum
+from enum import StrEnum
 from keyword import iskeyword, issoftkeyword
 from typing import Annotated
 
@@ -11,7 +11,7 @@ from pydantic import BaseModel, field_validator
 from pydantic.fields import Field
 
 
-class PackageType(str, Enum):
+class PackageType(StrEnum):
     LIBRARY = "LIBRARY"
     QUESTIONTYPE = "QUESTIONTYPE"
     QUESTION = "QUESTION"
