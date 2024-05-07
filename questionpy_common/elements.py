@@ -22,6 +22,7 @@ __all__ = [
     "RepetitionElement",
     "SelectElement",
     "StaticTextElement",
+    "TextAreaElement",
     "TextInputElement",
     "is_form_element",
 ]
@@ -64,6 +65,16 @@ class StaticTextElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp)
 
 class TextInputElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     kind: Literal["input"] = "input"
+    required: bool = False
+    """Require some non-empty input to be entered before the form can be submitted."""
+    default: str | None = None
+    """Default value of the input when first loading the form. Part of the submitted form data."""
+    placeholder: str | None = None
+    """Placeholder to show when no value has been entered yet. Not part of the submitted form data."""
+
+
+class TextAreaElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
+    kind: Literal["textarea"] = "textarea"
     required: bool = False
     """Require some non-empty input to be entered before the form can be submitted."""
     default: str | None = None
@@ -165,7 +176,8 @@ FormElement: TypeAlias = Annotated[
     | RepetitionElement
     | SelectElement
     | StaticTextElement
-    | TextInputElement,
+    | TextInputElement
+    | TextAreaElement,
     Field(discriminator="kind"),
 ]
 
