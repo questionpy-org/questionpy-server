@@ -199,13 +199,13 @@ class CustomEnvSettingsSource(EnvSettingsSource):
     def __init__(self, settings_cls: type[BaseSettings]) -> None:
         super().__init__(settings_cls)
 
-    def _get_settings(self, settings: dict[str, Any], result: set | None = None, parent: str = "") -> set[str]:
+    def _format_settings(self, settings: dict[str, Any], result: set | None = None, parent: str = "") -> set[str]:
         if result is None:
             result = set()
 
         for key, value in settings.items():
             if isinstance(value, dict):
-                self._get_settings(value, result, f"{parent}{key}->")
+                self._format_settings(value, result, f"{parent}{key}->")
             else:
                 result.add(f"{parent}{key}: {value}")
 
@@ -219,12 +219,13 @@ class CustomEnvSettingsSource(EnvSettingsSource):
     def __call__(self) -> dict[str, Any]:
         env_settings = super().__call__()
         if env_settings:
+            formatted_settings = self._format_settings(env_settings)
             _log.info(
                 "Reading settings from environment variables, %s in total. Environment variables overwrite "
                 "settings from the config file.",
-                len(env_settings),
+                len(formatted_settings),
             )
-            _log.debug("Following settings were read from environment variables: %s", self._get_settings(env_settings))
+            _log.debug("Following settings were read from environment variables: %s", sorted(formatted_settings))
         return env_settings
 
 

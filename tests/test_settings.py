@@ -40,7 +40,7 @@ def test_env_settings_source_wrapper(caplog: pytest.LogCaptureFixture) -> None:
     settings_wrapper = CustomEnvSettingsSource(MagicMock())
 
     with patch.object(
-        EnvSettingsSource, "__call__", return_value={"test": "value", "nested": {"test": "value"}}
+        EnvSettingsSource, "__call__", return_value={"beta": "1", "alpha": {"gamma": "3", "delta": "2"}}
     ) as mock:
         # Test that the wrapper calls the underlying source.
         settings_wrapper()
@@ -50,7 +50,7 @@ def test_env_settings_source_wrapper(caplog: pytest.LogCaptureFixture) -> None:
     assert caplog.record_tuples[0] == (
         "questionpy-server:settings",
         logging.INFO,
-        "Reading settings from environment variables, 2 in total. Environment variables "
+        "Reading settings from environment variables, 3 in total. Environment variables "
         "overwrite settings from the config file.",
     )
 
@@ -58,7 +58,7 @@ def test_env_settings_source_wrapper(caplog: pytest.LogCaptureFixture) -> None:
     assert logger_name == "questionpy-server:settings"
     assert level == logging.DEBUG
     assert message.startswith("Following settings were read from environment variables: ")
-    assert message.endswith(("{'test: value', 'nested->test: value'}", "{'nested->test: value', 'test: value'}"))
+    assert message.endswith("['alpha->delta: 2', 'alpha->gamma: 3', 'beta: 1']")
 
 
 def test_env_var_has_higher_priority_than_config_file(path_with_empty_config_file: Path) -> None:
