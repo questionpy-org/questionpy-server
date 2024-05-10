@@ -8,13 +8,13 @@ description = "QuestionPy application server"
 authors = ["Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>"]
 license = "MIT"
 homepage = "https://questionpy.org"
-version = "0.2.0"
+version = "0.2.1"
 
 [tool.poetry.dependencies]
 python = "^3.11"
 aiohttp = "^3.9.3"
 pydantic = "^2.6.4"
-questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "d19ad74856e9ee86e6dffe7a85dc0fd418546af6" }
+questionpy-common = { git = "https://github.com/questionpy-org/questionpy-common.git", rev = "0a2e08a505ac17f0f15eb82bec61cebb415104a7" }
 polyfactory = "^2.15.0"
 pydantic-settings = "^2.2.1"
 watchdog = "^4.0.0"
