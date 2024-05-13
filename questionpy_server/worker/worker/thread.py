@@ -5,6 +5,7 @@
 import asyncio
 import itertools
 import logging
+import sys
 import threading
 from asyncio import Task
 from collections.abc import Sequence
@@ -34,6 +35,10 @@ class _WorkerThread(threading.Thread):
     def run(self) -> None:
         self._end_event.clear()
 
+        # sys.path isn't thread-local, so this doesn't isolate concurrently running workers, but since the thread worker
+        # is only for testing anyway, it'll do for now.
+        original_path = sys.path.copy()
+
         connection = WorkerToServerConnection(self._pipe.right, self._pipe.right)
         manager = WorkerManager(connection)
         try:
@@ -42,6 +47,10 @@ class _WorkerThread(threading.Thread):
         finally:
             # Since asyncio.Event is not threadsafe, we schedule setting it in the main thread instead.
             self._loop.call_soon_threadsafe(self._end_event.set)
+
+            sys.path = original_path
+            # Having reset the path, this forces the questionpy module to be reloaded upon next import.
+            sys.modules.pop("questionpy", None)
 
     async def wait(self) -> None:
         await self._end_event.wait()
