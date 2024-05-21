@@ -8,7 +8,7 @@ from questionpy_common.elements import OptionsFormDefinition
 
 from .question import BaseQuestion
 
-__all__ = ["BaseQuestionType", "OptionsFormValidationError"]
+__all__ = ["BaseQuestionType", "InvalidQuestionStateError", "OptionsFormValidationError"]
 
 
 class BaseQuestionType(ABC):
@@ -40,7 +40,11 @@ class BaseQuestionType(ABC):
 
     @abstractmethod
     def create_question_from_state(self, question_state: str) -> BaseQuestion:
-        """Deserialize the given question state, returning a question object equivalent to the one which exported it."""
+        """Deserialize the given question state, returning a question object equivalent to the one which exported it.
+
+        Raises:
+            InvalidQuestionStateError: When the given question state is invalid and cannot be reused.
+        """
 
 
 class OptionsFormValidationError(Exception):
@@ -48,3 +52,7 @@ class OptionsFormValidationError(Exception):
         """There was at least one validation error."""
         self.errors = errors  # input element name -> error description
         super().__init__("Form input data could not be validated successfully.")
+
+
+class InvalidQuestionStateError(Exception):
+    """Error to raise when your package cannot parse the question state it is given."""
