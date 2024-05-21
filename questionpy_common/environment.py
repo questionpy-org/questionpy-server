@@ -5,7 +5,7 @@ from abc import abstractmethod
 from collections.abc import Callable, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass
-from importlib.abc import Traversable
+from importlib.resources.abc import Traversable
 from typing import Protocol, TypeAlias
 
 from pydantic import BaseModel
