@@ -8,7 +8,7 @@ import zipfile
 from abc import ABC, abstractmethod
 from functools import cached_property
 from importlib import import_module, resources
-from importlib.abc import Traversable
+from importlib.resources.abc import Traversable
 from pathlib import Path
 from types import ModuleType
 from typing import cast
