@@ -38,13 +38,7 @@ NAME_MAX_LENGTH = 127
 def ensure_is_valid_name(name: str) -> str:
     """Ensures valid package name.
 
-    Checks that `name`
-
-      - contains only lowercase alphanumeric characters and underscores,
-      - is 1 - 127 characters long,
-      - does not start with a number,
-      - is a valid Python identifier and
-      - is NOT a Python keyword.
+    Checks that `name` follows the [naming rules](../../documentation/configuration.md#short_name).
 
     Args:
       name: the name to be checked
@@ -80,7 +74,12 @@ def ensure_is_valid_name(name: str) -> str:
     return name
 
 
-class Manifest(BaseModel):
+class SourceManifest(BaseModel):
+    """Represents the fields in a package source directory.
+
+    These fields are valid inside a package's configuration file.
+    """
+
     short_name: str
     namespace: str = DEFAULT_NAMESPACE
     version: Annotated[str, Field(pattern=RE_SEMVER)]
@@ -106,3 +105,19 @@ class Manifest(BaseModel):
     @property
     def identifier(self) -> str:
         return f"@{self.namespace}/{self.short_name}"
+
+
+class PackageFile(BaseModel):
+    """Represents a static file included in a built package."""
+
+    mime_type: str | None
+    size: int
+
+
+class Manifest(SourceManifest):
+    """Represents a package manifest.
+
+    Contains fields valid in a pre-built package manifest.
+    """
+
+    static_files: dict[str, PackageFile] = {}
