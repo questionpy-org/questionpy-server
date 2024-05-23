@@ -8,8 +8,6 @@ from dataclasses import dataclass
 from importlib.resources.abc import Traversable
 from typing import Protocol, TypeAlias
 
-from pydantic import BaseModel
-
 from questionpy_common.api.qtype import BaseQuestionType
 from questionpy_common.manifest import Manifest
 
@@ -58,11 +56,6 @@ class Package(Protocol):
 
 
 OnRequestCallback: TypeAlias = Callable[[RequestUser], None]
-
-
-class PackageFile(BaseModel):
-    mime_type: str
-    size: int
 
 
 class Environment(Protocol):
