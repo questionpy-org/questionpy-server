@@ -2,14 +2,14 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import traceback
-from enum import IntEnum, unique
+from enum import IntEnum, StrEnum, auto, unique
 from struct import Struct
 from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
-from questionpy_common.api.qtype import OptionsFormDefinition
+from questionpy_common.api.qtype import InvalidQuestionStateError, OptionsFormDefinition
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_common.manifest import Manifest
@@ -197,11 +197,12 @@ class ScoreAttempt(MessageToWorker):
 class WorkerError(MessageToServer):
     """Error message."""
 
-    class ErrorType(IntEnum):
+    class ErrorType(StrEnum):
         """Error types."""
 
-        UNKNOWN = 0
-        MEMORY_EXCEEDED = 1
+        UNKNOWN = auto()
+        MEMORY_EXCEEDED = auto()
+        QUESTION_STATE_INVALID = auto()
 
     message_id: ClassVar[MessageIds] = MessageIds.ERROR
     expected_response_id: MessageIds
@@ -216,6 +217,8 @@ class WorkerError(MessageToServer):
         """Get a WorkerError message from an exception."""
         if isinstance(error, MemoryError):
             error_type = WorkerError.ErrorType.MEMORY_EXCEEDED
+        elif isinstance(error, InvalidQuestionStateError):
+            error_type = WorkerError.ErrorType.QUESTION_STATE_INVALID
         else:
             error_type = WorkerError.ErrorType.UNKNOWN
 
@@ -233,15 +236,18 @@ class WorkerError(MessageToServer):
 
     def to_exception(self) -> Exception:
         """Get an exception from a WorkerError message."""
-        message = self.message
-        if __debug__ and self.original_stacktrace:
-            # add_note (PEP 678) will be great for this when we're on Python 3.11.
-            note = f"The original worker-side stacktrace follows:\n{self.original_stacktrace}"
-            message = message + "\n" + note if message else note
-
+        error: Exception
         if self.type == WorkerError.ErrorType.MEMORY_EXCEEDED:
-            return WorkerMemoryLimitExceededError(message)
-        return WorkerUnknownError(message)
+            error = WorkerMemoryLimitExceededError(self.message)
+        elif self.type == WorkerError.ErrorType.QUESTION_STATE_INVALID:
+            error = InvalidQuestionStateError(self.message)
+        else:
+            error = WorkerUnknownError(self.message)
+
+        if __debug__ and self.original_stacktrace:
+            error.add_note(f"The original worker-side stacktrace follows:\n{self.original_stacktrace}")
+
+        return error
 
 
 def get_message_bytes(message: Message) -> tuple[bytes, bytes | None]:
