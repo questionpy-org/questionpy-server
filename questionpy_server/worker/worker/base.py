@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, TypeVar
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import RequestUser, WorkerResourceLimits
+from questionpy_common.environment import PackageFile, RequestUser, WorkerResourceLimits
 from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
@@ -31,7 +31,7 @@ from questionpy_server.worker.runtime.messages import (
     WorkerError,
 )
 from questionpy_server.worker.runtime.package_location import PackageLocation
-from questionpy_server.worker.worker import Worker, WorkerState
+from questionpy_server.worker.worker import PackageFileStream, Worker, WorkerState
 
 if TYPE_CHECKING:
     from questionpy_server.worker.connection import ServerToWorkerConnection
@@ -223,3 +223,9 @@ class BaseWorker(Worker, ABC):
         ret = await self._send_and_wait_response(msg, ScoreAttempt.Response)
 
         return ret.attempt_scored_model
+
+    async def get_static_file(self, path: str) -> PackageFileStream:
+        raise NotImplementedError  # TODO: Implement get_static_file.
+
+    async def get_static_file_index(self) -> dict[str, PackageFile]:
+        raise NotImplementedError  # TODO: Implement get_static_file_index.

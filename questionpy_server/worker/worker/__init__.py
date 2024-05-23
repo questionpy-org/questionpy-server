@@ -4,10 +4,11 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import Protocol
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import RequestUser, WorkerResourceLimits
+from questionpy_common.environment import PackageFile, RequestUser, WorkerResourceLimits
 from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import WorkerResources
@@ -20,6 +21,22 @@ class WorkerState(Enum):
     IDLE = 2
     SERVER_AWAITS_RESPONSE = 3  # server send a message to worker and is waiting for a response
     WORKER_AWAITS_RESPONSE = 4  # worker send a request/message to server and server is now processing the request
+
+
+class PackageFileStream(Protocol):
+    """Represents a file read from a package."""
+
+    size: int
+    """The total size of the file in bytes."""
+    mime_type: str | None
+    """Mime type as reported by the package.
+
+    Usually this is derived from the file extension at build time and listed in the manifest.
+    """
+
+    @abstractmethod
+    def read(self) -> bytes:
+        """Reads the entire file and returns its contents."""
 
 
 class Worker(ABC):
@@ -140,3 +157,18 @@ class Worker(ABC):
         response: dict,
     ) -> AttemptScoredModel:
         """TODO: write docstring."""
+
+    @abstractmethod
+    async def get_static_file(self, path: str) -> PackageFileStream:
+        """Reads the static file at the given path in the package.
+
+        Args:
+            path: Path relative to the `dist` directory of the package.
+
+        Raises:
+            FileNotFoundError: If no static file exists at the given path.
+        """
+
+    @abstractmethod
+    async def get_static_file_index(self) -> dict[str, PackageFile]:
+        """Returns the index of static files as declared in the package's manifest."""
