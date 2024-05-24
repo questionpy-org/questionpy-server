@@ -14,7 +14,7 @@ from _pytest.tmpdir import TempPathFactory
 from aiohttp.pytest_plugin import AiohttpClient
 from aiohttp.test_utils import TestClient
 
-from questionpy_common.constants import MANIFEST_FILENAME, KiB
+from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, KiB
 from questionpy_server.app import QPyServer
 from questionpy_server.settings import (
     CollectorSettings,
@@ -46,7 +46,7 @@ class TestPackage(ZipPackageLocation):
 
         with TemporaryDirectory() as tmp_dir, ZipFile(self.path) as package:
             package.extractall(tmp_dir)
-            manifest_path = Path(tmp_dir) / MANIFEST_FILENAME
+            manifest_path = Path(tmp_dir) / DIST_DIR / MANIFEST_FILENAME
             self.manifest = ComparableManifest(**json.loads(manifest_path.read_bytes()))
 
 
