@@ -15,7 +15,7 @@ from typing import cast
 from zipfile import ZipFile
 
 from questionpy_common.api.qtype import BaseQuestionType
-from questionpy_common.constants import MANIFEST_FILENAME
+from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME
 from questionpy_common.environment import Environment, Package, set_qpy_environment
 from questionpy_common.manifest import Manifest
 from questionpy_server.worker.runtime.package_location import (
@@ -73,7 +73,7 @@ class ZipBasedPackage(ZipFile, ImportablePackage):
     @cached_property
     def manifest(self) -> Manifest:
         """Load QuestionPy manifest from package."""
-        data = json.loads(self.read(MANIFEST_FILENAME))
+        data = json.loads(self.read(f"{DIST_DIR}/{MANIFEST_FILENAME}"))
         return Manifest.model_validate(data)
 
     def get_path(self, path: str) -> Traversable:
@@ -84,7 +84,10 @@ class ZipBasedPackage(ZipFile, ImportablePackage):
         return cast(Traversable, zipfile.Path(self, path))
 
     def setup_imports(self) -> None:
-        for new_path in str(self.path / "dependencies/site-packages"), str(self.path / "python"):
+        for new_path in (
+            str(self.path / f"{DIST_DIR}/dependencies/site-packages"),
+            str(self.path / f"{DIST_DIR}/python"),
+        ):
             if new_path not in sys.path:
                 sys.path.insert(0, new_path)
 
@@ -109,7 +112,7 @@ class DirBasedPackage(ImportablePackage):
         return self.path.joinpath(path)
 
     def setup_imports(self) -> None:
-        new_path = str(self.path / "python")
+        new_path = str(self.path / DIST_DIR / "python")
         if new_path not in sys.path:
             sys.path.insert(0, new_path)
 
