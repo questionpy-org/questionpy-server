@@ -27,7 +27,6 @@ from .models import (
 
 if TYPE_CHECKING:
     from questionpy_server.app import QPyServer
-    from questionpy_server.worker.worker import Worker
 
 routes = web.RouteTableDef()
 
@@ -62,7 +61,6 @@ async def post_options(
     qpyserver: "QPyServer" = request.app["qpy_server_app"]
 
     package_path = await package.get_path()
-    worker: Worker
     async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
         definition, form_data = await worker.get_options_form(
             RequestUser(["de", "en"]), question_state.decode() if question_state else None
@@ -79,7 +77,6 @@ async def post_attempt_start(
     qpyserver: "QPyServer" = request.app["qpy_server_app"]
 
     package_path = await package.get_path()
-    worker: Worker
     async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
         attempt = await worker.start_attempt(RequestUser(["de", "en"]), question_state.decode(), data.variant)
 
@@ -94,7 +91,6 @@ async def post_attempt_view(
     qpyserver: "QPyServer" = request.app["qpy_server_app"]
 
     package_path = await package.get_path()
-    worker: Worker
     async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
         attempt = await worker.get_attempt(
             request_user=RequestUser(["de", "en"]),
@@ -115,7 +111,6 @@ async def post_attempt_score(
     qpyserver: "QPyServer" = request.app["qpy_server_app"]
 
     package_path = await package.get_path()
-    worker: Worker
     async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
         attempt_scored = await worker.score_attempt(
             request_user=RequestUser(["de", "en"]),
@@ -136,7 +131,6 @@ async def post_question(
     qpyserver: "QPyServer" = request.app["qpy_server_app"]
 
     package_path = await package.get_path()
-    worker: Worker
     async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
         question = await worker.create_question_from_options(
             RequestUser(["de", "en"]), question_state.decode() if question_state else None, data.form_data
