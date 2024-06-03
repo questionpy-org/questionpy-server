@@ -6,13 +6,16 @@ import asyncio
 import contextlib
 import logging
 from abc import ABC
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from functools import partial
 from typing import TYPE_CHECKING, TypeVar
+from zipfile import ZipFile
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
+from questionpy_common.constants import DIST_DIR
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestUser, WorkerResourceLimits
-from questionpy_common.manifest import PackageFile
+from questionpy_common.manifest import Manifest, PackageFile
 from questionpy_server.api.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
@@ -31,10 +34,17 @@ from questionpy_server.worker.runtime.messages import (
     ViewAttempt,
     WorkerError,
 )
-from questionpy_server.worker.runtime.package_location import PackageLocation
-from questionpy_server.worker.worker import PackageFileStream, Worker, WorkerState
+from questionpy_server.worker.runtime.package_location import (
+    DirPackageLocation,
+    FunctionPackageLocation,
+    PackageLocation,
+    ZipPackageLocation,
+)
+from questionpy_server.worker.worker import PackageFileData, Worker, WorkerState
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from questionpy_server.worker.connection import ServerToWorkerConnection
 
 log = logging.getLogger(__name__)
@@ -225,8 +235,49 @@ class BaseWorker(Worker, ABC):
 
         return ret.attempt_scored_model
 
-    async def get_static_file(self, path: str) -> PackageFileStream:
-        raise NotImplementedError  # TODO: Implement get_static_file.
+    def _get_static_file_sync(self, path: str, manifest: Manifest) -> PackageFileData:
+        path = path.lstrip("/")
+
+        try:
+            manifest_entry = manifest.static_files[path]
+        except KeyError as e:
+            raise FileNotFoundError(path) from e
+
+        dist_path = DIST_DIR + "/" + path.lstrip("/")
+
+        reader: Callable[[], bytes]
+        if isinstance(self.package, ZipPackageLocation):
+            with ZipFile(self.package.path) as zip_file:
+                try:
+                    zipinfo = zip_file.getinfo(dist_path)
+                except KeyError as e:
+                    raise FileNotFoundError(path) from e
+
+                real_size = zipinfo.file_size
+                reader = partial(zip_file.read, dist_path)
+        elif isinstance(self.package, DirPackageLocation):
+            full_path: Path = self.package.path / dist_path
+            real_size = full_path.stat().st_size
+            reader = full_path.read_bytes
+        elif isinstance(self.package, FunctionPackageLocation):
+            msg = f"'{path}'. Function-based packages don't serve static files."
+            raise FileNotFoundError(msg)
+        else:
+            raise TypeError(type(self.package).__name__)
+
+        if manifest_entry.size != real_size:
+            msg = (
+                f"Static file '{path}' has different file size on disk ('{real_size}') than in manifest "
+                f"('{manifest_entry.size}')"
+            )
+            raise RuntimeError(msg)
+
+        return PackageFileData(real_size, manifest_entry.mime_type, reader())
+
+    async def get_static_file(self, path: str) -> PackageFileData:
+        # TODO: Read the file inside the worker and return it in a message.
+        manifest = await self.get_manifest()
+        return await asyncio.to_thread(lambda: self._get_static_file_sync(path, manifest))
 
     async def get_static_file_index(self) -> dict[str, PackageFile]:
         raise NotImplementedError  # TODO: Implement get_static_file_index.

@@ -2,7 +2,8 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-import json
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
@@ -10,7 +11,6 @@ from tempfile import TemporaryDirectory
 from zipfile import ZipFile
 
 import pytest
-from _pytest.tmpdir import TempPathFactory
 from aiohttp.pytest_plugin import AiohttpClient
 from aiohttp.test_utils import TestClient
 
@@ -26,7 +26,7 @@ from questionpy_server.settings import (
     WorkerSettings,
 )
 from questionpy_server.utils.manifest import ComparableManifest
-from questionpy_server.worker.runtime.package_location import ZipPackageLocation
+from questionpy_server.worker.runtime.package_location import DirPackageLocation, ZipPackageLocation
 from questionpy_server.worker.worker.thread import ThreadWorker
 
 
@@ -44,10 +44,14 @@ class TestPackage(ZipPackageLocation):
         super().__init__(path)
         self.hash = get_file_hash(self.path)
 
+        with ZipFile(self.path) as package:
+            self.manifest = ComparableManifest.model_validate_json(package.read(f"{DIST_DIR}/{MANIFEST_FILENAME}"))
+
+    @contextmanager
+    def as_dir_package(self) -> Iterator[DirPackageLocation]:
         with TemporaryDirectory() as tmp_dir, ZipFile(self.path) as package:
             package.extractall(tmp_dir)
-            manifest_path = Path(tmp_dir) / DIST_DIR / MANIFEST_FILENAME
-            self.manifest = ComparableManifest(**json.loads(manifest_path.read_bytes()))
+            yield DirPackageLocation(Path(tmp_dir), self.manifest)
 
 
 package_dir = Path(__file__).parent / "test_data/package"
@@ -56,7 +60,7 @@ PACKAGE_2 = TestPackage(package_dir / "package_2.qpy")
 
 
 @pytest.fixture
-def qpy_server(tmp_path_factory: TempPathFactory) -> QPyServer:
+def qpy_server(tmp_path_factory: pytest.TempPathFactory) -> QPyServer:
     return QPyServer(
         Settings(
             config_files=(),
