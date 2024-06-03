@@ -125,6 +125,8 @@ runtime-evaluated-base-classes = ["pydantic.BaseModel"]
 [lint.pep8-naming]
 # Allow Pydantic's `@validator` decorator to trigger class method treatment.
 classmethod-decorators = ["pydantic.validator"]
+# Allow test functions to be named anything.
+extend-ignore-names = ["test_*"]
 
 [lint.flake8-pytest-style]
 fixture-parentheses = false
