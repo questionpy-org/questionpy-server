@@ -85,8 +85,8 @@ class ZipBasedPackage(ZipFile, ImportablePackage):
 
     def setup_imports(self) -> None:
         for new_path in (
-            str(self.path / f"{DIST_DIR}/dependencies/site-packages"),
-            str(self.path / f"{DIST_DIR}/python"),
+            str(self.path / DIST_DIR / "dependencies/site-packages"),
+            str(self.path / DIST_DIR / "python"),
         ):
             if new_path not in sys.path:
                 sys.path.insert(0, new_path)
@@ -112,9 +112,12 @@ class DirBasedPackage(ImportablePackage):
         return self.path.joinpath(path)
 
     def setup_imports(self) -> None:
-        new_path = str(self.path / DIST_DIR / "python")
-        if new_path not in sys.path:
-            sys.path.insert(0, new_path)
+        for new_path in (
+            str(self.path / DIST_DIR / "dependencies/site-packages"),
+            str(self.path / DIST_DIR / "python"),
+        ):
+            if new_path not in sys.path:
+                sys.path.insert(0, new_path)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.path})"

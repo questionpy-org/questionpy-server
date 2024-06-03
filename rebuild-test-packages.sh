@@ -17,7 +17,7 @@ build_package() {
 
   cd "$SDK_DIR"
   python -m questionpy_sdk create "$1" -o "$tmp_source_dir"
-  python -m questionpy_sdk package "$tmp_source_dir" -o "$package"
+  python -m questionpy_sdk package -f "$tmp_source_dir" -o "$package"
 
   rm -rf "$tmp_source_dir"
 }
