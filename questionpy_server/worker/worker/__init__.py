@@ -3,8 +3,8 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import Enum
-from typing import Protocol
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
 from questionpy_common.elements import OptionsFormDefinition
@@ -24,7 +24,8 @@ class WorkerState(Enum):
     WORKER_AWAITS_RESPONSE = 4  # worker send a request/message to server and server is now processing the request
 
 
-class PackageFileStream(Protocol):
+@dataclass
+class PackageFileData:
     """Represents a file read from a package."""
 
     size: int
@@ -34,10 +35,7 @@ class PackageFileStream(Protocol):
 
     Usually this is derived from the file extension at build time and listed in the manifest.
     """
-
-    @abstractmethod
-    def read(self) -> bytes:
-        """Reads the entire file and returns its contents."""
+    data: bytes
 
 
 class Worker(ABC):
@@ -160,7 +158,7 @@ class Worker(ABC):
         """TODO: write docstring."""
 
     @abstractmethod
-    async def get_static_file(self, path: str) -> PackageFileStream:
+    async def get_static_file(self, path: str) -> PackageFileData:
         """Reads the static file at the given path in the package.
 
         Args:
