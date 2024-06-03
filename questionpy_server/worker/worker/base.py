@@ -280,4 +280,4 @@ class BaseWorker(Worker, ABC):
         return await asyncio.to_thread(lambda: self._get_static_file_sync(path, manifest))
 
     async def get_static_file_index(self) -> dict[str, PackageFile]:
-        raise NotImplementedError  # TODO: Implement get_static_file_index.
+        return (await self.get_manifest()).static_files
