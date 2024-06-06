@@ -241,6 +241,7 @@ class BaseWorker(Worker, ABC):
         try:
             manifest_entry = manifest.static_files[path]
         except KeyError as e:
+            log.info("Static file '%s' is not listed in package manifest.", path)
             raise FileNotFoundError(path) from e
 
         dist_path = DIST_DIR + "/" + path
@@ -251,22 +252,32 @@ class BaseWorker(Worker, ABC):
                 try:
                     zipinfo = zip_file.getinfo(dist_path)
                 except KeyError as e:
+                    log.info("Static file '%s' is missing despite being listed in the manifest.", path)
                     raise FileNotFoundError(path) from e
 
                 real_size = zipinfo.file_size
                 reader = partial(zip_file.read, dist_path)
         elif isinstance(self.package, DirPackageLocation):
             full_path: Path = self.package.path / dist_path
+            if not full_path.exists():
+                log.info("Static file '%s' is missing despite being listed in the manifest.", path)
+                raise FileNotFoundError(path)
+
             real_size = full_path.stat().st_size
             reader = full_path.read_bytes
         elif isinstance(self.package, FunctionPackageLocation):
-            msg = f"'{path}'. Function-based packages don't serve static files."
-            raise FileNotFoundError(msg)
+            msg = "Function-based packages don't serve static files."
+            raise NotImplementedError(msg)
         else:
             raise TypeError(type(self.package).__name__)
 
         if manifest_entry.size != real_size:
-            raise StaticFileSizeMismatchError(path, manifest_entry.size, real_size)
+            msg = (
+                f"Static file '{path}' has different file size on disk ('{real_size}') than in manifest "
+                f"('{manifest_entry.size}')"
+            )
+            log.info(msg)
+            raise StaticFileSizeMismatchError(msg)
 
         return PackageFileData(real_size, manifest_entry.mime_type, reader())
 
@@ -280,8 +291,4 @@ class BaseWorker(Worker, ABC):
 
 
 class StaticFileSizeMismatchError(Exception):
-    def __init__(self, file_path: str, manifest_size: int, real_size: int) -> None:
-        super().__init__(
-            f"Static file '{file_path}' has different file size on disk ('{real_size}') than in manifest "
-            f"('{manifest_size}')"
-        )
+    pass
