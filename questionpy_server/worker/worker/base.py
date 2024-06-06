@@ -243,7 +243,7 @@ class BaseWorker(Worker, ABC):
         except KeyError as e:
             raise FileNotFoundError(path) from e
 
-        dist_path = DIST_DIR + "/" + path.lstrip("/")
+        dist_path = DIST_DIR + "/" + path
 
         reader: Callable[[], bytes]
         if isinstance(self.package, ZipPackageLocation):
