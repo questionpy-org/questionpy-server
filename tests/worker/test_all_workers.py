@@ -37,7 +37,7 @@ async def test_should_get_manifest(pool: WorkerPool) -> None:
 
 
 def _inject_static_file_into_dist(package: DirPackageLocation, name: str, content: str) -> None:
-    full_path = package.path / f"{DIST_DIR}/{name}"
+    full_path = package.path / DIST_DIR / name
     full_path.parent.mkdir(exist_ok=True)
     full_path.write_text(content)
 
