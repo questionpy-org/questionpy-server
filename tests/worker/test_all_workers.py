@@ -65,7 +65,7 @@ async def test_should_get_static_file_from_dir(pool: WorkerPool) -> None:
             assert static_file.size == len(_STATIC_FILE_CONTENT)
 
 
-async def test_should_raise_FileNotFoundError_when_not_in_manifest(pool: WorkerPool) -> None:
+async def test_should_raise_file_not_found_error_when_not_in_manifest(pool: WorkerPool) -> None:
     with PACKAGE.as_dir_package() as package:
         _inject_static_file_into_dist(package, _STATIC_FILE_NAME, _STATIC_FILE_CONTENT)
 
@@ -75,7 +75,7 @@ async def test_should_raise_FileNotFoundError_when_not_in_manifest(pool: WorkerP
                 await worker.get_static_file(_STATIC_FILE_NAME)
 
 
-async def test_should_raise_FileNotFoundError_when_not_on_disk(pool: WorkerPool) -> None:
+async def test_should_raise_file_not_found_error_when_not_on_disk(pool: WorkerPool) -> None:
     with PACKAGE.as_dir_package() as package:
         _inject_static_file_into_manifest(package, _STATIC_FILE_NAME, len(_STATIC_FILE_CONTENT))
 
@@ -85,7 +85,7 @@ async def test_should_raise_FileNotFoundError_when_not_on_disk(pool: WorkerPool)
                 await worker.get_static_file(_STATIC_FILE_NAME)
 
 
-async def test_should_raise_StaticFileSizeMismatchError_when_sizes_dont_match(pool: WorkerPool) -> None:
+async def test_should_raise_static_file_size_mismatch_error_when_sizes_dont_match(pool: WorkerPool) -> None:
     with PACKAGE.as_dir_package() as package:
         _inject_static_file_into_dist(package, _STATIC_FILE_NAME, _STATIC_FILE_CONTENT)
         _inject_static_file_into_manifest(package, _STATIC_FILE_NAME, 1234)
