@@ -13,6 +13,7 @@ from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, MiB
 from questionpy_common.manifest import PackageFile
 from questionpy_server import WorkerPool
 from questionpy_server.worker.runtime.package_location import DirPackageLocation
+from questionpy_server.worker.worker.base import StaticFileSizeMismatchError
 from questionpy_server.worker.worker.subprocess import SubprocessWorker
 from questionpy_server.worker.worker.thread import ThreadWorker
 from tests.conftest import PACKAGE
@@ -84,12 +85,12 @@ async def test_should_raise_FileNotFoundError_when_not_on_disk(pool: WorkerPool)
                 await worker.get_static_file(_STATIC_FILE_NAME)
 
 
-async def test_should_raise_RuntimeError_when_sizes_dont_match(pool: WorkerPool) -> None:
+async def test_should_raise_StaticFileSizeMismatchError_when_sizes_dont_match(pool: WorkerPool) -> None:
     with PACKAGE.as_dir_package() as package:
         _inject_static_file_into_dist(package, _STATIC_FILE_NAME, _STATIC_FILE_CONTENT)
         _inject_static_file_into_manifest(package, _STATIC_FILE_NAME, 1234)
 
         worker: Worker
         async with pool.get_worker(package, 1, 1) as worker:
-            with pytest.raises(RuntimeError):
+            with pytest.raises(StaticFileSizeMismatchError):
                 await worker.get_static_file(_STATIC_FILE_NAME)

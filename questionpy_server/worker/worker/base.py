@@ -266,11 +266,7 @@ class BaseWorker(Worker, ABC):
             raise TypeError(type(self.package).__name__)
 
         if manifest_entry.size != real_size:
-            msg = (
-                f"Static file '{path}' has different file size on disk ('{real_size}') than in manifest "
-                f"('{manifest_entry.size}')"
-            )
-            raise RuntimeError(msg)
+            raise StaticFileSizeMismatchError(path, manifest_entry.size, real_size)
 
         return PackageFileData(real_size, manifest_entry.mime_type, reader())
 
@@ -281,3 +277,11 @@ class BaseWorker(Worker, ABC):
 
     async def get_static_file_index(self) -> dict[str, PackageFile]:
         return (await self.get_manifest()).static_files
+
+
+class StaticFileSizeMismatchError(Exception):
+    def __init__(self, file_path: str, manifest_size: int, real_size: int) -> None:
+        super().__init__(
+            f"Static file '{file_path}' has different file size on disk ('{real_size}') than in manifest "
+            f"('{manifest_size}')"
+        )
