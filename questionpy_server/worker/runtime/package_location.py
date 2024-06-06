@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Annotated, Literal, TypeAlias
 
-from pydantic import Field
+from pydantic import Field, SerializeAsAny
 
 from questionpy_common.environment import PackageInitFunction
 from questionpy_common.manifest import Manifest
@@ -100,7 +100,7 @@ class FunctionPackageLocation:
 
 
 PackageLocation: TypeAlias = Annotated[
-    ZipPackageLocation | DirPackageLocation | FunctionPackageLocation, Field(discriminator="kind")
+    ZipPackageLocation | DirPackageLocation | FunctionPackageLocation, Field(discriminator="kind"), SerializeAsAny()
 ]
 """Identifies how to load a package.
 
