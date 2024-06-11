@@ -641,8 +641,7 @@ components:
           type: number
           nullable: true
           format: double
-          description: Penalty factor (fraction that is subtracted from the score after each failed attempt,
-            might be used when package cannot compute a final score).
+          description: Penalty that is subtracted from the score after each failed attempt. Exact semantics TBD.
         random_guess_score:
           type: number
           nullable: true
@@ -886,7 +885,8 @@ components:
               type: number
               nullable: true
               format: double
-              description: A fraction between question.score_min_fraction and question.score_max_fraction.
+              description: The score for this question attempt, must lie between the `score_min` and `score_max` set by
+                the question.
             specific_feedback:
               type: string
               nullable: true

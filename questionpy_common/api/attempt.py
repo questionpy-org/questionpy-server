@@ -74,7 +74,7 @@ class ScoreModel(BaseModel):
     scoring_state: str = "{}"
     scoring_code: ScoringCode
     score: float | None
-    """The total score for this question attempt, as a fraction of the default mark set by the LMS."""
+    """The score for this question attempt, must lie between the `score_min` and `score_max` set by the question."""
     classification: Sequence[ClassifiedResponse] | None = None
 
 
