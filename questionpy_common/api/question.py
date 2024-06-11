@@ -32,9 +32,9 @@ class SubquestionModel(BaseModel):
 class QuestionModel(BaseModel):
     num_variants: Annotated[int, Field(ge=1, strict=True)] = 1
     score_min: float = 0
-    """Lowest score used by this question, as a fraction of the default mark set by the LMS."""
+    """Lowest score used by this question."""
     score_max: float = 1
-    """Highest score used by this question, as a fraction of the default mark set by the LMS."""
+    """Highest score used by this question."""
     scoring_method: ScoringMethod
     penalty: float | None = None
     random_guess_score: float | None = None
