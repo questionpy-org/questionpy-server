@@ -110,7 +110,8 @@ class WorkerManager:
                     packages=self.loaded_packages,
                     main_package=package,
                     _on_request_callbacks=self._on_request_callbacks,
-                )
+                ),
+                reload=msg.reload,
             )
             if not isinstance(qtype, BaseQuestionType):
                 msg = f"Package initialization returned '{qtype}', BaseQuestionType expected"

@@ -76,6 +76,14 @@ class Worker(ABC):
         """Get the worker's current resource usage. If unknown or unsupported, return None."""
 
     @abstractmethod
+    async def load_main_package(self, *, reload: bool = False) -> None:
+        """Loads a main package.
+
+        Args:
+            reload: Force reload of module.
+        """
+
+    @abstractmethod
     async def get_manifest(self) -> ComparableManifest:
         """Get manifest of the main package in the worker."""
 

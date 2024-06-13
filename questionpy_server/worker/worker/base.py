@@ -80,9 +80,7 @@ class BaseWorker(Worker, ABC):
                 ),
                 InitWorker.Response,
             )
-            await self._send_and_wait_response(
-                LoadQPyPackage(location=self.package, main=True), LoadQPyPackage.Response
-            )
+            await self.load_main_package()
         except WorkerNotRunningError as e:
             msg = "Worker has exited before or during initialization."
             raise WorkerStartError(msg) from e
@@ -168,6 +166,11 @@ class BaseWorker(Worker, ABC):
                 await asyncio.wait_for(self._observe_task, timeout)
             except TimeoutError:
                 log.info("Worker was killed because it did not stop gracefully")
+
+    async def load_main_package(self, *, reload: bool = False) -> None:
+        await self._send_and_wait_response(
+            LoadQPyPackage(location=self.package, main=True, reload=reload), LoadQPyPackage.Response
+        )
 
     async def get_manifest(self) -> ComparableManifest:
         msg = GetQPyPackageManifest(path=str(self.package))

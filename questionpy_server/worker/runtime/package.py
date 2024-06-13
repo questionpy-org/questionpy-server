@@ -1,13 +1,13 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
+import importlib
 import inspect
 import json
 import sys
 import zipfile
 from abc import ABC, abstractmethod
 from functools import cached_property
-from importlib import import_module, resources
 from importlib.resources.abc import Traversable
 from pathlib import Path
 from types import ModuleType
@@ -38,20 +38,23 @@ class ImportablePackage(ABC, Package):
     def setup_imports(self) -> None:
         """Modifies ``sys.path`` to include the package's python code."""
 
-    def init_as_main(self, env: Environment) -> BaseQuestionType:
+    def init_as_main(self, env: Environment, *, reload: bool = False) -> BaseQuestionType:
         """Imports the package's entrypoint and executes its ``init`` function.
 
         :meth:`setup_imports` should be called beforehand to allow the import.
         """
         set_qpy_environment(env)
 
-        main_module: ModuleType
-        if self.manifest.entrypoint:
-            main_module = import_module(
-                f"{self.manifest.namespace}.{self.manifest.short_name}.{self.manifest.entrypoint}"
-            )
-        else:
-            main_module = import_module(f"{self.manifest.namespace}.{self.manifest.short_name}")
+        module_name = f"{self.manifest.namespace}.{self.manifest.short_name}"
+        main_module_name = f"{module_name}.{self.manifest.entrypoint}" if self.manifest.entrypoint else module_name
+
+        main_module = importlib.import_module(main_module_name)
+
+        if reload:
+            for name in sys.modules.copy():
+                if name.startswith(f"{module_name}.") and name != main_module_name:
+                    del sys.modules[name]
+            main_module = importlib.reload(main_module)
 
         if not hasattr(main_module, "init") or not callable(main_module.init):
             raise NoInitFunctionError(main_module)
@@ -141,16 +144,16 @@ class FunctionBasedPackage(ImportablePackage):
         return self._manifest
 
     def get_path(self, path: str) -> Traversable:
-        return resources.files(self.module_name).joinpath(path)
+        return importlib.resources.files(self.module_name).joinpath(path)
 
     def setup_imports(self) -> None:
         # Nothing to do.
         pass
 
-    def init_as_main(self, env: Environment) -> BaseQuestionType:
+    def init_as_main(self, env: Environment, *, reload: bool = False) -> BaseQuestionType:
         set_qpy_environment(env)
 
-        main_module = import_module(self.module_name)
+        main_module = importlib.import_module(self.module_name)
         init_function = getattr(main_module, self.function_name, None)
         if not init_function or not callable(init_function):
             raise NoInitFunctionError(main_module)

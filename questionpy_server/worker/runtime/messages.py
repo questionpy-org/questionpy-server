@@ -106,6 +106,8 @@ class LoadQPyPackage(MessageToWorker):
     location: PackageLocation
     main: bool
     """Set this package as the main package and execute its entry point."""
+    reload: bool = False
+    """Force reload of module."""
 
     class Response(MessageToServer):
         """Success message in return to LoadQPyPackage."""
