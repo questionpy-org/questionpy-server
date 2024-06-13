@@ -38,7 +38,7 @@ NAME_MAX_LENGTH = 127
 def ensure_is_valid_name(name: str) -> str:
     """Ensures valid package name.
 
-    Checks that `name` follows the [naming rules](../../documentation/configuration.md#short_name).
+    Checks that `name` follows the [naming rules](../../../documentation/configuration.md#short_name).
 
     Args:
       name: the name to be checked
