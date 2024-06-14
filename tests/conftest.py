@@ -54,7 +54,8 @@ class TestPackage(ZipPackageLocation):
             yield DirPackageLocation(Path(tmp_dir), self.manifest)
 
 
-package_dir = Path(__file__).parent / "test_data" / "package"
+test_data_path = Path(__file__).parent / "test_data"
+package_dir = test_data_path / "package"
 PACKAGE = TestPackage(package_dir / "package_1.qpy")
 PACKAGE_2 = TestPackage(package_dir / "package_2.qpy")
 
