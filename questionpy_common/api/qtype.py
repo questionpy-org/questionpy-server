@@ -1,19 +1,25 @@
 #  This file is part of QuestionPy. (https://questionpy.org)
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
+from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+from typing import TYPE_CHECKING, Protocol
 
-from questionpy_common.elements import OptionsFormDefinition
+from questionpy_common.api.package import BasePackageInterface
 
-from .question import BaseQuestion
+if TYPE_CHECKING:
+    from questionpy_common.elements import OptionsFormDefinition
 
-__all__ = ["BaseQuestionType", "InvalidQuestionStateError", "OptionsFormValidationError"]
+    from . import PlainMapping
+    from .question import QuestionInterface
+
+__all__ = ["InvalidQuestionStateError", "OptionsFormValidationError", "QuestionTypeInterface"]
 
 
-class BaseQuestionType(ABC):
+class QuestionTypeInterface(BasePackageInterface, Protocol):
     @abstractmethod
-    def get_options_form(self, question_state: str | None) -> tuple[OptionsFormDefinition, dict[str, object]]:
+    def get_options_form(self, question_state: str | None) -> tuple[OptionsFormDefinition, PlainMapping]:
         """Get the form used to create a new or edit an existing question.
 
         Args:
@@ -24,7 +30,7 @@ class BaseQuestionType(ABC):
         """
 
     @abstractmethod
-    def create_question_from_options(self, old_state: str | None, form_data: dict[str, object]) -> BaseQuestion:
+    def create_question_from_options(self, old_state: str | None, form_data: PlainMapping) -> QuestionInterface:
         """Create or update the question (state) with the form data from a submitted question edit form.
 
         Args:
@@ -39,7 +45,7 @@ class BaseQuestionType(ABC):
         """
 
     @abstractmethod
-    def create_question_from_state(self, question_state: str) -> BaseQuestion:
+    def create_question_from_state(self, question_state: str) -> QuestionInterface:
         """Deserialize the given question state, returning a question object equivalent to the one which exported it.
 
         Raises:

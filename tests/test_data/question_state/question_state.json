@@ -7,5 +7,7 @@
     "my_repetition": [],
     "name_group": {}
   },
-  "example": "question_state"
+  "state": {
+    "example": "question_state"
+  }
 }

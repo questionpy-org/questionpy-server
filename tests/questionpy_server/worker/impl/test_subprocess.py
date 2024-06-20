@@ -1,7 +1,6 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-
 import resource
 
 import psutil
@@ -18,7 +17,7 @@ def pool() -> WorkerPool:
     return WorkerPool(1, 512 * MiB, worker_type=SubprocessWorker)
 
 
-# TODO: Figure out how to provoke errors in the subprocess worker in order to test their handling.
+# TODO: Figure out how to test_should_gracefully_handle_error_in_bootstrap in the SubprocessWorker.
 
 
 async def test_should_apply_limits(pool: WorkerPool) -> None:

@@ -4,16 +4,17 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
+from typing import TypeVar
 
 from pydantic import BaseModel
 
-from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
+from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_common.manifest import PackageFile
-from questionpy_server.models import AttemptStarted, QuestionCreated
+from questionpy_server.models import QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
-from questionpy_server.worker.runtime.messages import MessageToWorker
+from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
 
@@ -44,6 +45,9 @@ class PackageFileData:
     Usually this is derived from the file extension at build time and listed in the manifest.
     """
     data: bytes
+
+
+_M = TypeVar("_M", bound=MessageToServer)
 
 
 class Worker(ABC):
@@ -78,6 +82,10 @@ class Worker(ABC):
     @abstractmethod
     def send(self, message: MessageToWorker) -> None:
         """Send a message to the worker."""
+
+    @abstractmethod
+    async def send_and_wait_for_response(self, message: MessageToWorker, expected_response_message: type[_M]) -> _M:
+        """Send a message and wait for a response of the given type."""
 
     @abstractmethod
     async def get_resource_usage(self) -> WorkerResources | None:
@@ -117,7 +125,7 @@ class Worker(ABC):
         """
 
     @abstractmethod
-    async def start_attempt(self, request_user: RequestUser, question_state: str, variant: int) -> AttemptStarted:
+    async def start_attempt(self, request_user: RequestUser, question_state: str, variant: int) -> AttemptStartedModel:
         """Start an attempt at this question with the given variant.
 
         Args:

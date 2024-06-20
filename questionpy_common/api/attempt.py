@@ -2,19 +2,19 @@
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from enum import Enum
 from typing import Annotated
 
 from pydantic import BaseModel, Field
 
+from . import Localized
+
 __all__ = [
     "AttemptFile",
     "AttemptModel",
     "AttemptScoredModel",
+    "AttemptStartedModel",
     "AttemptUi",
-    "BaseAttempt",
     "CacheControl",
     "ClassifiedResponse",
     "ScoreModel",
@@ -46,14 +46,18 @@ class AttemptUi(BaseModel):
 
     placeholders: dict[str, str] = {}
     """Names and values of the ``<?p`` placeholders that appear in content."""
-    css_files: list[str]
+    css_files: list[str] = []
     files: dict[str, AttemptFile] = {}
     cache_control: CacheControl = CacheControl.PRIVATE_CACHE
 
 
-class AttemptModel(BaseModel):
+class AttemptModel(Localized):
     variant: int
     ui: AttemptUi
+
+
+class AttemptStartedModel(AttemptModel):
+    attempt_state: str
 
 
 class ScoringCode(Enum):
@@ -70,31 +74,40 @@ class ClassifiedResponse(BaseModel):
     score: float
 
 
+class ScoredInputState(Enum):
+    CORRECT = "CORRECT"
+    CONSEQUENTIAL_SCORE = "CONSEQUENTIAL_SCORE"
+    PARTIALLY_CORRECT = "PARTIALLY_CORRECT"
+    WRONG = "WRONG"
+
+
+class ScoredInputModel(BaseModel):
+    state: ScoredInputState
+    score: float | None = None
+    score_max: float | None = None
+    specific_feedback: str | None = None
+    right_answer: str | None = None
+
+
+class ScoredSubquestionModel(BaseModel):
+    score: float | None = None
+    score_final: float | None = None
+    scoring_code: ScoringCode | None = None
+    response_summary: str
+    response_class: str
+
+
 class ScoreModel(BaseModel):
-    scoring_state: str = "{}"
+    scoring_state: str | None = None
     scoring_code: ScoringCode
     score: float | None
     """The score for this question attempt, must lie between the `score_min` and `score_max` set by the question."""
-    classification: Sequence[ClassifiedResponse] | None = None
+    score_final: float | None
+    scored_inputs: dict[str, ScoredInputModel] = {}
+    """Maps input names to their individual scores."""
+    scored_subquestions: dict[str, ScoredSubquestionModel] = {}
+    """Maps subquestion IDs to their individual scores."""
 
 
 class AttemptScoredModel(AttemptModel, ScoreModel):
     pass
-
-
-class BaseAttempt(ABC):
-    @abstractmethod
-    def export_attempt_state(self) -> str:
-        """Serialize this attempt's relevant data.
-
-        A future call to :meth:`BaseQuestion.view_attempt` should result in an attempt object identical to the one which
-        exported the state.
-        """
-
-    @abstractmethod
-    def export(self) -> AttemptModel:
-        """Get metadata about this attempt."""
-
-    @abstractmethod
-    def export_scored_attempt(self) -> AttemptScoredModel:
-        """Score this attempt."""

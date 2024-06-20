@@ -13,7 +13,7 @@ import pytest
 from aiohttp.pytest_plugin import AiohttpClient
 from aiohttp.test_utils import TestClient
 
-from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, KiB
+from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, KiB, MiB
 from questionpy_common.manifest import PackageFile
 from questionpy_server.settings import (
     CollectorSettings,
@@ -26,7 +26,9 @@ from questionpy_server.settings import (
 )
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.web.app import QPyServer
+from questionpy_server.worker.impl.subprocess import SubprocessWorker
 from questionpy_server.worker.impl.thread import ThreadWorker
+from questionpy_server.worker.pool import WorkerPool
 from questionpy_server.worker.runtime.package_location import DirPackageLocation, ZipPackageLocation
 
 
@@ -138,3 +140,8 @@ async def client(qpy_server: QPyServer, aiohttp_client: AiohttpClient) -> TestCl
 @pytest.fixture
 def package_factory(tmp_path_factory: pytest.TempPathFactory) -> TestPackageFactory:
     return TestPackageFactory(tmp_path_factory.mktemp("test_packages"))
+
+
+@pytest.fixture(params=(SubprocessWorker, ThreadWorker))
+def worker_pool(request: pytest.FixtureRequest) -> WorkerPool:
+    return WorkerPool(1, 512 * MiB, worker_type=request.param)
