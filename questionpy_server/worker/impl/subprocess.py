@@ -109,9 +109,9 @@ class SubprocessWorker(BaseWorker):
             # Whether initialization was successful or not, flush the logs.
             self._stderr_buffer.flush()
 
-    async def _send_and_wait_response(self, message: MessageToWorker, expected_response_message: type[_T]) -> _T:
+    async def send_and_wait_for_response(self, message: MessageToWorker, expected_response_message: type[_T]) -> _T:
         try:
-            return await super()._send_and_wait_response(message, expected_response_message)
+            return await super().send_and_wait_for_response(message, expected_response_message)
         finally:
             # Write worker's stderr to log after every exchange.
             if self._stderr_buffer:

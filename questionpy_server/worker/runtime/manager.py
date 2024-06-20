@@ -1,25 +1,25 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-
 import resource
-import warnings
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, NoReturn
+from typing import Any, NoReturn, cast
 
-from questionpy_common.api.qtype import BaseQuestionType
+from questionpy_common.api.qtype import QuestionTypeInterface
 from questionpy_common.environment import (
     Environment,
     OnRequestCallback,
     RequestUser,
     WorkerResourceLimits,
     get_qpy_environment,
+    set_qpy_environment,
 )
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
 from questionpy_server.worker.runtime.messages import (
     CreateQuestionFromOptions,
+    DebugExec,
     Exit,
     GetOptionsForm,
     GetQPyPackageManifest,
@@ -51,13 +51,17 @@ class EnvironmentImpl(Environment):
 
 class WorkerManager:
     def __init__(self, server_connection: WorkerToServerConnection):
-        self.worker_type: str | None = None
-        self.server_connection: WorkerToServerConnection = server_connection
-        self.limits: WorkerResourceLimits | None = None
-        self.loaded_packages: dict[str, ImportablePackage] = {}
-        self.main_package: ImportablePackage | None = None
-        self.question_type: BaseQuestionType | None = None
-        self.message_dispatch: dict[MessageIds, Callable[[Any], MessageToServer]] = {
+        self._connection: WorkerToServerConnection = server_connection
+
+        self._worker_type: str | None = None
+        self._loaded_packages: dict[str, ImportablePackage] = {}
+
+        self._limits: WorkerResourceLimits | None = None
+
+        self._env: EnvironmentImpl | None = None
+        self._question_type: QuestionTypeInterface | None = None
+
+        self._message_dispatch: dict[MessageIds, Callable[[Any], MessageToServer]] = {
             LoadQPyPackage.message_id: self.on_msg_load_qpy_package,
             GetQPyPackageManifest.message_id: self.on_msg_get_qpy_package_manifest,
             GetOptionsForm.message_id: self.on_msg_get_options_form_definition,
@@ -66,136 +70,133 @@ class WorkerManager:
             ViewAttempt.message_id: self.on_msg_view_attempt,
             ScoreAttempt.message_id: self.on_msg_score_attempt,
         }
+        if __debug__:
+            self._message_dispatch[DebugExec.message_id] = self.on_msg_debug_exec
+
         self._on_request_callbacks: list[OnRequestCallback] = []
 
     def bootstrap(self) -> None:
-        init_msg = self.server_connection.receive_message()
+        init_msg = self._connection.receive_message()
         if not isinstance(init_msg, InitWorker):
             raise self._raise_not_initialized(init_msg)
 
-        self.worker_type = init_msg.worker_type
-        self.limits = init_msg.limits
-        if self.limits:
+        self._worker_type = init_msg.worker_type
+        self._limits = init_msg.limits
+        if self._limits:
             # Limit memory usage.
-            resource.setrlimit(resource.RLIMIT_AS, (self.limits.max_memory, self.limits.max_memory))
+            resource.setrlimit(resource.RLIMIT_AS, (self._limits.max_memory, self._limits.max_memory))
 
-        self.server_connection.send_message(InitWorker.Response())
+        self._connection.send_message(InitWorker.Response())
 
     def loop(self) -> None:
         """Dispatch incoming messages."""
         while True:
-            msg = self.server_connection.receive_message()
+            msg = self._connection.receive_message()
             if isinstance(msg, Exit):
                 return
 
             try:
-                response = self.message_dispatch[msg.message_id](msg)
+                response = self._message_dispatch[msg.message_id](msg)
             except Exception as error:  # noqa: BLE001
                 response = WorkerError.from_exception(error, cause=msg)
-            self.server_connection.send_message(response)
+            self._connection.send_message(response)
 
     def on_msg_load_qpy_package(self, msg: LoadQPyPackage) -> MessageToServer:
-        if not self.worker_type:
+        if not self._worker_type:
             self._raise_not_initialized(msg)
 
         package = load_package(msg.location)
         package.setup_imports()
-        self.loaded_packages[str(msg.location)] = package
 
         if msg.main:
-            qtype = package.init_as_main(
-                EnvironmentImpl(
-                    type=self.worker_type,
-                    limits=self.limits,
-                    packages=self.loaded_packages,
-                    main_package=package,
-                    _on_request_callbacks=self._on_request_callbacks,
-                )
+            self._env = EnvironmentImpl(
+                type=self._worker_type,
+                limits=self._limits,
+                packages=self._loaded_packages,
+                main_package=package,
+                _on_request_callbacks=self._on_request_callbacks,
             )
-            if not isinstance(qtype, BaseQuestionType):
-                msg = f"Package initialization returned '{qtype}', BaseQuestionType expected"
-                raise PackageInitFailedError(msg)
+            set_qpy_environment(self._env)
+        elif not self._env:
+            self._raise_no_main_package_loaded(msg)
 
-            self.main_package = package
-            self.question_type = qtype
+        package_interface = package.init(self._env)
+        if msg.main:
+            self._question_type = cast(QuestionTypeInterface, package_interface)
 
+        self._loaded_packages[str(msg.location)] = package
         return LoadQPyPackage.Response()
 
     def on_msg_get_qpy_package_manifest(self, msg: GetQPyPackageManifest) -> MessageToServer:
-        if not self.worker_type:
+        if not self._worker_type:
             self._raise_not_initialized(msg)
 
-        package = self.loaded_packages[msg.path]
+        package = self._loaded_packages[msg.path]
         return GetQPyPackageManifest.Response(manifest=package.manifest)
 
     def on_msg_get_options_form_definition(self, msg: GetOptionsForm) -> MessageToServer:
-        if not self.worker_type:
+        if not self._worker_type:
             self._raise_not_initialized(msg)
-        if not self.question_type:
+        if not self._question_type:
             self._raise_no_main_package_loaded(msg)
 
         with self._with_request_user(msg.request_user):
-            definition, form_data = self.question_type.get_options_form(msg.question_state)
+            definition, form_data = self._question_type.get_options_form(msg.question_state)
 
             return GetOptionsForm.Response(definition=definition, form_data=form_data)
 
     def on_msg_create_question_from_options(self, msg: CreateQuestionFromOptions) -> CreateQuestionFromOptions.Response:
-        if not self.worker_type:
+        if not self._worker_type:
             self._raise_not_initialized(msg)
-        if not self.question_type:
+        if not self._question_type:
             self._raise_no_main_package_loaded(msg)
 
         with self._with_request_user(msg.request_user):
-            question = self.question_type.create_question_from_options(msg.question_state, msg.form_data)
+            question = self._question_type.create_question_from_options(msg.question_state, msg.form_data)
 
             return CreateQuestionFromOptions.Response(
                 question_state=question.export_question_state(), question_model=question.export()
             )
 
     def on_msg_start_attempt(self, msg: StartAttempt) -> StartAttempt.Response:
-        if not self.worker_type:
+        if not self._worker_type:
             self._raise_not_initialized(msg)
-        if not self.question_type:
+        if not self._question_type:
             self._raise_no_main_package_loaded(msg)
 
         with self._with_request_user(msg.request_user):
-            question = self.question_type.create_question_from_state(msg.question_state)
-            attempt = question.start_attempt(msg.variant)
-            return StartAttempt.Response(attempt_state=attempt.export_attempt_state(), attempt_model=attempt.export())
+            question = self._question_type.create_question_from_state(msg.question_state)
+            attempt_started_model = question.start_attempt(msg.variant)
+            return StartAttempt.Response(attempt_started_model=attempt_started_model)
 
     def on_msg_view_attempt(self, msg: ViewAttempt) -> ViewAttempt.Response:
-        if not self.worker_type:
+        if not self._worker_type:
             self._raise_not_initialized(msg)
-        if not self.question_type:
+        if not self._question_type:
             self._raise_no_main_package_loaded(msg)
 
         with self._with_request_user(msg.request_user):
-            question = self.question_type.create_question_from_state(msg.question_state)
-            attempt = question.get_attempt(
-                msg.attempt_state, msg.scoring_state, msg.response, compute_score=False, generate_hint=False
-            )
-            if __debug__ and msg.attempt_state != attempt.export_attempt_state():
-                warnings.warn(
-                    "The attempt state has been changed by viewing the attempt, which has no effect and "
-                    "should not happen.",
-                    stacklevel=2,
-                )
-
-            return ViewAttempt.Response(attempt_model=attempt.export())
+            question = self._question_type.create_question_from_state(msg.question_state)
+            attempt_model = question.get_attempt(msg.attempt_state, msg.scoring_state, msg.response)
+            return ViewAttempt.Response(attempt_model=attempt_model)
 
     def on_msg_score_attempt(self, msg: ScoreAttempt) -> ScoreAttempt.Response:
-        if not self.worker_type:
+        if not self._worker_type:
             self._raise_not_initialized(msg)
-        if not self.question_type:
+        if not self._question_type:
             self._raise_no_main_package_loaded(msg)
 
         with self._with_request_user(msg.request_user):
-            question = self.question_type.create_question_from_state(msg.question_state)
-            attempt = question.get_attempt(
-                msg.attempt_state, msg.scoring_state, msg.response, compute_score=True, generate_hint=False
-            )
-            scored_model = attempt.export_scored_attempt()
-            return ScoreAttempt.Response(attempt_scored_model=scored_model)
+            question = self._question_type.create_question_from_state(msg.question_state)
+            attempt_scored_model = question.score_attempt(msg.attempt_state, msg.scoring_state, msg.response)
+            return ScoreAttempt.Response(attempt_scored_model=attempt_scored_model)
+
+    if __debug__:
+
+        def on_msg_debug_exec(self, msg: DebugExec) -> DebugExec.Response:
+            locals_ = msg.locals.copy()
+            exec(msg.code, {"manager": self, "env": self._env, **globals()}, locals_)  # noqa: S102
+            return DebugExec.Response()
 
     @staticmethod
     def _raise_not_initialized(msg: MessageToWorker) -> NoReturn:

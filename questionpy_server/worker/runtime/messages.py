@@ -8,9 +8,11 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
-from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
-from questionpy_common.api.qtype import InvalidQuestionStateError, OptionsFormDefinition
+from questionpy_common.api import PlainMapping
+from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
+from questionpy_common.api.qtype import InvalidQuestionStateError
 from questionpy_common.api.question import QuestionModel
+from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_common.manifest import Manifest
 from questionpy_server.worker.runtime.package_location import PackageLocation
@@ -37,6 +39,9 @@ class MessageIds(IntEnum):
     VIEW_ATTEMPT = 51
     SCORE_ATTEMPT = 52
 
+    if __debug__:
+        DEBUG_EXEC = 900
+
     # Worker to server.
     WORKER_STARTED = 1000
     SANDBOX_ENABLED = 1001
@@ -49,6 +54,9 @@ class MessageIds(IntEnum):
     RETURN_START_ATTEMPT = 1050
     RETURN_VIEW_ATTEMPT = 1051
     RETURN_SCORE_ATTEMPT = 1052
+
+    if __debug__:
+        RETURN_DEBUG_EXEC = 1900
 
     ERROR = 1100
 
@@ -147,7 +155,7 @@ class CreateQuestionFromOptions(MessageToWorker):
     request_user: RequestUser
     question_state: str | None
     """Old question state or ``None`` if the question is new."""
-    form_data: dict[str, object]
+    form_data: PlainMapping
 
     class Response(MessageToServer):
         message_id: ClassVar[MessageIds] = MessageIds.RETURN_CREATE_QUESTION
@@ -164,8 +172,7 @@ class StartAttempt(MessageToWorker):
 
     class Response(MessageToServer):
         message_id: ClassVar[MessageIds] = MessageIds.RETURN_START_ATTEMPT
-        attempt_state: str
-        attempt_model: AttemptModel
+        attempt_started_model: AttemptStartedModel
 
 
 class ViewAttempt(MessageToWorker):
@@ -192,6 +199,21 @@ class ScoreAttempt(MessageToWorker):
     class Response(MessageToServer):
         message_id: ClassVar[MessageIds] = MessageIds.RETURN_SCORE_ATTEMPT
         attempt_scored_model: AttemptScoredModel
+
+
+if __debug__:
+
+    class DebugExec(MessageToWorker):
+        message_id: ClassVar[MessageIds] = MessageIds.DEBUG_EXEC
+        code: str
+        locals: dict[str, object] = {}
+
+        class Response(MessageToServer):
+            message_id: ClassVar[MessageIds] = MessageIds.RETURN_DEBUG_EXEC
+
+else:
+    # So imports needn't by wrapped in 'if __debug__'.
+    DebugExec = NotImplemented  # type: ignore[misc]
 
 
 class WorkerError(MessageToServer):

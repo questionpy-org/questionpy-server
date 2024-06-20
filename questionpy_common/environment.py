@@ -8,7 +8,8 @@ from dataclasses import dataclass
 from importlib.resources.abc import Traversable
 from typing import Protocol, TypeAlias
 
-from questionpy_common.api.qtype import BaseQuestionType
+from questionpy_common.api.package import QPyPackageInterface
+from questionpy_common.api.qtype import QuestionTypeInterface
 from questionpy_common.manifest import Manifest
 
 __all__ = [
@@ -93,7 +94,11 @@ class Environment(Protocol):
         """
 
 
-PackageInitFunction: TypeAlias = Callable[[Environment], BaseQuestionType] | Callable[[], BaseQuestionType]
+PackageInitFunction: TypeAlias = (
+    Callable[[Package, Environment], QPyPackageInterface]
+    | Callable[[Package], QPyPackageInterface]
+    | Callable[[], QuestionTypeInterface]
+)
 """Signature of the "init"-function expected in the main package."""
 
 _current_env: ContextVar[Environment | None] = ContextVar("_current_env")

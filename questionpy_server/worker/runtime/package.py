@@ -13,9 +13,9 @@ from types import ModuleType
 from typing import cast
 from zipfile import ZipFile
 
-from questionpy_common.api.qtype import BaseQuestionType
+from questionpy_common.api.package import QPyPackageInterface
 from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME
-from questionpy_common.environment import Environment, Package, set_qpy_environment
+from questionpy_common.environment import Environment, Package
 from questionpy_common.manifest import Manifest
 from questionpy_server.worker.runtime.package_location import (
     DirPackageLocation,
@@ -37,13 +37,11 @@ class ImportablePackage(ABC, Package):
     def setup_imports(self) -> None:
         """Modifies ``sys.path`` to include the package's python code."""
 
-    def init_as_main(self, env: Environment) -> BaseQuestionType:
+    def init(self, env: Environment) -> QPyPackageInterface:
         """Imports the package's entrypoint and executes its ``init`` function.
 
         :meth:`setup_imports` should be called beforehand to allow the import.
         """
-        set_qpy_environment(env)
-
         main_module: ModuleType
         if self.manifest.entrypoint:
             main_module = import_module(
@@ -56,10 +54,7 @@ class ImportablePackage(ABC, Package):
             raise NoInitFunctionError(main_module)
 
         signature = inspect.signature(main_module.init)
-        if len(signature.parameters) == 0:
-            return main_module.init()
-
-        return main_module.init(env)
+        return main_module.init(*(self, env)[: len(signature.parameters)])
 
 
 class ZipBasedPackage(ZipFile, ImportablePackage):
@@ -147,19 +142,14 @@ class FunctionBasedPackage(ImportablePackage):
         # Nothing to do.
         pass
 
-    def init_as_main(self, env: Environment) -> BaseQuestionType:
-        set_qpy_environment(env)
-
+    def init(self, env: Environment) -> QPyPackageInterface:
         main_module = import_module(self.module_name)
         init_function = getattr(main_module, self.function_name, None)
         if not init_function or not callable(init_function):
             raise NoInitFunctionError(main_module)
 
         signature = inspect.signature(init_function)
-        if len(signature.parameters) == 0:
-            return init_function()
-
-        return init_function(env)
+        return init_function(*(self, env)[: len(signature.parameters)])
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.module_name, self.function_name})"

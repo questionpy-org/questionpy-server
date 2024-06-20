@@ -7,7 +7,6 @@ from typing import Annotated, Any
 
 from pydantic import BaseModel, ByteSize, ConfigDict, Field
 
-from questionpy_common.api.attempt import AttemptModel
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.manifest import PackageType
@@ -78,10 +77,6 @@ class QuestionCreated(QuestionModel):
 
 class AttemptStartArguments(RequestBaseData):
     variant: Annotated[int, Field(ge=1, strict=True)]
-
-
-class AttemptStarted(AttemptModel):
-    attempt_state: str
 
 
 class AttemptViewArguments(RequestBaseData):

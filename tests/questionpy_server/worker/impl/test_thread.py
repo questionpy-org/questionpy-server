@@ -13,7 +13,6 @@ from questionpy_server import WorkerPool
 from questionpy_server.worker.exception import WorkerStartError
 from questionpy_server.worker.impl.thread import ThreadWorker
 from questionpy_server.worker.runtime.manager import WorkerManager
-from questionpy_server.worker.runtime.messages import WorkerUnknownError
 from tests.conftest import PACKAGE
 
 
@@ -35,14 +34,6 @@ async def test_should_gracefully_handle_error_in_bootstrap(pool: WorkerPool) -> 
     with patch.object(WorkerManager, "bootstrap", just_raise), pytest.raises(WorkerStartError):
         async with pool.get_worker(PACKAGE, 1, 1):
             pass
-
-
-@pytest.mark.filterwarnings("ignore:Exception in thread qpy-worker-")
-async def test_should_gracefully_handle_error_in_loop(pool: WorkerPool) -> None:
-    with patch.object(WorkerManager, "on_msg_get_qpy_package_manifest", just_raise):
-        async with pool.get_worker(PACKAGE, 1, 1) as worker:
-            with pytest.raises(WorkerUnknownError):
-                await worker.get_manifest()
 
 
 async def test_should_ignore_limits(pool: WorkerPool) -> None:

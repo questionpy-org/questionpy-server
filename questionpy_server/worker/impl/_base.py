@@ -10,12 +10,12 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, TypeVar
 from zipfile import ZipFile
 
-from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
+from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.constants import DIST_DIR
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_common.manifest import Manifest, PackageFile
-from questionpy_server.models import AttemptStarted, QuestionCreated
+from questionpy_server.models import QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import PackageFileData, Worker, WorkerState
 from questionpy_server.worker.exception import StaticFileSizeMismatchError, WorkerNotRunningError, WorkerStartError
@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     from questionpy_server.worker.connection import ServerToWorkerConnection
 
 log = logging.getLogger(__name__)
-_T = TypeVar("_T", bound=MessageToServer)
+_M = TypeVar("_M", bound=MessageToServer)
 
 
 def _check_static_file_size(path: str, expected_size: int, real_size: int) -> None:
@@ -82,14 +82,14 @@ class BaseWorker(Worker, ABC):
         self._observe_task = asyncio.create_task(self._observe(), name="observe worker task")
 
         try:
-            await self._send_and_wait_response(
+            await self.send_and_wait_for_response(
                 InitWorker(
                     limits=self.limits,
                     worker_type=self._worker_type,
                 ),
                 InitWorker.Response,
             )
-            await self._send_and_wait_response(
+            await self.send_and_wait_for_response(
                 LoadQPyPackage(location=self.package, main=True), LoadQPyPackage.Response
             )
         except WorkerNotRunningError as e:
@@ -101,13 +101,16 @@ class BaseWorker(Worker, ABC):
             raise WorkerNotRunningError
         self._connection.send_message(message)
 
-    async def _send_and_wait_response(self, message: MessageToWorker, expected_response_message: type[_T]) -> _T:
+    async def send_and_wait_for_response(self, message: MessageToWorker, expected_response_message: type[_M]) -> _M:
         self.send(message)
         fut = asyncio.get_running_loop().create_future()
         self._expected_incoming_messages.append((expected_response_message.message_id, fut))
         self.state = WorkerState.SERVER_AWAITS_RESPONSE
-        result = await fut
-        self.state = WorkerState.IDLE
+        try:
+            result = await fut
+        finally:
+            # We also want to reset the state upon error.
+            self.state = WorkerState.IDLE
         return result
 
     async def _receive_messages(self) -> None:
@@ -180,29 +183,28 @@ class BaseWorker(Worker, ABC):
 
     async def get_manifest(self) -> ComparableManifest:
         msg = GetQPyPackageManifest(path=str(self.package))
-        ret = await self._send_and_wait_response(msg, GetQPyPackageManifest.Response)
+        ret = await self.send_and_wait_for_response(msg, GetQPyPackageManifest.Response)
         return ComparableManifest(**ret.manifest.model_dump())
 
     async def get_options_form(
         self, request_user: RequestUser, question_state: str | None
     ) -> tuple[OptionsFormDefinition, dict[str, object]]:
         msg = GetOptionsForm(question_state=question_state, request_user=request_user)
-        ret = await self._send_and_wait_response(msg, GetOptionsForm.Response)
+        ret = await self.send_and_wait_for_response(msg, GetOptionsForm.Response)
         return ret.definition, ret.form_data
 
     async def create_question_from_options(
         self, request_user: RequestUser, old_state: str | None, form_data: dict[str, object]
     ) -> QuestionCreated:
         msg = CreateQuestionFromOptions(question_state=old_state, form_data=form_data, request_user=request_user)
-        ret = await self._send_and_wait_response(msg, CreateQuestionFromOptions.Response)
+        ret = await self.send_and_wait_for_response(msg, CreateQuestionFromOptions.Response)
 
         return QuestionCreated(question_state=ret.question_state, **ret.question_model.model_dump())
 
-    async def start_attempt(self, request_user: RequestUser, question_state: str, variant: int) -> AttemptStarted:
+    async def start_attempt(self, request_user: RequestUser, question_state: str, variant: int) -> AttemptStartedModel:
         msg = StartAttempt(question_state=question_state, variant=variant, request_user=request_user)
-        ret = await self._send_and_wait_response(msg, StartAttempt.Response)
-
-        return AttemptStarted(attempt_state=ret.attempt_state, **ret.attempt_model.model_dump())
+        ret = await self.send_and_wait_for_response(msg, StartAttempt.Response)
+        return ret.attempt_started_model
 
     async def get_attempt(
         self,
@@ -220,7 +222,7 @@ class BaseWorker(Worker, ABC):
             response=response,
             request_user=request_user,
         )
-        ret = await self._send_and_wait_response(msg, ViewAttempt.Response)
+        ret = await self.send_and_wait_for_response(msg, ViewAttempt.Response)
 
         return ret.attempt_model
 
@@ -240,7 +242,7 @@ class BaseWorker(Worker, ABC):
             response=response,
             request_user=request_user,
         )
-        ret = await self._send_and_wait_response(msg, ScoreAttempt.Response)
+        ret = await self.send_and_wait_for_response(msg, ScoreAttempt.Response)
 
         return ret.attempt_scored_model
 

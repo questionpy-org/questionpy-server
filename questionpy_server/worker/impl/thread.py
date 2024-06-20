@@ -38,6 +38,7 @@ class _WorkerThread(threading.Thread):
         # sys.path isn't thread-local, so this doesn't isolate concurrently running workers, but since the thread worker
         # is only for testing anyway, it'll do for now.
         original_path = sys.path.copy()
+        original_module_names = set(sys.modules.keys())
 
         connection = WorkerToServerConnection(self._pipe.right, self._pipe.right)
         manager = WorkerManager(connection)
@@ -49,8 +50,9 @@ class _WorkerThread(threading.Thread):
             self._loop.call_soon_threadsafe(self._end_event.set)
 
             sys.path = original_path
-            # Having reset the path, this forces the questionpy module to be reloaded upon next import.
-            sys.modules.pop("questionpy", None)
+            for module_name in sys.modules.keys() - original_module_names:
+                # Having reset the path, this forces questionpy and any package modules to be reloaded upon next import.
+                del sys.modules[module_name]
 
     async def wait(self) -> None:
         await self._end_event.wait()
