@@ -7,7 +7,7 @@ from typing import Annotated, Protocol
 
 from pydantic import BaseModel, Field
 
-from . import Localized
+from . import Localized, PlainMapping
 from .attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 
 __all__ = ["PossibleResponse", "QuestionInterface", "QuestionModel", "ScoringMethod", "SubquestionModel"]
@@ -58,7 +58,7 @@ class QuestionInterface(Protocol):
 
     @abstractmethod
     def get_attempt(
-        self, attempt_state: str, scoring_state: str | None = None, response: dict | None = None
+        self, attempt_state: str, scoring_state: str | None = None, response: PlainMapping | None = None
     ) -> AttemptModel:
         """Create an attempt object for a previously started attempt.
 
@@ -77,7 +77,7 @@ class QuestionInterface(Protocol):
         self,
         attempt_state: str,
         scoring_state: str | None = None,
-        response: dict | None = None,
+        response: PlainMapping | None = None,
         *,
         try_scoring_with_countback: bool = False,
         try_giving_hint: bool = False,
