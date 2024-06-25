@@ -244,11 +244,10 @@ class BaseWorker(Worker, ABC):
             log.info("Static file '%s' is not listed in package manifest.", path)
             raise FileNotFoundError(path) from e
 
-        dist_path = DIST_DIR + "/" + path
-
         reader: Callable[[], bytes]
         if isinstance(self.package, ZipPackageLocation):
             with ZipFile(self.package.path) as zip_file:
+                dist_path = f"{DIST_DIR}/{path}"
                 try:
                     zipinfo = zip_file.getinfo(dist_path)
                 except KeyError as e:
@@ -257,17 +256,20 @@ class BaseWorker(Worker, ABC):
 
                 real_size = zipinfo.file_size
                 reader = partial(zip_file.read, dist_path)
-        elif isinstance(self.package, DirPackageLocation):
-            full_path: Path = self.package.path / dist_path
-            if not full_path.exists():
-                log.info("Static file '%s' is missing despite being listed in the manifest.", path)
-                raise FileNotFoundError(path)
 
-            real_size = full_path.stat().st_size
-            reader = full_path.read_bytes
+        elif isinstance(self.package, DirPackageLocation):
+            full_path: Path = self.package.path / path
+            try:
+                real_size = full_path.stat().st_size
+                reader = full_path.read_bytes
+            except FileNotFoundError:
+                log.info("Static file '%s' is missing despite being listed in the manifest.", path)
+                raise
+
         elif isinstance(self.package, FunctionPackageLocation):
             msg = "Function-based packages don't serve static files."
             raise NotImplementedError(msg)
+
         else:
             raise TypeError(type(self.package).__name__)
 

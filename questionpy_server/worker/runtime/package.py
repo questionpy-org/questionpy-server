@@ -2,7 +2,6 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import inspect
-import json
 import sys
 import zipfile
 from abc import ABC, abstractmethod
@@ -73,8 +72,8 @@ class ZipBasedPackage(ZipFile, ImportablePackage):
     @cached_property
     def manifest(self) -> Manifest:
         """Load QuestionPy manifest from package."""
-        data = json.loads(self.read(f"{DIST_DIR}/{MANIFEST_FILENAME}"))
-        return Manifest.model_validate(data)
+        data = self.read(f"{DIST_DIR}/{MANIFEST_FILENAME}")
+        return Manifest.model_validate_json(data)
 
     def get_path(self, path: str) -> Traversable:
         # Intuitively, a path beginning with '/' should be absolute within the package, but ZipFile behaves differently.
@@ -98,23 +97,24 @@ class ZipBasedPackage(ZipFile, ImportablePackage):
 
 
 class DirBasedPackage(ImportablePackage):
-    """A package's source directory to be used directly."""
+    """A package's dist directory to be used directly."""
 
-    def __init__(self, path: Path, manifest: Manifest) -> None:
+    def __init__(self, path: Path) -> None:
         self.path = path
-        self._manifest = manifest
 
-    @property
+    @cached_property
     def manifest(self) -> Manifest:
-        return self._manifest
+        """Load QuestionPy manifest from package."""
+        manifest_path = self.path / MANIFEST_FILENAME
+        return Manifest.model_validate_json(manifest_path.read_bytes())
 
     def get_path(self, path: str) -> Traversable:
         return self.path.joinpath(path)
 
     def setup_imports(self) -> None:
         for new_path in (
-            str(self.path / DIST_DIR / "dependencies" / "site-packages"),
-            str(self.path / DIST_DIR / "python"),
+            str(self.path / "dependencies" / "site-packages"),
+            str(self.path / "python"),
         ):
             if new_path not in sys.path:
                 sys.path.insert(0, new_path)
@@ -172,7 +172,7 @@ def load_package(location: PackageLocation) -> ImportablePackage:
     if isinstance(location, ZipPackageLocation):
         return ZipBasedPackage(location.path)
     if isinstance(location, DirPackageLocation):
-        return DirBasedPackage(location.path, location.manifest)
+        return DirBasedPackage(location.path)
     if isinstance(location, FunctionPackageLocation):
         return FunctionBasedPackage(location.module_name, location.function_name, location.manifest)
 

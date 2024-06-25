@@ -51,7 +51,7 @@ class TestPackage(ZipPackageLocation):
     def as_dir_package(self) -> Iterator[DirPackageLocation]:
         with TemporaryDirectory() as tmp_dir, ZipFile(self.path) as package:
             package.extractall(tmp_dir)
-            yield DirPackageLocation(Path(tmp_dir), self.manifest)
+            yield DirPackageLocation(Path(tmp_dir) / DIST_DIR)
 
 
 test_data_path = Path(__file__).parent / "test_data"

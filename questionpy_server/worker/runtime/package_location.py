@@ -22,16 +22,9 @@ class ZipPackageLocation:
 
 @dataclass
 class DirPackageLocation:
-    """A package's source directory to be loaded directly."""
+    """A package's dist directory to be loaded directly."""
 
     path: Path
-
-    manifest: Manifest
-    """The manifest to use, probably loaded from the package config.
-
-    Since the source format of a manifest is YAML and we don't want the runtime to depend on PyYAML, the server should
-    load the manifest and pass it into the worker here.
-    """
 
     kind: Literal["dir"] = field(default="dir", init=False)
 
