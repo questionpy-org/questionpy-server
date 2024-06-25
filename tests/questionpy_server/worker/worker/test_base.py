@@ -3,13 +3,12 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 import mimetypes
-from copy import deepcopy
 from typing import TYPE_CHECKING
 
 import pytest
 
-from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, MiB
-from questionpy_common.manifest import PackageFile
+from questionpy_common.constants import MANIFEST_FILENAME, MiB
+from questionpy_common.manifest import Manifest, PackageFile
 from questionpy_server import WorkerPool
 from questionpy_server.worker.runtime.package_location import DirPackageLocation
 from questionpy_server.worker.worker.base import StaticFileSizeMismatchError
@@ -36,15 +35,16 @@ async def test_should_get_manifest(pool: WorkerPool) -> None:
 
 
 def _inject_static_file_into_dist(package: DirPackageLocation, name: str, content: str) -> None:
-    full_path = package.path / DIST_DIR / name
+    full_path = package.path / name
     full_path.parent.mkdir(exist_ok=True)
     full_path.write_text(content)
 
 
 def _inject_static_file_into_manifest(package: DirPackageLocation, name: str, size: int) -> None:
-    package.manifest = deepcopy(package.manifest)
-    package.manifest.static_files[name] = PackageFile(mime_type=mimetypes.guess_type(name)[0], size=size)
-    (package.path / DIST_DIR / MANIFEST_FILENAME).write_text(package.manifest.model_dump_json())
+    manifest_path = package.path / MANIFEST_FILENAME
+    manifest = Manifest.model_validate_json(manifest_path.read_bytes())
+    manifest.static_files[name] = PackageFile(mime_type=mimetypes.guess_type(name)[0], size=size)
+    manifest_path.write_text(manifest.model_dump_json())
 
 
 _STATIC_FILE_NAME = "static/test_file.txt"
