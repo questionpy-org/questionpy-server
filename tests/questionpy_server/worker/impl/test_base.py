@@ -1,16 +1,20 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-
-from typing import TYPE_CHECKING, Literal
+from collections.abc import Iterator
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Literal, NoReturn
+from unittest.mock import patch
 
 import pytest
 
 from questionpy_server import WorkerPool
 from questionpy_server.worker import WorkerState
-from questionpy_server.worker.exception import StaticFileSizeMismatchError
-from questionpy_server.worker.runtime.messages import DebugExec, WorkerUnknownError
+from questionpy_server.worker.exception import StaticFileSizeMismatchError, WorkerStartError
+from questionpy_server.worker.runtime.manager import WorkerManager
+from questionpy_server.worker.runtime.messages import WorkerUnknownError
 from tests.conftest import PACKAGE, TestPackageFactory
+from tests.questionpy_server.worker.impl.conftest import patch_worker_pool
 
 if TYPE_CHECKING:
     from questionpy_server.worker.runtime.package_location import PackageLocation
@@ -86,19 +90,38 @@ async def test_should_raise_static_file_size_mismatch_error_when_sizes_dont_matc
             await worker.get_static_file(_STATIC_FILE_NAME)
 
 
-_MAKE_GET_MANIFEST_RAISE = """
-def just_raise(*_):
-    raise RuntimeError
+class MyError(Exception):
+    pass
 
-manager._message_dispatch[GetQPyPackageManifest.message_id] = just_raise
-"""
+
+def _just_raise(*_: object) -> NoReturn:
+    msg = "some custom error"
+    raise MyError(msg)
+
+
+@contextmanager
+def _make_bootstrap_raise() -> Iterator[None]:
+    with patch.object(WorkerManager, "bootstrap", _just_raise):
+        yield
+
+
+@contextmanager
+def _make_get_manifest_raise() -> Iterator[None]:
+    with patch.object(WorkerManager, "on_msg_get_qpy_package_manifest", _just_raise):
+        yield
+
+
+@pytest.mark.filterwarnings("ignore:Exception in thread qpy-worker-")
+async def test_should_gracefully_handle_error_in_bootstrap(worker_pool: WorkerPool) -> None:
+    with patch_worker_pool(worker_pool, _make_bootstrap_raise), pytest.raises(WorkerStartError):
+        async with worker_pool.get_worker(PACKAGE, 1, 1):
+            pass
 
 
 async def test_should_gracefully_handle_error_in_loop(worker_pool: WorkerPool) -> None:
-    async with worker_pool.get_worker(PACKAGE, 1, 1) as worker:
-        await worker.send_and_wait_for_response(DebugExec(code=_MAKE_GET_MANIFEST_RAISE), DebugExec.Response)
+    with patch_worker_pool(worker_pool, _make_get_manifest_raise):
+        async with worker_pool.get_worker(PACKAGE, 1, 1) as worker:
+            with pytest.raises(WorkerUnknownError, match="some custom error"):
+                await worker.get_manifest()
 
-        with pytest.raises(WorkerUnknownError):
-            await worker.get_manifest()
-
-        assert worker.state == WorkerState.IDLE
+            assert worker.state == WorkerState.IDLE

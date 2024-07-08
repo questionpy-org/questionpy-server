@@ -19,7 +19,6 @@ from questionpy_common.environment import (
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
 from questionpy_server.worker.runtime.messages import (
     CreateQuestionFromOptions,
-    DebugExec,
     Exit,
     GetOptionsForm,
     GetQPyPackageManifest,
@@ -70,8 +69,6 @@ class WorkerManager:
             ViewAttempt.message_id: self.on_msg_view_attempt,
             ScoreAttempt.message_id: self.on_msg_score_attempt,
         }
-        if __debug__:
-            self._message_dispatch[DebugExec.message_id] = self.on_msg_debug_exec
 
         self._on_request_callbacks: list[OnRequestCallback] = []
 
@@ -190,13 +187,6 @@ class WorkerManager:
             question = self._question_type.create_question_from_state(msg.question_state)
             attempt_scored_model = question.score_attempt(msg.attempt_state, msg.scoring_state, msg.response)
             return ScoreAttempt.Response(attempt_scored_model=attempt_scored_model)
-
-    if __debug__:
-
-        def on_msg_debug_exec(self, msg: DebugExec) -> DebugExec.Response:
-            locals_ = msg.locals.copy()
-            exec(msg.code, {"manager": self, "env": self._env, **globals()}, locals_)  # noqa: S102
-            return DebugExec.Response()
 
     @staticmethod
     def _raise_not_initialized(msg: MessageToWorker) -> NoReturn:

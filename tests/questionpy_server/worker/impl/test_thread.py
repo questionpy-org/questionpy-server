@@ -3,37 +3,19 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 import resource
-from typing import Any, NoReturn
 from unittest.mock import patch
 
 import pytest
 
 from questionpy_common.constants import MiB
 from questionpy_server import WorkerPool
-from questionpy_server.worker.exception import WorkerStartError
 from questionpy_server.worker.impl.thread import ThreadWorker
-from questionpy_server.worker.runtime.manager import WorkerManager
 from tests.conftest import PACKAGE
 
 
 @pytest.fixture
 def pool() -> WorkerPool:
     return WorkerPool(1, 512 * MiB, worker_type=ThreadWorker)
-
-
-class MyError(Exception):
-    pass
-
-
-def just_raise(*_: Any) -> NoReturn:
-    raise MyError
-
-
-@pytest.mark.filterwarnings("ignore:Exception in thread qpy-worker-")
-async def test_should_gracefully_handle_error_in_bootstrap(pool: WorkerPool) -> None:
-    with patch.object(WorkerManager, "bootstrap", just_raise), pytest.raises(WorkerStartError):
-        async with pool.get_worker(PACKAGE, 1, 1):
-            pass
 
 
 async def test_should_ignore_limits(pool: WorkerPool) -> None:

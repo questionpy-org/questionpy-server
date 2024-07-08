@@ -17,9 +17,6 @@ def pool() -> WorkerPool:
     return WorkerPool(1, 512 * MiB, worker_type=SubprocessWorker)
 
 
-# TODO: Figure out how to test_should_gracefully_handle_error_in_bootstrap in the SubprocessWorker.
-
-
 async def test_should_apply_limits(pool: WorkerPool) -> None:
     async with pool.get_worker(PACKAGE, 1, 1) as worker:
         assert isinstance(worker, SubprocessWorker)
