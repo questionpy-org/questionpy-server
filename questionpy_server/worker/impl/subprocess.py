@@ -76,6 +76,9 @@ class SubprocessWorker(BaseWorker):
 
     _worker_type = "process"
 
+    # Allows to use a patched runtime in tests.
+    _runtime_main = ["-m", "questionpy_server.worker.runtime"]
+
     def __init__(self, package: PackageLocation, limits: WorkerResourceLimits | None):
         super().__init__(package, limits)
 
@@ -90,8 +93,7 @@ class SubprocessWorker(BaseWorker):
         self._proc = await asyncio.create_subprocess_exec(
             sys.executable,
             *python_flags,
-            "-m",
-            "questionpy_server.worker.runtime",
+            *self._runtime_main,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,

@@ -38,9 +38,6 @@ class MessageIds(IntEnum):
     VIEW_ATTEMPT = 51
     SCORE_ATTEMPT = 52
 
-    if __debug__:
-        DEBUG_EXEC = 900
-
     # Worker to server.
     WORKER_STARTED = 1000
     SANDBOX_ENABLED = 1001
@@ -53,9 +50,6 @@ class MessageIds(IntEnum):
     RETURN_START_ATTEMPT = 1050
     RETURN_VIEW_ATTEMPT = 1051
     RETURN_SCORE_ATTEMPT = 1052
-
-    if __debug__:
-        RETURN_DEBUG_EXEC = 1900
 
     ERROR = 1100
 
@@ -198,21 +192,6 @@ class ScoreAttempt(MessageToWorker):
     class Response(MessageToServer):
         message_id: ClassVar[MessageIds] = MessageIds.RETURN_SCORE_ATTEMPT
         attempt_scored_model: AttemptScoredModel
-
-
-if __debug__:
-
-    class DebugExec(MessageToWorker):
-        message_id: ClassVar[MessageIds] = MessageIds.DEBUG_EXEC
-        code: str
-        locals: dict[str, object] = {}
-
-        class Response(MessageToServer):
-            message_id: ClassVar[MessageIds] = MessageIds.RETURN_DEBUG_EXEC
-
-else:
-    # So imports needn't by wrapped in 'if __debug__'.
-    DebugExec = NotImplemented  # type: ignore[misc]
 
 
 class WorkerError(MessageToServer):
