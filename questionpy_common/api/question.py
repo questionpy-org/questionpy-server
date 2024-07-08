@@ -5,9 +5,9 @@ from abc import abstractmethod
 from enum import Enum
 from typing import Annotated, Protocol
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, JsonValue
 
-from . import Localized, PlainMapping
+from . import Localized
 from .attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 
 __all__ = ["PossibleResponse", "QuestionInterface", "QuestionModel", "ScoringMethod", "SubquestionModel"]
@@ -58,7 +58,7 @@ class QuestionInterface(Protocol):
 
     @abstractmethod
     def get_attempt(
-        self, attempt_state: str, scoring_state: str | None = None, response: PlainMapping | None = None
+        self, attempt_state: str, scoring_state: str | None = None, response: dict[str, JsonValue] | None = None
     ) -> AttemptModel:
         """Create an attempt object for a previously started attempt.
 
@@ -77,7 +77,7 @@ class QuestionInterface(Protocol):
         self,
         attempt_state: str,
         scoring_state: str | None = None,
-        response: PlainMapping | None = None,
+        response: dict[str, JsonValue] | None = None,
         *,
         try_scoring_with_countback: bool = False,
         try_giving_hint: bool = False,

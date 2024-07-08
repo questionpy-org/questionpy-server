@@ -9,9 +9,10 @@ from typing import TYPE_CHECKING, Protocol
 from questionpy_common.api.package import BasePackageInterface
 
 if TYPE_CHECKING:
+    from pydantic import JsonValue
+
     from questionpy_common.elements import OptionsFormDefinition
 
-    from . import PlainMapping
     from .question import QuestionInterface
 
 __all__ = ["InvalidQuestionStateError", "OptionsFormValidationError", "QuestionTypeInterface"]
@@ -19,7 +20,7 @@ __all__ = ["InvalidQuestionStateError", "OptionsFormValidationError", "QuestionT
 
 class QuestionTypeInterface(BasePackageInterface, Protocol):
     @abstractmethod
-    def get_options_form(self, question_state: str | None) -> tuple[OptionsFormDefinition, PlainMapping]:
+    def get_options_form(self, question_state: str | None) -> tuple[OptionsFormDefinition, dict[str, JsonValue]]:
         """Get the form used to create a new or edit an existing question.
 
         Args:
@@ -30,7 +31,7 @@ class QuestionTypeInterface(BasePackageInterface, Protocol):
         """
 
     @abstractmethod
-    def create_question_from_options(self, old_state: str | None, form_data: PlainMapping) -> QuestionInterface:
+    def create_question_from_options(self, old_state: str | None, form_data: dict[str, JsonValue]) -> QuestionInterface:
         """Create or update the question (state) with the form data from a submitted question edit form.
 
         Args:
