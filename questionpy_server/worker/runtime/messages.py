@@ -6,9 +6,8 @@ from enum import IntEnum, StrEnum, auto, unique
 from struct import Struct
 from typing import Any, ClassVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, JsonValue
 
-from questionpy_common.api import PlainMapping
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.api.qtype import InvalidQuestionStateError
 from questionpy_common.api.question import QuestionModel
@@ -155,7 +154,7 @@ class CreateQuestionFromOptions(MessageToWorker):
     request_user: RequestUser
     question_state: str | None
     """Old question state or ``None`` if the question is new."""
-    form_data: PlainMapping
+    form_data: dict[str, JsonValue]
 
     class Response(MessageToServer):
         message_id: ClassVar[MessageIds] = MessageIds.RETURN_CREATE_QUESTION
