@@ -45,15 +45,14 @@ class QuestionModel(Localized):
 
 
 class QuestionInterface(Protocol):
+    """Describes the API of a question between the worker runtime and the package."""
+
     @abstractmethod
     def start_attempt(self, variant: int) -> AttemptStartedModel:
         """Start an attempt at this question with the given variant.
 
         Args:
             variant: Not implemented.
-
-        Returns:
-            A :class:`BaseAttempt` object representing the attempt.
         """
 
     @abstractmethod
@@ -64,12 +63,9 @@ class QuestionInterface(Protocol):
 
         Args:
             attempt_state: The `attempt_state` attribute of an attempt which was previously returned by
-                           :meth:`start_attempt`.
+                           [start_attempt][].
             scoring_state: Not implemented.
             response: The response currently entered by the student.
-
-        Returns:
-            A :class:`BaseAttempt` object which should be identical to the one which generated the given state(s).
         """
 
     @abstractmethod
@@ -86,21 +82,18 @@ class QuestionInterface(Protocol):
 
         Args:
             attempt_state: The `attempt_state` attribute of an attempt which was previously returned by
-                           :meth:`start_attempt`.
+                           [start_attempt][].
             scoring_state: Not implemented.
             response: The response currently entered by the student.
             try_scoring_with_countback: TBD
             try_giving_hint: TBD
-
-        Returns:
-            A :class:`BaseAttempt` object which should be identical to the one which generated the given state(s).
         """
 
     @abstractmethod
     def export_question_state(self) -> str:
         """Serialize this question's relevant data.
 
-        A future call to :meth:`QuestionTypeInterface.create_question_from_state` should result in a question object
+        A future call to [QuestionTypeInterface.create_question_from_state][] should result in a question object
         identical to the one which exported the state.
         """
 
