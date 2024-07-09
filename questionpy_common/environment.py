@@ -47,7 +47,7 @@ class Package(Protocol):
 
     @abstractmethod
     def get_path(self, path: str) -> Traversable:
-        """Gets a :class:`Traversable` object which allows reading files from the package.
+        """Gets a [Traversable][] object which allows reading files from the package.
 
         Note that the returned path object may not exist. This method does not throw an exception in that case.
 
@@ -70,7 +70,7 @@ class Environment(Protocol):
       not possible to isolate workers effectively.
     - container: The worker is sandboxed in a Docker(-like) container.
 
-    Other worker types may be added in future. (Hence the :class:`str` type.)
+    Other worker types may be added in future. (Hence the `str` type.)
     """
     limits: WorkerResourceLimits | None
     """The resource limits imposed on the worker, if any."""
@@ -89,7 +89,7 @@ class Environment(Protocol):
         """Register a new on-request callback.
 
         When processing of a new request begins, any callback(s) registered here are called to inform packages of the
-        new :class:`RequestUser`. This may be expanded in the future to allow cleaning up after request processing has
+        new [RequestUser][]. This may be expanded in the future to allow cleaning up after request processing has
         finished.
         """
 

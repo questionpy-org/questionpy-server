@@ -19,6 +19,8 @@ __all__ = ["InvalidQuestionStateError", "OptionsFormValidationError", "QuestionT
 
 
 class QuestionTypeInterface(BasePackageInterface, Protocol):
+    """Describes the API of a question type between the worker runtime and the package."""
+
     @abstractmethod
     def get_options_form(self, question_state: str | None) -> tuple[OptionsFormDefinition, dict[str, JsonValue]]:
         """Get the form used to create a new or edit an existing question.
