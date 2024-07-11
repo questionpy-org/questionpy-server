@@ -15,14 +15,16 @@ build_package() {
   tmp_source_dir="$(mktemp -du)"
   package="$SERVER_DIR/tests/test_data/package/$1.qpy"
 
-  cd "$SDK_DIR"
   python -m questionpy_sdk create "$1" -o "$tmp_source_dir"
   python -m questionpy_sdk package -f "$tmp_source_dir" -o "$package"
 
   rm -rf "$tmp_source_dir"
 }
 
-. "$SDK_DIR/.venv/bin/activate"
+cd "$SDK_DIR"
+. .venv/bin/activate
+
+./build.py
 
 build_package package_1
 build_package package_2
