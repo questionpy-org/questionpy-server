@@ -3,21 +3,23 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 import mimetypes
-from typing import TYPE_CHECKING
+from collections.abc import Iterator
+from contextlib import AsyncExitStack, contextmanager
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from typing import Literal
+from zipfile import ZipFile
 
 import pytest
 
-from questionpy_common.constants import MANIFEST_FILENAME, MiB
+from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, MiB
 from questionpy_common.manifest import Manifest, PackageFile
 from questionpy_server import WorkerPool
-from questionpy_server.worker.runtime.package_location import DirPackageLocation
+from questionpy_server.worker.runtime.package_location import DirPackageLocation, PackageLocation, ZipPackageLocation
 from questionpy_server.worker.worker.base import StaticFileSizeMismatchError
 from questionpy_server.worker.worker.subprocess import SubprocessWorker
 from questionpy_server.worker.worker.thread import ThreadWorker
 from tests.conftest import PACKAGE
-
-if TYPE_CHECKING:
-    from questionpy_server.worker.worker import Worker
 
 
 @pytest.fixture(params=(SubprocessWorker, ThreadWorker))
@@ -32,6 +34,17 @@ async def test_should_get_manifest(pool: WorkerPool) -> None:
 
 
 # TODO: Include a test package with actual static files instead of whatever this is.
+
+
+@contextmanager
+def _temp_zip_package(dir_package: DirPackageLocation) -> Iterator[ZipPackageLocation]:
+    """Creates a temporary zip package from the given dir package."""
+    with NamedTemporaryFile(suffix=".qpy") as file:
+        with ZipFile(file, "w") as zipfile:
+            for path in dir_package.path.glob("**/*"):
+                zipfile.write(path, DIST_DIR / path.relative_to(dir_package.path))
+
+        yield ZipPackageLocation(Path(file.name))
 
 
 def _inject_static_file_into_dist(package: DirPackageLocation, name: str, content: str) -> None:
@@ -51,45 +64,71 @@ _STATIC_FILE_NAME = "static/test_file.txt"
 _STATIC_FILE_CONTENT = "static example file\n"
 
 
-async def test_should_get_static_file_from_dir(pool: WorkerPool) -> None:
-    with PACKAGE.as_dir_package() as package:
-        _inject_static_file_into_dist(package, _STATIC_FILE_NAME, _STATIC_FILE_CONTENT)
-        _inject_static_file_into_manifest(package, _STATIC_FILE_NAME, len(_STATIC_FILE_CONTENT))
+@pytest.mark.parametrize("package_type", ["dir", "zip"])
+async def test_should_get_static_file(pool: WorkerPool, package_type: Literal["dir", "zip"]) -> None:
+    async with AsyncExitStack() as stack:
+        dir_package = stack.enter_context(PACKAGE.as_dir_package())
+        _inject_static_file_into_dist(dir_package, _STATIC_FILE_NAME, _STATIC_FILE_CONTENT)
+        _inject_static_file_into_manifest(dir_package, _STATIC_FILE_NAME, len(_STATIC_FILE_CONTENT))
 
-        worker: Worker
-        async with pool.get_worker(package, 1, 1) as worker:
-            static_file = await worker.get_static_file(_STATIC_FILE_NAME)
-            assert static_file.data == _STATIC_FILE_CONTENT.encode()
-            assert static_file.mime_type == "text/plain"
-            assert static_file.size == len(_STATIC_FILE_CONTENT)
+        package: PackageLocation = (
+            dir_package if package_type == "dir" else stack.enter_context(_temp_zip_package(dir_package))
+        )
 
-
-async def test_should_raise_file_not_found_error_when_not_in_manifest(pool: WorkerPool) -> None:
-    with PACKAGE.as_dir_package() as package:
-        _inject_static_file_into_dist(package, _STATIC_FILE_NAME, _STATIC_FILE_CONTENT)
-
-        worker: Worker
-        async with pool.get_worker(package, 1, 1) as worker:
-            with pytest.raises(FileNotFoundError):
-                await worker.get_static_file(_STATIC_FILE_NAME)
+        worker = await stack.enter_async_context(pool.get_worker(package, 1, 1))
+        static_file = await worker.get_static_file(_STATIC_FILE_NAME)
+        assert static_file.data == _STATIC_FILE_CONTENT.encode()
+        assert static_file.mime_type == "text/plain"
+        assert static_file.size == len(_STATIC_FILE_CONTENT)
 
 
-async def test_should_raise_file_not_found_error_when_not_on_disk(pool: WorkerPool) -> None:
-    with PACKAGE.as_dir_package() as package:
-        _inject_static_file_into_manifest(package, _STATIC_FILE_NAME, len(_STATIC_FILE_CONTENT))
+@pytest.mark.parametrize("package_type", ["dir", "zip"])
+async def test_should_raise_file_not_found_error_when_not_in_manifest(
+    pool: WorkerPool, package_type: Literal["dir", "zip"]
+) -> None:
+    async with AsyncExitStack() as stack:
+        dir_package = stack.enter_context(PACKAGE.as_dir_package())
+        _inject_static_file_into_dist(dir_package, _STATIC_FILE_NAME, _STATIC_FILE_CONTENT)
 
-        worker: Worker
-        async with pool.get_worker(package, 1, 1) as worker:
-            with pytest.raises(FileNotFoundError):
-                await worker.get_static_file(_STATIC_FILE_NAME)
+        package: PackageLocation = (
+            dir_package if package_type == "dir" else stack.enter_context(_temp_zip_package(dir_package))
+        )
+
+        worker = await stack.enter_async_context(pool.get_worker(package, 1, 1))
+        with pytest.raises(FileNotFoundError):
+            await worker.get_static_file(_STATIC_FILE_NAME)
 
 
-async def test_should_raise_static_file_size_mismatch_error_when_sizes_dont_match(pool: WorkerPool) -> None:
-    with PACKAGE.as_dir_package() as package:
-        _inject_static_file_into_dist(package, _STATIC_FILE_NAME, _STATIC_FILE_CONTENT)
-        _inject_static_file_into_manifest(package, _STATIC_FILE_NAME, 1234)
+@pytest.mark.parametrize("package_type", ["dir", "zip"])
+async def test_should_raise_file_not_found_error_when_not_on_disk(
+    pool: WorkerPool, package_type: Literal["dir", "zip"]
+) -> None:
+    async with AsyncExitStack() as stack:
+        dir_package = stack.enter_context(PACKAGE.as_dir_package())
+        _inject_static_file_into_manifest(dir_package, _STATIC_FILE_NAME, len(_STATIC_FILE_CONTENT))
 
-        worker: Worker
-        async with pool.get_worker(package, 1, 1) as worker:
-            with pytest.raises(StaticFileSizeMismatchError):
-                await worker.get_static_file(_STATIC_FILE_NAME)
+        package: PackageLocation = (
+            dir_package if package_type == "dir" else stack.enter_context(_temp_zip_package(dir_package))
+        )
+
+        worker = await stack.enter_async_context(pool.get_worker(package, 1, 1))
+        with pytest.raises(FileNotFoundError):
+            await worker.get_static_file(_STATIC_FILE_NAME)
+
+
+@pytest.mark.parametrize("package_type", ["dir", "zip"])
+async def test_should_raise_static_file_size_mismatch_error_when_sizes_dont_match(
+    pool: WorkerPool, package_type: Literal["dir", "zip"]
+) -> None:
+    async with AsyncExitStack() as stack:
+        dir_package = stack.enter_context(PACKAGE.as_dir_package())
+        _inject_static_file_into_dist(dir_package, _STATIC_FILE_NAME, _STATIC_FILE_CONTENT)
+        _inject_static_file_into_manifest(dir_package, _STATIC_FILE_NAME, 1234)
+
+        package: PackageLocation = (
+            dir_package if package_type == "dir" else stack.enter_context(_temp_zip_package(dir_package))
+        )
+
+        worker = await stack.enter_async_context(pool.get_worker(package, 1, 1))
+        with pytest.raises(StaticFileSizeMismatchError):
+            await worker.get_static_file(_STATIC_FILE_NAME)

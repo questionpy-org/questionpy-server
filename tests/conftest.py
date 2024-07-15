@@ -49,6 +49,7 @@ class TestPackage(ZipPackageLocation):
 
     @contextmanager
     def as_dir_package(self) -> Iterator[DirPackageLocation]:
+        """Creates a dir package from this zip package."""
         with TemporaryDirectory() as tmp_dir, ZipFile(self.path) as package:
             package.extractall(tmp_dir)
             yield DirPackageLocation(Path(tmp_dir) / DIST_DIR)
