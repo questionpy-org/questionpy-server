@@ -6,8 +6,7 @@ import asyncio
 import contextlib
 import logging
 from abc import ABC
-from collections.abc import Callable, Sequence
-from functools import partial
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, TypeVar
 from zipfile import ZipFile
 
@@ -49,6 +48,16 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 _T = TypeVar("_T", bound=MessageToServer)
+
+
+def _check_static_file_size(path: str, expected_size: int, real_size: int) -> None:
+    if expected_size != real_size:
+        msg = (
+            f"Static file '{path}' has different file size on disk ('{real_size}') than in manifest "
+            f"('{expected_size}')"
+        )
+        log.info(msg)
+        raise StaticFileSizeMismatchError(msg)
 
 
 class BaseWorker(Worker, ABC):
@@ -244,7 +253,6 @@ class BaseWorker(Worker, ABC):
             log.info("Static file '%s' is not listed in package manifest.", path)
             raise FileNotFoundError(path) from e
 
-        reader: Callable[[], bytes]
         if isinstance(self.package, ZipPackageLocation):
             with ZipFile(self.package.path) as zip_file:
                 dist_path = f"{DIST_DIR}/{path}"
@@ -254,17 +262,19 @@ class BaseWorker(Worker, ABC):
                     log.info("Static file '%s' is missing despite being listed in the manifest.", path)
                     raise FileNotFoundError(path) from e
 
-                real_size = zipinfo.file_size
-                reader = partial(zip_file.read, dist_path)
+                _check_static_file_size(path, manifest_entry.size, zipinfo.file_size)
+                return PackageFileData(zipinfo.file_size, manifest_entry.mime_type, zip_file.read(dist_path))
 
         elif isinstance(self.package, DirPackageLocation):
             full_path: Path = self.package.path / path
             try:
                 real_size = full_path.stat().st_size
-                reader = full_path.read_bytes
             except FileNotFoundError:
                 log.info("Static file '%s' is missing despite being listed in the manifest.", path)
                 raise
+
+            _check_static_file_size(path, manifest_entry.size, real_size)
+            return PackageFileData(real_size, manifest_entry.mime_type, full_path.read_bytes())
 
         elif isinstance(self.package, FunctionPackageLocation):
             msg = "Function-based packages don't serve static files."
@@ -272,16 +282,6 @@ class BaseWorker(Worker, ABC):
 
         else:
             raise TypeError(type(self.package).__name__)
-
-        if manifest_entry.size != real_size:
-            msg = (
-                f"Static file '{path}' has different file size on disk ('{real_size}') than in manifest "
-                f"('{manifest_entry.size}')"
-            )
-            log.info(msg)
-            raise StaticFileSizeMismatchError(msg)
-
-        return PackageFileData(real_size, manifest_entry.mime_type, reader())
 
     async def get_static_file(self, path: str) -> PackageFileData:
         # TODO: Read the file inside the worker and return it in a message.
