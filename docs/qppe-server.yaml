@@ -19,7 +19,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/PackageInfo"
+                  $ref: "#/components/schemas/PackageVersionsInfo"
 
   /packages/{package_hash}:
     parameters:
@@ -34,7 +34,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PackageInfo"
+                $ref: "#/components/schemas/PackageVersionInfo"
         404:
           description: Not Found
 
@@ -385,7 +385,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PackageInfo"
+                $ref: "#/components/schemas/PackageVersionInfo"
         500:
           description: Error occurred.
           content:
@@ -461,10 +461,6 @@ components:
     PackageInfo:
       type: object
       properties:
-        package_hash:
-          type: string
-          description: SHA256 hash of package zip
-          example: bf6f896
         short_name:
           type: string
           example: multiple_choice
@@ -476,12 +472,6 @@ components:
           example:
             en: Multiple Choice
             de: Mehrfachauswahl
-        version:
-          type: string
-          format: semver
-          # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
-          pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
-          example: 0.1.0
         type:
           type: string
           enum:
@@ -498,6 +488,7 @@ components:
           type: array
           items:
             type: string
+          example: [ en, de ]
           default: [ ]
         description:
           type: object
@@ -518,7 +509,36 @@ components:
         tags:
           type: array
           default: [ ]
-      required: [ package_hash, short_name, namespace, name, version, type, author ]
+      required: [ short_name, namespace, name, type, author ]
+
+    PackageVersionSpecificInfo:
+      type: object
+      properties:
+        package_hash:
+          type: string
+          description: SHA256 hash of package zip
+          example: bf6f896
+        version:
+          type: string
+          format: semver
+          # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+          pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
+          example: 0.1.0
+      required: [ package_hash, version ]
+
+    PackageVersionInfo:
+      allOf:
+        - $ref: '#/components/schemas/PackageInfo'
+        - $ref: '#/components/schemas/PackageVersionSpecificInfo'
+
+    PackageVersionsInfo:
+      properties:
+        manifest:
+          $ref: '#/components/schemas/PackageInfo'
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackageVersionSpecificInfo'
 
     OptionsFormDefinition:
       type: object
