@@ -19,7 +19,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/PackageInfo"
+                  $ref: "#/components/schemas/PackageVersionsInfo"
 
   /packages/{package_hash}:
     parameters:
@@ -458,7 +458,7 @@ components:
         type: string
 
   schemas:
-    Manifest:
+    PackageInfo:
       type: object
       properties:
         short_name:
@@ -528,14 +528,13 @@ components:
 
     PackageVersionInfo:
       allOf:
-        - $ref: '#/components/schemas/Manifest'
+        - $ref: '#/components/schemas/PackageInfo'
         - $ref: '#/components/schemas/PackageVersionSpecificInfo'
 
-    PackageInfo:
+    PackageVersionsInfo:
       properties:
         manifest:
-          allOf:
-            - $ref: '#/components/schemas/Manifest'
+          $ref: '#/components/schemas/PackageInfo'
         versions:
           type: array
           items:
