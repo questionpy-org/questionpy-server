@@ -6,14 +6,14 @@
 from faker import Faker
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from questionpy_server.api.models import PackageInfo
+from questionpy_server.api.models import PackageVersionInfo
 
 languages = ["en", "de"]
 fake = Faker()
 
 
-class PackageInfoFactory(ModelFactory):
-    __model__ = PackageInfo
+class PackageVersionInfoFactory(ModelFactory):
+    __model__ = PackageVersionInfo
 
     @staticmethod
     def author() -> str:

@@ -87,9 +87,9 @@ def test_get_packages() -> None:
     package_collection = PackageCollection(None, {}, Mock(), Mock(), Mock())
 
     # Package does exist.
-    with patch.object(Indexer, "get_packages") as get_packages:
-        package_collection.get_packages()
-        get_packages.assert_called_once()
+    with patch.object(Indexer, "get_package_versions_infos") as get_package_versions_infos:
+        package_collection.get_package_versions_infos()
+        get_package_versions_infos.assert_called_once()
 
 
 async def test_notify_indexer_on_cache_deletion(tmp_path_factory: TempPathFactory) -> None:

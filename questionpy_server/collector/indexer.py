@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import overload
 
 from questionpy_server import WorkerPool
+from questionpy_server.api.models import PackageInfo, PackageVersionsInfo, PackageVersionSpecificInfo
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
@@ -29,6 +30,8 @@ class Indexer:
         self._index_by_hash: dict[str, Package] = {}
         self._index_by_identifier: dict[str, dict[SemVer, Package]] = {}
         """dict[identifier, dict[version, Package]]"""
+
+        self._package_versions_infos: list[PackageVersionsInfo] | None = None
 
         self._lock: Lock | None = None
 
@@ -66,13 +69,38 @@ class Indexer:
         """
         return self._index_by_identifier.get(identifier, {}).get(version, None)
 
-    def get_packages(self) -> set[Package]:
-        """Returns all packages in the index (excluding packages from LMSs).
+    def get_package_versions_infos(self) -> list[PackageVersionsInfo]:
+        """Returns an overview of every package and its versions (excluding packages from LMSs).
+
+        TODO: optimize further?
 
         Returns:
-            set of packages
+            list of PackageVersionsInfo
         """
-        return {package for packages in self._index_by_identifier.values() for package in packages.values()}
+        if self._package_versions_infos is not None:
+            return self._package_versions_infos
+
+        package_versions_infos = []
+
+        for package_versions in self._index_by_identifier.values():
+            versions = []
+            sorted_package_versions = sorted(package_versions, reverse=True)
+            for version in sorted_package_versions:
+                package_version = package_versions[version]
+                versions.append(PackageVersionSpecificInfo(package_hash=package_version.hash, version=str(version)))
+
+            # A package should always have at least one package version, we try-except just in case.
+            try:
+                latest_package_version = package_versions[sorted_package_versions[0]]
+                package_info = PackageInfo(**latest_package_version.manifest.model_dump())
+            except KeyError:
+                continue
+
+            package_versions_info = PackageVersionsInfo(manifest=package_info, versions=versions)
+            package_versions_infos.append(package_versions_info)
+
+        self._package_versions_infos = package_versions_infos
+        return self._package_versions_infos
 
     @overload
     async def register_package(
@@ -128,6 +156,9 @@ class Indexer:
                 else:
                     package_versions[package.manifest.version] = package
 
+                # Force recalculation of list[PackageVersionsInfo].
+                self._package_versions_infos = None
+
         return package
 
     async def unregister_package(self, package_hash: str, source: BaseCollector) -> None:
@@ -157,6 +188,9 @@ class Indexer:
                 # If there are no more packages with the same identifier, remove the identifier from the index.
                 if not package_versions:
                     self._index_by_identifier.pop(package.manifest.identifier, None)
+
+            # Force recalculation of list[PackageVersionsInfo].
+            self._package_versions_infos = None
 
         if len(package.sources) == 0:
             # Package has no more sources; remove it from the index.

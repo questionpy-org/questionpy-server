@@ -5,7 +5,7 @@
 from enum import Enum
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ByteSize, ConfigDict, Field, FilePath, HttpUrl
+from pydantic import BaseModel, ByteSize, ConfigDict, Field
 
 from questionpy_common.api.attempt import AttemptModel
 from questionpy_common.api.question import QuestionModel
@@ -16,10 +16,21 @@ from questionpy_common.manifest import PackageType
 class PackageInfo(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
-    package_hash: str
     short_name: str
     namespace: str
     name: dict[str, str]
+    type: PackageType
+    author: str | None
+    url: str | None
+    languages: set[str] | None
+    description: dict[str, str] | None
+    icon: str | None
+    license: str | None
+    tags: set[str] | None
+
+
+class PackageVersionSpecificInfo(BaseModel):
+    package_hash: str
     version: Annotated[
         str,
         Field(
@@ -29,14 +40,15 @@ class PackageInfo(BaseModel):
             r"(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$"
         ),
     ]
-    type: PackageType
-    author: str | None
-    url: HttpUrl | None
-    languages: list[str] | None
-    description: dict[str, str] | None
-    icon: FilePath | HttpUrl | None
-    license: str | None
-    tags: list[str] | None
+
+
+class PackageVersionInfo(PackageInfo, PackageVersionSpecificInfo):
+    pass
+
+
+class PackageVersionsInfo(BaseModel):
+    manifest: PackageInfo
+    versions: list[PackageVersionSpecificInfo]
 
 
 class MainBaseModel(BaseModel):

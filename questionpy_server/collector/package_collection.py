@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from pydantic import HttpUrl
 
 from questionpy_server import WorkerPool
+from questionpy_server.api.models import PackageVersionsInfo
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
@@ -121,10 +122,10 @@ class PackageCollection:
 
         raise FileNotFoundError
 
-    def get_packages(self) -> set["Package"]:
-        """Returns a set of all available packages.
+    def get_package_versions_infos(self) -> list[PackageVersionsInfo]:
+        """Returns an overview of every package and its versions.
 
         Returns:
-            set of packages
+            list of PackageVersionsInfo
         """
-        return self._indexer.get_packages()
+        return self._indexer.get_package_versions_infos()

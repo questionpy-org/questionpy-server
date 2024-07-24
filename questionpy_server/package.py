@@ -5,7 +5,7 @@
 import contextlib
 from pathlib import Path
 
-from questionpy_server.api.models import PackageInfo
+from questionpy_server.api.models import PackageVersionInfo
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
@@ -99,7 +99,7 @@ class Package:
 
     sources: PackageSources
 
-    _info: PackageInfo | None
+    _info: PackageVersionInfo | None
     _path: Path | None
 
     def __init__(
@@ -127,7 +127,7 @@ class Package:
             return NotImplemented
         return self.hash == other.hash
 
-    def get_info(self) -> PackageInfo:
+    def get_info(self) -> PackageVersionInfo:
         """Returns the package info.
 
         Returns:
@@ -136,7 +136,7 @@ class Package:
         if not self._info:
             tmp = self.manifest.model_dump()
             tmp["version"] = str(tmp["version"])
-            self._info = PackageInfo(**tmp, package_hash=self.hash)
+            self._info = PackageVersionInfo(**tmp, package_hash=self.hash)
         return self._info
 
     async def get_path(self) -> Path:
