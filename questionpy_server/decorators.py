@@ -52,7 +52,9 @@ def ensure_package_and_question_state_exist(  # noqa: C901
             server: "QPyServer" = request.app["qpy_server_app"]
             package_hash: str = request.match_info.get("package_hash", "")
 
-            if request.content_type == "multipart/form-data":
+            if not request.body_exists:
+                main, sent_package, sent_question_state = None, None, None
+            elif request.content_type == "multipart/form-data":
                 main, sent_package, sent_question_state = await parse_form_data(request)
             elif request.content_type == "application/json":
                 main, sent_package, sent_question_state = await request.read(), None, None
