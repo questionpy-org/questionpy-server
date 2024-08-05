@@ -361,6 +361,58 @@ paths:
         404:
           description: Job not found.
 
+  /packages/{package_hash}/file/{namespace}/{short_name}/{path}:
+    parameters:
+      - $ref: '#/components/parameters/PackageHash'
+      - name: namespace
+        in: path
+        required: true
+        description: Namespace of the package from which to retrieve the file.
+        schema:
+          type: string
+      - name: short_name
+        in: path
+        required: true
+        description: Short name of the package from which to retrieve the file.
+        schema:
+          type: string
+      - name: path
+        in: path
+        required: true
+        description: Path within the package. Must start with either `static/` or `static-private/`.
+        schema:
+          type: string
+          pattern: "^(static|static-private)/.*$"
+      - $ref: '#/components/parameters/UserAgent'
+      - $ref: '#/components/parameters/AcceptLanguageOne'
+    post:
+      summary: Retrieve a static file from a package.
+      description: While the `package_hash` refers to the main package to load, that package may load other packages in
+        turn, in which case the path params `namespace` and `short_name` may identify one of those. Within the request
+        data, `lms_auth_token` should provide access to the AuthPackageAccess QPPE LMS Callback API security scheme.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestBaseData"
+      responses:
+        "200":
+          description: Static file data
+          content:
+            "*/*": {}
+        "404":
+          description: Package or its static file not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundStatus"
+        "500":
+          description: Error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestError"
+
   /package-extract-info:
     parameters:
       - $ref: '#/components/parameters/UserAgent'
