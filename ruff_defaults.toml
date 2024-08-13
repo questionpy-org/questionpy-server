@@ -134,7 +134,7 @@ mark-parentheses = false
 ban-relative-imports = "parents"
 
 [lint.isort]
-known-first-party = ["questionpy_common", "questionpy_sdk", "questionpy_server"]
+known-first-party = ["questionpy", "questionpy_common", "questionpy_sdk", "questionpy_server"]
 
 [lint.mccabe]
 max-complexity = 10
