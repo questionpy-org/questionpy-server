@@ -49,7 +49,7 @@ def ensure_package_and_question_state_exist(  # noqa: C901
         @functools.wraps(function)
         async def wrapper(request: Request, *args: Any, **kwargs: Any) -> Any:  # noqa: C901
             """Wrapper around the actual function call."""
-            server: "QPyServer" = request.app["qpy_server_app"]
+            server: QPyServer = request.app["qpy_server_app"]
             package_hash: str = request.match_info.get("package_hash", "")
 
             if not request.body_exists:

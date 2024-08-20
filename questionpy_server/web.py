@@ -122,7 +122,7 @@ async def parse_form_data(request: Request) -> tuple[bytes | None, HashContainer
     Returns:
         tuple of main field, package, and question state
     """
-    server: "QPyServer" = request.app["qpy_server_app"]
+    server: QPyServer = request.app["qpy_server_app"]
     main = package = question_state = None
 
     reader = await request.multipart()
