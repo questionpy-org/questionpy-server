@@ -3,12 +3,11 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from asyncio import create_task
-from typing import Any
+from typing import Any, ClassVar
 
 from aiohttp import web
 
 from . import __version__
-from .api.routes import routes
 from .cache import FileLimitLRU
 from .collector import PackageCollection
 from .settings import Settings
@@ -16,11 +15,16 @@ from .worker.pool import WorkerPool
 
 
 class QPyServer:
+    APP_KEY: ClassVar[web.AppKey["QPyServer"]] = web.AppKey("qpy_server_app")
+
     def __init__(self, settings: Settings):
+        # We import here, so we don't have to work around circular imports.
+        from .api.routes import routes  # noqa: PLC0415
+
         self.settings: Settings = settings
         self.web_app = web.Application(client_max_size=settings.webservice.max_main_size)
         self.web_app.add_routes(routes)
-        self.web_app["qpy_server_app"] = self
+        self.web_app[self.APP_KEY] = self
 
         self.worker_pool = WorkerPool(
             settings.worker.max_workers, settings.worker.max_memory, worker_type=settings.worker.type

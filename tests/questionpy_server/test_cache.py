@@ -11,7 +11,7 @@ from unittest.mock import patch
 import pytest
 from _pytest.tmpdir import TempPathFactory
 
-from questionpy_server.cache import FileLimitLRU, SizeError
+from questionpy_server.cache import CacheItemTooLargeError, FileLimitLRU
 
 
 @dataclass
@@ -186,7 +186,7 @@ async def test_put(cache: FileLimitLRU, settings: Settings) -> None:
     assert get_file_count(settings.cache.directory) == settings.items.num_of_items
 
     # Content size is bigger than cache size.
-    with pytest.raises(SizeError):
+    with pytest.raises(CacheItemTooLargeError):
         await cache.put("new", b"." * (settings.cache.size + 1))
 
     # Replace existing file.

@@ -11,7 +11,7 @@ import pytest
 from _pytest.tmpdir import TempPathFactory
 
 from questionpy_common.constants import KiB
-from questionpy_server.cache import FileLimitLRU, SizeError
+from questionpy_server.cache import CacheItemTooLargeError, FileLimitLRU
 from questionpy_server.repository import RepoMeta, RepoPackage, RepoPackageIndex, Repository
 from questionpy_server.utils.manifest import ComparableManifest
 from tests.test_data.factories import ManifestFactory, RepoMetaFactory, RepoPackageVersionsFactory
@@ -119,7 +119,7 @@ async def test_log_warning_when_package_index_is_too_big_for_cache(
 
     with (
         patch("questionpy_server.repository.download") as mock_download,
-        patch.object(cache, "put", side_effect=SizeError),
+        patch.object(cache, "put", side_effect=CacheItemTooLargeError("key", 2, 1)),
     ):
         parsed = package_index.model_dump_json()
         mock_download.return_value = compress(parsed.encode())

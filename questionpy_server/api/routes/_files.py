@@ -6,35 +6,35 @@ from typing import TYPE_CHECKING
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPNotImplemented
 
-from questionpy_server.decorators import ensure_package_and_question_state_exist
+from questionpy_server.app import QPyServer
+from questionpy_server.decorators import ensure_package
 from questionpy_server.package import Package
 from questionpy_server.worker.runtime.package_location import ZipPackageLocation
 
 if TYPE_CHECKING:
-    from questionpy_server.app import QPyServer
     from questionpy_server.worker.worker import Worker
 
 file_routes = web.RouteTableDef()
 
 
 @file_routes.post(r"/packages/{package_hash}/file/{namespace}/{short_name}/{path:static/.*}")  # type: ignore[arg-type]
-@ensure_package_and_question_state_exist
+@ensure_package
 async def serve_static_file(request: web.Request, package: Package) -> web.Response:
-    qpy_server: QPyServer = request.app["qpy_server_app"]
+    qpy_server = request.app[QPyServer.APP_KEY]
     namespace = request.match_info["namespace"]
     short_name = request.match_info["short_name"]
     path = request.match_info["path"]
 
     if package.manifest.namespace != namespace or package.manifest.short_name != short_name:
         # TODO: Support static files in non-main packages by using namespace and short_name.
-        raise HTTPNotImplemented(reason="Static file retrieval from non-main packages is not supported yet.")
+        raise HTTPNotImplemented(text="Static file retrieval from non-main packages is not supported yet.")
 
     worker: Worker
     async with qpy_server.worker_pool.get_worker(ZipPackageLocation(await package.get_path()), 0, None) as worker:
         try:
             file = await worker.get_static_file(path)
         except FileNotFoundError as e:
-            raise web.HTTPNotFound(reason="File not found.") from e
+            raise web.HTTPNotFound(text="File not found.") from e
 
     return web.Response(
         body=file.data,

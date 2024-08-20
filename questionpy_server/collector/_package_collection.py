@@ -81,20 +81,13 @@ class PackageCollection:
         """
         return await self._lms_collector.put(package_container)
 
-    def get(self, package_hash: str) -> "Package":
+    def get(self, package_hash: str) -> "Package | None":
         """Returns a package if it exists.
 
         Args:
-          package_hash (str): hash value of the package
-
-        Returns:
-          path to the package
+          package_hash: hash value of the package
         """
-        # Check if package was indexed
-        if package := self._indexer.get_by_hash(package_hash):
-            return package
-
-        raise FileNotFoundError
+        return self._indexer.get_by_hash(package_hash)
 
     def get_by_identifier(self, identifier: str) -> dict[SemVer, "Package"]:
         """Returns a dict of packages with the given identifier and available versions.
@@ -107,20 +100,14 @@ class PackageCollection:
         """
         return self._indexer.get_by_identifier(identifier)
 
-    def get_by_identifier_and_version(self, identifier: str, version: SemVer) -> "Package":
+    def get_by_identifier_and_version(self, identifier: str, version: SemVer) -> "Package | None":
         """Returns a package with the given identifier and version.
 
         Args:
-          identifier (str): identifier of the package
-          version (str): version of the package
-
-        Returns:
-          package
+          identifier: identifier of the package
+          version: version of the package
         """
-        if package := self._indexer.get_by_identifier_and_version(identifier, version):
-            return package
-
-        raise FileNotFoundError
+        return self._indexer.get_by_identifier_and_version(identifier, version)
 
     def get_package_versions_infos(self) -> list[PackageVersionsInfo]:
         """Returns an overview of every package and its versions.

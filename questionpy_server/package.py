@@ -4,6 +4,7 @@
 
 import contextlib
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from questionpy_server.api.models import PackageVersionInfo
 from questionpy_server.collector.abc import BaseCollector
@@ -11,6 +12,9 @@ from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.utils.manifest import ComparableManifest
+
+if TYPE_CHECKING:
+    from questionpy_server.collector.abc import BaseCollector
 
 
 class PackageSources:
@@ -28,7 +32,7 @@ class PackageSources:
         lms_collector = 1 if self._lms_collector else 0
         return local_collector + len(self._repo_collectors) + lms_collector
 
-    def add(self, collector: BaseCollector) -> None:
+    def add(self, collector: "BaseCollector") -> None:
         """Adds a collector to the package sources.
 
         Args:
@@ -44,7 +48,7 @@ class PackageSources:
             msg = f"Invalid collector type: {type(collector)}"
             raise TypeError(msg)
 
-    def remove(self, collector: BaseCollector) -> None:
+    def remove(self, collector: "BaseCollector") -> None:
         """Removes a collector from the package sources.
 
         Args:
@@ -106,7 +110,7 @@ class Package:
         self,
         package_hash: str,
         manifest: ComparableManifest,
-        source: BaseCollector | None = None,
+        source: "BaseCollector | None" = None,
         path: Path | None = None,
     ):
         self.hash = package_hash

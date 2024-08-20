@@ -7,7 +7,7 @@ from asyncio import to_thread
 from gzip import decompress
 from urllib.parse import urljoin
 
-from questionpy_server.cache import FileLimitLRU, SizeError
+from questionpy_server.cache import CacheItemTooLargeError, FileLimitLRU
 from questionpy_server.repository.helper import download
 from questionpy_server.repository.models import RepoMeta, RepoPackage, RepoPackageIndex
 from questionpy_server.utils.logger import URLAdapter
@@ -52,7 +52,7 @@ class Repository:
             raw_index_zip = await download(self._url_index, size=meta.size, expected_hash=meta.sha256)
             try:
                 await self._cache.put(meta.sha256, raw_index_zip)
-            except SizeError:
+            except CacheItemTooLargeError:
                 self._log.warning("Package index is too big to be cached.")
 
         raw_index = decompress(raw_index_zip)
