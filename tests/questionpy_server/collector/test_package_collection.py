@@ -5,7 +5,6 @@
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
 from _pytest.tmpdir import TempPathFactory
 from semver import VersionInfo
 
@@ -53,8 +52,7 @@ def test_get_package() -> None:
 
     # Package does not exist.
     with patch.object(Indexer, "get_by_hash", return_value=None) as get_by_hash:
-        with pytest.raises(FileNotFoundError):
-            package_collection.get("hash")
+        assert package_collection.get("hash") is None
         get_by_hash.assert_called_once_with("hash")
 
 
@@ -78,8 +76,7 @@ def test_get_package_by_identifier_and_version() -> None:
     # Package does not exist.
     with patch.object(Indexer, "get_by_identifier_and_version", return_value=None) as get_by_identifier_and_version:
         version = VersionInfo.parse("0.1.0")
-        with pytest.raises(FileNotFoundError):
-            package_collection.get_by_identifier_and_version("@default/name", version)
+        assert package_collection.get_by_identifier_and_version("@default/name", version) is None
         get_by_identifier_and_version.assert_called_once_with("@default/name", version)
 
 

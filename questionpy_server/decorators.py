@@ -1,107 +1,323 @@
-import functools
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, cast, get_type_hints
+import inspect
+from collections.abc import Awaitable, Callable
+from functools import wraps
+from inspect import Parameter
+from typing import Concatenate, NamedTuple, ParamSpec, TypeAlias
 
-from aiohttp.abc import Request
+from aiohttp import BodyPartReader, web
 from aiohttp.log import web_logger
-from aiohttp.web_exceptions import HTTPBadRequest, HTTPNotFound, HTTPUnsupportedMediaType
+from aiohttp.web_exceptions import HTTPBadRequest
+from pydantic import BaseModel, ValidationError
 
+from questionpy_common import constants
 from questionpy_server.api.models import MainBaseModel, NotFoundStatus, NotFoundStatusWhat
-from questionpy_server.types import RouteHandler
-from questionpy_server.web import create_model_from_json, get_or_save_package, parse_form_data
+from questionpy_server.app import QPyServer
+from questionpy_server.cache import CacheItemTooLargeError
+from questionpy_server.package import Package
+from questionpy_server.types import M
+from questionpy_server.web import (
+    HashContainer,
+    read_part,
+)
 
-if TYPE_CHECKING:
-    from questionpy_server.app import QPyServer
+_P = ParamSpec("_P")
+_HandlerFunc: TypeAlias = Callable[Concatenate[web.Request, _P], Awaitable[web.StreamResponse]]
 
 
-# TODO: refactor to reduce complexity
-def ensure_package_and_question_state_exist(  # noqa: C901
-    _func: RouteHandler | None = None,
-) -> RouteHandler | Callable[[RouteHandler], RouteHandler]:
-    """Decorator that ensures package and question state exist.
+def ensure_required_parts(handler: _HandlerFunc) -> _HandlerFunc:
+    """Decorator passing the main body, package and question state into handler method if necessary.
 
-    Ensures that the package and question state exist (if needed by func) and that the json corresponds to the model
-    given as a type annotation in func.
+    Composes the functionality of [ensure_package][], [ensure_question_state][] and [ensure_main_body][] if their
+    respective parameters exist on the handler function.
+    """
+    signature = inspect.signature(handler)
 
-    This decorator assumes that:
-    * func may want an argument named 'data' (with a subclass of MainBaseModel)
-    * func may want an argument named 'question_state' (bytes or bytes | None)
-    * every func wants a package with an argument named 'package'
+    main_body_param = _get_main_body_param(handler, signature)
+    question_state_param = signature.parameters.get("question_state", None)
+    package_param = _get_package_param(handler, signature)
+
+    if main_body_param:
+        handler = ensure_main_body(handler, param=main_body_param)
+
+    if question_state_param:
+        handler = ensure_question_state(handler, param=question_state_param)
+
+    if package_param:
+        handler = ensure_package(handler, param=package_param)
+
+    return handler
+
+
+def ensure_package(handler: _HandlerFunc, *, param: inspect.Parameter | None = None) -> _HandlerFunc:
+    """Decorator that ensures that the package needed by the handler is present and passes it in.
+
+    The handler function must declare exactly one parameter of type [Package][].
+    """
+    if not param:
+        signature = inspect.signature(handler)
+        param = _get_package_param(handler, signature)
+
+    if not param:
+        msg = f"Handler '{handler.__name__}' does not have a package param but is decorated with ensure_package."
+        raise TypeError(msg)
+
+    @wraps(handler)
+    async def wrapper(request: web.Request, *args: _P.args, **kwargs: _P.kwargs) -> web.StreamResponse:
+        kwargs[param.name] = await _get_package_from_request(request)
+        return await handler(request, *args, **kwargs)
+
+    return wrapper
+
+
+def ensure_question_state(handler: _HandlerFunc, *, param: inspect.Parameter | None = None) -> _HandlerFunc:
+    """Decorator that ensures that the question state, if needed by the handler, is present and passes it in.
+
+    The handler function must declare exactly one parameter named `question_state`. The question state is considered
+    optional the that parameter has a default value. (Which is usually `None`.) If the parameter has no default value
+    but the request doesn't include the question state, [QuestionStateMissingError][] will be raised, leading to a bad
+    request response.
+    """
+    if not param:
+        signature = inspect.signature(handler)
+        param = signature.parameters.get("question_state", None)
+
+    if not param:
+        msg = (
+            f"Handler '{handler.__name__}' does not have a question state param but is decorated with "
+            f"ensure_question_state."
+        )
+        raise TypeError(msg)
+
+    @wraps(handler)
+    async def wrapper(request: web.Request, *args: _P.args, **kwargs: _P.kwargs) -> web.StreamResponse:
+        parts = await _read_body_parts(request)
+
+        if parts.question_state is not None:
+            kwargs[param.name] = parts.question_state
+        elif param.default is Parameter.empty:
+            raise QuestionStateMissingError
+
+        return await handler(request, *args, **kwargs)
+
+    return wrapper
+
+
+def ensure_main_body(handler: _HandlerFunc, *, param: inspect.Parameter | None = None) -> _HandlerFunc:
+    """Decorator that ensures that the main body is present, parses it, and passes it in.
+
+    The handler function must declare exactly one parameter with a subtype of [MainBaseModel][]. The request may:
+    - use Content-Type `application/json`, in which case the entire body is considered the main body, or
+    - use Content-Type `multipart/form-data`, in which case a part named `main` must exist, which is then considered the
+      main body.
+    """
+    if not param:
+        signature = inspect.signature(handler)
+        param = _get_main_body_param(handler, signature)
+
+    if not param:
+        msg = (
+            f"Handler '{handler.__name__}' does not have a MainBaseModel param but is decorated with "
+            f"ensure_main_body."
+        )
+        raise TypeError(msg)
+
+    @wraps(handler)
+    async def wrapper(request: web.Request, *args: _P.args, **kwargs: _P.kwargs) -> web.StreamResponse:
+        parts = await _read_body_parts(request)
+
+        if parts.main is None:
+            raise MainBodyMissingError
+
+        kwargs[param.name] = _validate_from_http(parts.main, param.annotation)
+        return await handler(request, *args, **kwargs)
+
+    return wrapper
+
+
+async def _get_package_from_request(request: web.Request) -> Package:
+    server = request.app[QPyServer.APP_KEY]
+
+    uri_package_hash: str | None = request.match_info.get("package_hash", None)
+    parts = await _read_body_parts(request)
+
+    if parts.package and uri_package_hash and uri_package_hash != parts.package.hash:
+        raise PackageHashMismatchError(uri_package_hash, parts.package.hash)
+
+    package = None
+    if uri_package_hash:
+        package = server.package_collection.get(uri_package_hash)
+
+    if not package and parts.package:
+        try:
+            package = await server.package_collection.put(parts.package)
+        except CacheItemTooLargeError as e:
+            raise web.HTTPRequestEntityTooLarge(max_size=e.max_size, actual_size=e.actual_size, text=str(e)) from e
+
+    if not package:
+        if uri_package_hash:
+            raise PackageMissingByHashError(uri_package_hash)
+        raise PackageMissingWithoutHashError
+
+    return package
+
+
+def _get_main_body_param(handler: _HandlerFunc, signature: inspect.Signature) -> inspect.Parameter | None:
+    candidates = [
+        param
+        for param in signature.parameters.values()
+        if isinstance(param.annotation, type) and issubclass(param.annotation, MainBaseModel)
+    ]
+
+    if not candidates:
+        # Handler doesn't use the main body.
+        return None
+
+    if len(candidates) > 1:
+        msg = f"Handler function '{handler.__name__}' ambiguously takes multiple MainBaseModel parameters"
+        raise TypeError(msg)
+
+    return candidates[0]
+
+
+def _get_package_param(handler: _HandlerFunc, signature: inspect.Signature) -> inspect.Parameter | None:
+    candidates = [param for param in signature.parameters.values() if param.annotation is Package]
+
+    if not candidates:
+        # Handler doesn't use the package.
+        return None
+
+    if len(candidates) > 1:
+        msg = f"Handler function '{handler.__name__}' ambiguously takes multiple Package parameters"
+        raise TypeError(msg)
+
+    return candidates[0]
+
+
+class _RequestBodyParts(NamedTuple):
+    main: bytes | None
+    package: HashContainer | None
+    question_state: bytes | None
+
+
+_PARTS_REQUEST_KEY = "qpy-request-parts"
+
+
+async def _read_body_parts(request: web.Request) -> _RequestBodyParts:
+    # We can only read the body once, and we have to read all of it at once (since we make no assumption about the order
+    # of the parts). Since we want to otherwise decouple main body, package, and question state handling logic, we cache
+    # the read body as a request variable.
+    parts: _RequestBodyParts = request.get(_PARTS_REQUEST_KEY, None)
+    if parts:
+        return parts
+
+    if not request.body_exists:
+        # No body sent at all.
+        parts = _RequestBodyParts(None, None, None)
+    elif request.content_type == "multipart/form-data":
+        # Multiple parts.
+        parts = await _parse_form_data(request)
+    elif request.content_type == "application/json":
+        # Just the main body part.
+        parts = _RequestBodyParts(await request.read(), None, None)
+    else:
+        msg = (
+            f"Wrong content type, expected multipart/form-data, application/json or no body, got "
+            f"'{request.content_type}'"
+        )
+        web_logger.info(msg)
+        raise web.HTTPUnsupportedMediaType(text=msg)
+
+    request[_PARTS_REQUEST_KEY] = parts
+    return parts
+
+
+class _ExceptionMixin(web.HTTPException):
+    """Decently pretty HTTP error which logs itself upon creation."""
+
+    def __init__(self, msg: str, body: BaseModel | None = None) -> None:
+        if body:
+            # Send structured error body as JSON.
+            super().__init__(reason=type(self).__name__, text=body.model_dump_json(), content_type="application/json")
+        else:
+            # Send the detailed message.
+            super().__init__(reason=type(self).__name__, text=msg)
+
+        # web.HTTPException uses the HTTP reason (which should be very short) as the exception message (which should be
+        # detailed). This sets the message to our detailed one.
+        Exception.__init__(self, msg)
+
+        web_logger.info(msg)
+
+
+class MainBodyMissingError(web.HTTPBadRequest, _ExceptionMixin):
+    def __init__(self) -> None:
+        super().__init__("The main body is required but was not provided.")
+
+
+class PackageMissingWithoutHashError(web.HTTPBadRequest, _ExceptionMixin):
+    def __init__(self) -> None:
+        super().__init__("The package is required but was not provided.")
+
+
+class PackageMissingByHashError(web.HTTPNotFound, _ExceptionMixin):
+    def __init__(self, package_hash: str) -> None:
+        super().__init__(
+            f"The package was not provided, is not cached and could not be found by its hash. ('{package_hash}')",
+            NotFoundStatus(what=NotFoundStatusWhat.PACKAGE),
+        )
+
+
+class PackageHashMismatchError(web.HTTPBadRequest, _ExceptionMixin):
+    def __init__(self, from_uri: str, from_body: str) -> None:
+        super().__init__(
+            f"The request URI specifies a package with hash '{from_uri}', but the sent package has a hash of "
+            f"'{from_body}'."
+        )
+
+
+class QuestionStateMissingError(web.HTTPBadRequest, _ExceptionMixin):
+    def __init__(self) -> None:
+        super().__init__(
+            "A question state part is required but was not provided.",
+            NotFoundStatus(what=NotFoundStatusWhat.QUESTION_STATE),
+        )
+
+
+async def _parse_form_data(request: web.Request) -> _RequestBodyParts:
+    """Parses a multipart/form-data request.
 
     Args:
-        _func (Optional[RouteHandler]): Control parameter; allows using the decorator with or without arguments.
-            If this decorator is used with any arguments, this will always be the decorated function itself. (Default
-            value = None)
+        request (Request): The request to be parsed.
+
+    Returns: tuple of main field, package, and question state
     """
+    server = request.app[QPyServer.APP_KEY]
+    main = package = question_state = None
 
-    def decorator(function: RouteHandler) -> RouteHandler:  # noqa: C901
-        """Internal decorator function."""
-        type_hints = get_type_hints(function)
-        question_state_type = type_hints.get("question_state")
-        takes_question_state = question_state_type is not None
-        require_question_state = question_state_type is bytes
-        main_part_json_model: type[MainBaseModel] | None = type_hints.get("data")
+    reader = await request.multipart()
+    while part := await reader.next():
+        if not isinstance(part, BodyPartReader):
+            continue
 
-        if main_part_json_model and not issubclass(main_part_json_model, MainBaseModel):
-            msg = f"Parameter 'data' of function {function.__name__} has unexpected type."
-            raise TypeError(msg)
+        if part.name == "main":
+            main = await read_part(part, server.settings.webservice.max_main_size, calculate_hash=False)
+        elif part.name == "package":
+            package = await read_part(part, server.settings.webservice.max_package_size, calculate_hash=True)
+        elif part.name == "question_state":
+            question_state = await read_part(part, constants.MAX_QUESTION_STATE_SIZE, calculate_hash=False)
 
-        @functools.wraps(function)
-        async def wrapper(request: Request, *args: Any, **kwargs: Any) -> Any:  # noqa: C901
-            """Wrapper around the actual function call."""
-            server: QPyServer = request.app["qpy_server_app"]
-            package_hash: str = request.match_info.get("package_hash", "")
+    return _RequestBodyParts(main, package, question_state)
 
-            if not request.body_exists:
-                main, sent_package, sent_question_state = None, None, None
-            elif request.content_type == "multipart/form-data":
-                main, sent_package, sent_question_state = await parse_form_data(request)
-            elif request.content_type == "application/json":
-                main, sent_package, sent_question_state = await request.read(), None, None
-            else:
-                web_logger.info("Wrong content type, multipart/form-data expected, got %s", request.content_type)
-                raise HTTPUnsupportedMediaType
 
-            if main_part_json_model:
-                if main is None:
-                    msg = "Multipart/form-data field 'main' is not set"
-                    web_logger.warning(msg)
-                    raise HTTPBadRequest(text=msg)
+def _validate_from_http(raw_body: str | bytes, param_class: type[M]) -> M:
+    """Validates the given json which was presumably an HTTP body to the given Pydantic model.
 
-                model = create_model_from_json(main.decode(), main_part_json_model)
-                kwargs["data"] = model
-
-            # Check if func wants a question state and if it is provided.
-            if takes_question_state:
-                if require_question_state and sent_question_state is None:
-                    msg = "Multipart/form-data field 'question_state' is not set"
-                    web_logger.warning(msg)
-                    raise HTTPBadRequest(text=msg)
-                kwargs["question_state"] = sent_question_state
-
-            # Check if a package is provided and if it matches the optional hash given in the URL.
-            if sent_package and package_hash and package_hash != sent_package.hash:
-                msg = f"Package hash does not match: {package_hash} != {sent_package.hash}"
-                web_logger.warning(msg)
-                raise HTTPBadRequest(text=msg)
-
-            package = await get_or_save_package(server.package_collection, package_hash, sent_package)
-            if package is None:
-                if package_hash:
-                    raise HTTPNotFound(
-                        text=NotFoundStatus(what=NotFoundStatusWhat.PACKAGE).model_dump_json(),
-                        content_type="application/json",
-                    )
-
-                msg = "No package found in multipart/form-data"
-                web_logger.warning(msg)
-                raise HTTPBadRequest(text=msg)
-
-            kwargs["package"] = package
-            return await function(request, *args, **kwargs)
-
-        return cast(RouteHandler, wrapper)
-
-    if _func is None:
-        return decorator
-    return decorator(_func)
+    Args:
+        raw_body: raw json body
+        param_class: the [pydantic.BaseModel][] subclass to valdiate to
+    """
+    try:
+        return param_class.model_validate_json(raw_body)
+    except ValidationError as error:
+        web_logger.info("JSON does not match model: %s", error)
+        raise HTTPBadRequest(reason="Invalid JSON Body") from error

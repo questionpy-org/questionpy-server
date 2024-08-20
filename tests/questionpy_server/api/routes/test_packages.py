@@ -97,5 +97,4 @@ async def test_extract_info_faulty(client: TestClient) -> None:
     res = await client.request("POST", "/package-extract-info", data=payload)
 
     assert res.status == 400
-    text = await res.text()
-    assert text == "No package found in multipart/form-data"
+    assert res.reason == "PackageMissingWithoutHashError"

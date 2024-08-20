@@ -19,9 +19,14 @@ class File(NamedTuple):
     size: int
 
 
-class SizeError(Exception):
-    def __init__(self, message: str = "", max_size: int = 0, actual_size: int = 0):
-        super().__init__(message)
+class CacheItemTooLargeError(Exception):
+    def __init__(self, key: str, actual_size: int, max_size: int):
+        readable_actual = ByteSize(actual_size).human_readable()
+        readable_max = ByteSize(max_size).human_readable()
+        super().__init__(
+            f"Unable to cache item '{key}' with size '{readable_actual}' because it exceeds the maximum "
+            f"allowed size of '{readable_max}'"
+        )
 
         self.max_size = max_size
         self.actual_size = actual_size
@@ -146,12 +151,7 @@ class FileLimitLRU:
         if size > self.max_size:
             # If we allowed this, the loop at the end would remove all items from the dictionary,
             # so we raise an error to allow exceptions for this case.
-            msg = f"Item itself exceeds maximum allowed size of {ByteSize(self.max_size).human_readable()}"
-            raise SizeError(
-                msg,
-                max_size=self.max_size,
-                actual_size=size,
-            )
+            raise CacheItemTooLargeError(key, size, self.max_size)
 
         async with self._lock:
             # Save the bytes on filesystem.

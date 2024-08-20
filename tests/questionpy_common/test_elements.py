@@ -3,6 +3,7 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from io import BytesIO
+from unittest.mock import patch
 
 import pytest
 from aiohttp import FormData
@@ -38,6 +39,7 @@ from questionpy_common.elements import (
     TextInputElement,
     is_form_element,
 )
+from questionpy_server.collector import PackageCollection
 from tests.conftest import get_file_hash, package_dir, test_data_path
 
 PACKAGE = package_dir / "package_1.qpy"
@@ -51,10 +53,12 @@ QUESTION_STATE = (path / "question_state.json").read_text()
 QUESTION_STATE_REQUEST = (path / "main.json").read_text()
 
 
-async def test_optional_question_state(client: TestClient) -> None:
-    # Even though the question state is optional, the body is still required to be valid JSON.
-    res = await client.request(METHOD, URL, data=b"{not_valid!}", headers={"Content-Type": "application/json"})
-    assert res.status == 400
+async def test_should_validate_main_body_when_question_state_is_not_given(client: TestClient) -> None:
+    with patch.object(PackageCollection, "get"):
+        # Even though the question state is optional, the body is still required to be valid JSON.
+        res = await client.request(METHOD, URL, data=b"{not_valid!}", headers={"Content-Type": "application/json"})
+        assert res.status == 400
+        assert res.reason == "Invalid JSON Body"
 
 
 async def test_no_package(client: TestClient) -> None:
