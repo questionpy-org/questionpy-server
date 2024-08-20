@@ -20,7 +20,7 @@ status_routes = web.RouteTableDef()
 @status_routes.get(r"/status")
 async def get_server_status(request: web.Request) -> web.Response:
     """Get server status."""
-    qpyserver: "QPyServer" = request.app["qpy_server_app"]
+    qpyserver: QPyServer = request.app["qpy_server_app"]
     status = ServerStatus(
         version=__version__,
         allow_lms_packages=qpyserver.settings.webservice.allow_lms_packages,

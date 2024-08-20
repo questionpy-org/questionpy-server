@@ -26,7 +26,7 @@ attempt_routes = web.RouteTableDef()
 async def post_attempt_start(
     request: web.Request, package: Package, question_state: bytes, data: AttemptStartArguments
 ) -> web.Response:
-    qpyserver: "QPyServer" = request.app["qpy_server_app"]
+    qpyserver: QPyServer = request.app["qpy_server_app"]
 
     package_path = await package.get_path()
     worker: Worker
@@ -41,7 +41,7 @@ async def post_attempt_start(
 async def post_attempt_view(
     request: web.Request, package: Package, question_state: bytes, data: AttemptViewArguments
 ) -> web.Response:
-    qpyserver: "QPyServer" = request.app["qpy_server_app"]
+    qpyserver: QPyServer = request.app["qpy_server_app"]
 
     package_path = await package.get_path()
     worker: Worker
@@ -62,7 +62,7 @@ async def post_attempt_view(
 async def post_attempt_score(
     request: web.Request, package: Package, question_state: bytes, data: AttemptScoreArguments
 ) -> web.Response:
-    qpyserver: "QPyServer" = request.app["qpy_server_app"]
+    qpyserver: QPyServer = request.app["qpy_server_app"]
 
     package_path = await package.get_path()
     worker: Worker

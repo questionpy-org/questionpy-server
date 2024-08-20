@@ -23,7 +23,7 @@ package_routes = web.RouteTableDef()
 
 @package_routes.get("/packages")
 async def get_packages(request: web.Request) -> web.Response:
-    qpyserver: "QPyServer" = request.app["qpy_server_app"]
+    qpyserver: QPyServer = request.app["qpy_server_app"]
 
     package_versions_infos = qpyserver.package_collection.get_package_versions_infos()
     return json_response(data=package_versions_infos)
@@ -31,7 +31,7 @@ async def get_packages(request: web.Request) -> web.Response:
 
 @package_routes.get(r"/packages/{package_hash:\w+}")
 async def get_package(request: web.Request) -> web.Response:
-    qpyserver: "QPyServer" = request.app["qpy_server_app"]
+    qpyserver: QPyServer = request.app["qpy_server_app"]
 
     try:
         package = qpyserver.package_collection.get(request.match_info["package_hash"])
@@ -46,7 +46,7 @@ async def post_options(
     request: web.Request, package: Package, question_state: bytes | None, data: RequestBaseData
 ) -> web.Response:
     """Get the options form definition that allow a question creator to customize a question."""
-    qpyserver: "QPyServer" = request.app["qpy_server_app"]
+    qpyserver: QPyServer = request.app["qpy_server_app"]
 
     package_path = await package.get_path()
     worker: Worker
@@ -63,7 +63,7 @@ async def post_options(
 async def post_question(
     request: web.Request, data: QuestionCreateArguments, package: Package, question_state: bytes | None = None
 ) -> web.Response:
-    qpyserver: "QPyServer" = request.app["qpy_server_app"]
+    qpyserver: QPyServer = request.app["qpy_server_app"]
 
     package_path = await package.get_path()
     worker: Worker

@@ -20,7 +20,7 @@ file_routes = web.RouteTableDef()
 @file_routes.post(r"/packages/{package_hash}/file/{namespace}/{short_name}/{path:static/.*}")  # type: ignore[arg-type]
 @ensure_package_and_question_state_exist
 async def serve_static_file(request: web.Request, package: Package) -> web.Response:
-    qpy_server: "QPyServer" = request.app["qpy_server_app"]
+    qpy_server: QPyServer = request.app["qpy_server_app"]
     namespace = request.match_info["namespace"]
     short_name = request.match_info["short_name"]
     path = request.match_info["path"]
