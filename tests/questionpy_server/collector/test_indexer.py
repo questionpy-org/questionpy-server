@@ -111,7 +111,7 @@ async def test_register_package_with_same_hash_as_existing_package() -> None:
 
     packages = indexer.get_package_versions_infos()
     assert len(packages) == 1
-    assert next(iter(packages)).manifest.model_dump().items() <= package.manifest.model_dump().items()
+    assert packages[0].manifest.model_dump().items() <= package.manifest.model_dump().items()
 
 
 async def test_register_two_packages_with_same_manifest_but_different_hashes(caplog: pytest.LogCaptureFixture) -> None:

@@ -3,8 +3,6 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 from hashlib import sha256
 from io import BytesIO
-from itertools import pairwise, starmap
-from operator import ge
 from unittest.mock import Mock
 
 import pytest
@@ -56,11 +54,7 @@ async def test_packages(qpy_server: QPyServer, aiohttp_client: AiohttpClient, pa
     data = await res.json()
     package_versions_infos: list[PackageVersionsInfo] = TypeAdapter(list[PackageVersionsInfo]).validate_python(data)
 
-    expected_package_count = len(packages)
-    assert len(package_versions_infos) == expected_package_count
-
-    if expected_package_count <= 0:
-        return
+    assert len(package_versions_infos) == len(packages)
 
     actual_namespaces = []
 
@@ -69,14 +63,13 @@ async def test_packages(qpy_server: QPyServer, aiohttp_client: AiohttpClient, pa
         actual_package_info = package_versions_info.manifest
         actual_versions = [version.version for version in package_versions_info.versions]
         # Assert that each package version is available and in the correct order.
-        assert set(actual_versions) == packages[actual_package_info.namespace]
-        assert all(starmap(ge, pairwise(actual_versions))), "The package versions are not sorted in descending order."
+        assert actual_versions == sorted(packages[actual_package_info.namespace], reverse=True)
         # Assert that the actual package info is a subset of the manifest of the latest package version.
         actual_package_info_items = actual_package_info.model_dump().items()
         latest_manifest_items = manifests[actual_package_info.namespace][actual_versions[0]].model_dump().items()
-        assert actual_package_info_items <= latest_manifest_items, (
-            "Actual package info was not derived from the " "latest package version."
-        )
+        assert (
+            actual_package_info_items <= latest_manifest_items
+        ), "Actual package info was not derived from the latest package version."
 
         actual_namespaces.append(actual_package_info.namespace)
 

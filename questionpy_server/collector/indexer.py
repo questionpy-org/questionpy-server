@@ -73,9 +73,6 @@ class Indexer:
         """Returns an overview of every package and its versions (excluding packages from LMSs).
 
         TODO: optimize further?
-
-        Returns:
-            list of PackageVersionsInfo
         """
         if self._package_versions_infos is not None:
             return self._package_versions_infos
