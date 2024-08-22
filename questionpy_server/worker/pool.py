@@ -8,11 +8,11 @@ from contextlib import asynccontextmanager
 
 from questionpy_common.constants import MiB
 from questionpy_common.environment import WorkerResourceLimits
+from questionpy_server.worker.impl.subprocess import SubprocessWorker
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
+from . import Worker
 from .exception import WorkerStartError
-from .worker import Worker
-from .worker.subprocess import SubprocessWorker
 
 
 class WorkerPool:

@@ -26,8 +26,8 @@ from questionpy_server.settings import (
 )
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.web.app import QPyServer
+from questionpy_server.worker.impl.thread import ThreadWorker
 from questionpy_server.worker.runtime.package_location import DirPackageLocation, ZipPackageLocation
-from questionpy_server.worker.worker.thread import ThreadWorker
 
 
 def get_file_hash(path: Path) -> str:

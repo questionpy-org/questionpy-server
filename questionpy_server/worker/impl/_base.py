@@ -17,7 +17,8 @@ from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_common.manifest import Manifest, PackageFile
 from questionpy_server.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
-from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
+from questionpy_server.worker import PackageFileData, Worker, WorkerState
+from questionpy_server.worker.exception import StaticFileSizeMismatchError, WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.runtime.messages import (
     CreateQuestionFromOptions,
     Exit,
@@ -39,7 +40,6 @@ from questionpy_server.worker.runtime.package_location import (
     PackageLocation,
     ZipPackageLocation,
 )
-from questionpy_server.worker.worker import PackageFileData, Worker, WorkerState
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -290,7 +290,3 @@ class BaseWorker(Worker, ABC):
 
     async def get_static_file_index(self) -> dict[str, PackageFile]:
         return (await self.get_manifest()).static_files
-
-
-class StaticFileSizeMismatchError(Exception):
-    pass

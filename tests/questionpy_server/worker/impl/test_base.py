@@ -8,9 +8,9 @@ import pytest
 
 from questionpy_common.constants import MiB
 from questionpy_server import WorkerPool
-from questionpy_server.worker.worker.base import StaticFileSizeMismatchError
-from questionpy_server.worker.worker.subprocess import SubprocessWorker
-from questionpy_server.worker.worker.thread import ThreadWorker
+from questionpy_server.worker.exception import StaticFileSizeMismatchError
+from questionpy_server.worker.impl.subprocess import SubprocessWorker
+from questionpy_server.worker.impl.thread import ThreadWorker
 from tests.conftest import PACKAGE, TestPackageFactory
 
 if TYPE_CHECKING:
