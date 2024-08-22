@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 attempt_routes = web.RouteTableDef()
 
 
-@attempt_routes.post(r"/packages/{package_hash:\w+}/attempt/start")  # type: ignore[arg-type]
+@attempt_routes.post(r"/packages/{package_hash:\w+}/attempt/start")
 @ensure_required_parts
 async def post_attempt_start(
     request: web.Request, package: Package, question_state: bytes, data: AttemptStartArguments
@@ -35,7 +35,7 @@ async def post_attempt_start(
     return pydantic_json_response(data=attempt, status=201)
 
 
-@attempt_routes.post(r"/packages/{package_hash:\w+}/attempt/view")  # type: ignore[arg-type]
+@attempt_routes.post(r"/packages/{package_hash:\w+}/attempt/view")
 @ensure_required_parts
 async def post_attempt_view(
     request: web.Request, package: Package, question_state: bytes, data: AttemptViewArguments
@@ -56,7 +56,7 @@ async def post_attempt_view(
     return pydantic_json_response(data=attempt, status=201)
 
 
-@attempt_routes.post(r"/packages/{package_hash:\w+}/attempt/score")  # type: ignore[arg-type]
+@attempt_routes.post(r"/packages/{package_hash:\w+}/attempt/score")
 @ensure_required_parts
 async def post_attempt_score(
     request: web.Request, package: Package, question_state: bytes, data: AttemptScoreArguments

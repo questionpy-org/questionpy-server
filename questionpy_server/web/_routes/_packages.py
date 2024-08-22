@@ -40,7 +40,7 @@ async def get_package(request: web.Request) -> web.Response:
     return pydantic_json_response(data=package.get_info())
 
 
-@package_routes.post(r"/packages/{package_hash:\w+}/options")  # type: ignore[arg-type]
+@package_routes.post(r"/packages/{package_hash:\w+}/options")
 @ensure_required_parts
 async def post_options(
     request: web.Request, package: Package, data: RequestBaseData, question_state: bytes | None = None
@@ -58,7 +58,7 @@ async def post_options(
     return pydantic_json_response(data=QuestionEditFormResponse(definition=definition, form_data=form_data))
 
 
-@package_routes.post(r"/packages/{package_hash:\w+}/question")  # type: ignore[arg-type]
+@package_routes.post(r"/packages/{package_hash:\w+}/question")
 @ensure_required_parts
 async def post_question(
     request: web.Request, data: QuestionCreateArguments, package: Package, question_state: bytes | None = None
@@ -81,7 +81,7 @@ async def post_question_migrate(_request: web.Request) -> web.Response:
     raise HTTPMethodNotAllowed(msg, "")
 
 
-@package_routes.post(r"/package-extract-info")  # type: ignore[arg-type]
+@package_routes.post(r"/package-extract-info")
 @ensure_package
 async def package_extract_info(_request: web.Request, package: Package) -> web.Response:
     """Get package information."""
