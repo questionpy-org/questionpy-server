@@ -1,7 +1,7 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-
+import builtins
 import logging
 from configparser import ConfigParser
 from datetime import timedelta
@@ -20,7 +20,6 @@ from pydantic_settings import (
 )
 
 from questionpy_common.constants import MAX_PACKAGE_SIZE, MiB
-from questionpy_server.types import WorkerType
 from questionpy_server.worker.worker import Worker
 from questionpy_server.worker.worker.subprocess import SubprocessWorker
 
@@ -83,14 +82,14 @@ class WebserviceSettings(BaseModel):
 
 
 class WorkerSettings(BaseModel):
-    type: WorkerType = SubprocessWorker
+    type: builtins.type[Worker] = SubprocessWorker
     """Fully qualified name of the worker class or the class itself (for the default)."""
     max_workers: int = 8
     max_memory: ByteSize = ByteSize(500 * MiB)
 
     @field_validator("type", mode="before")
     @classmethod
-    def _load_worker_class(cls, value: object) -> WorkerType:
+    def _load_worker_class(cls, value: object) -> builtins.type[Worker]:
         if isinstance(value, str):
             value = locate(value)
 

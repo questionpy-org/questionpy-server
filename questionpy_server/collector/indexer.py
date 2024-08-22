@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import overload
 
 from questionpy_server import WorkerPool
-from questionpy_server.api.models import PackageInfo, PackageVersionsInfo, PackageVersionSpecificInfo
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
+from questionpy_server.models import PackageInfo, PackageVersionsInfo, PackageVersionSpecificInfo
 from questionpy_server.package import Package
 from questionpy_server.utils.manifest import ComparableManifest, SemVer
 from questionpy_server.worker.runtime.package_location import ZipPackageLocation

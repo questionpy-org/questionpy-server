@@ -4,7 +4,7 @@
 
 from hashlib import sha256
 from io import BytesIO
-from typing import Literal, NamedTuple, overload
+from typing import Literal, overload
 
 import pydantic_core
 from aiohttp import BodyPartReader
@@ -13,16 +13,12 @@ from aiohttp.web_exceptions import HTTPRequestEntityTooLarge
 from aiohttp.web_response import Response
 
 from questionpy_common.constants import KiB
+from questionpy_server.hash import HashContainer
 
 
 def pydantic_json_response(data: object, status: int = 200) -> Response:
     """Creates a json response from anything pydantic can dump."""
     return Response(body=pydantic_core.to_json(data), status=status, content_type="application/json", charset="utf-8")
-
-
-class HashContainer(NamedTuple):
-    data: bytes
-    hash: str
 
 
 @overload

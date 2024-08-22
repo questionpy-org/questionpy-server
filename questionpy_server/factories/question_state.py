@@ -4,7 +4,7 @@
 
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from questionpy_server.api.models import RequestBaseData
+from questionpy_server.models import RequestBaseData
 
 
 class RequestBaseDataFactory(ModelFactory):

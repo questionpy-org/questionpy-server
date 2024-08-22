@@ -5,7 +5,7 @@
 
 from aiohttp import ClientError, ClientSession
 
-from questionpy_server.misc import calculate_hash
+from questionpy_server.hash import calculate_hash
 
 
 class DownloadError(Exception):

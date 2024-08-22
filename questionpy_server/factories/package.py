@@ -6,7 +6,7 @@
 from faker import Faker
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from questionpy_server.api.models import PackageVersionInfo
+from questionpy_server.models import PackageVersionInfo
 
 languages = ["en", "de"]
 fake = Faker()

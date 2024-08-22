@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, overload
 from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff, EmptyDirectorySnapshot
 
 from questionpy_server.collector.abc import BaseCollector
-from questionpy_server.misc import calculate_hash
+from questionpy_server.hash import calculate_hash
 
 if TYPE_CHECKING:
     from questionpy_server.collector.indexer import Indexer

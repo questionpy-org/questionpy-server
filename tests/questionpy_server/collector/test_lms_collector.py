@@ -12,8 +12,8 @@ from questionpy_server import WorkerPool
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
+from questionpy_server.hash import HashContainer
 from questionpy_server.package import Package
-from questionpy_server.web import HashContainer
 from tests.conftest import PACKAGE
 
 

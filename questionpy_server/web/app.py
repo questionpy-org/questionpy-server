@@ -7,11 +7,11 @@ from typing import Any, ClassVar
 
 from aiohttp import web
 
-from . import __version__
-from .cache import FileLimitLRU
-from .collector import PackageCollection
-from .settings import Settings
-from .worker.pool import WorkerPool
+from questionpy_server import __version__
+from questionpy_server.cache import FileLimitLRU
+from questionpy_server.collector import PackageCollection
+from questionpy_server.settings import Settings
+from questionpy_server.worker.pool import WorkerPool
 
 
 class QPyServer:
@@ -19,7 +19,7 @@ class QPyServer:
 
     def __init__(self, settings: Settings):
         # We import here, so we don't have to work around circular imports.
-        from .api.routes import routes  # noqa: PLC0415
+        from questionpy_server.web._routes import routes  # noqa: PLC0415
 
         self.settings: Settings = settings
         self.web_app = web.Application(client_max_size=settings.webservice.max_main_size)

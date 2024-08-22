@@ -8,7 +8,6 @@ from contextlib import asynccontextmanager
 
 from questionpy_common.constants import MiB
 from questionpy_common.environment import WorkerResourceLimits
-from questionpy_server.types import WorkerType
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
 from .exception import WorkerStartError
@@ -17,7 +16,7 @@ from .worker.subprocess import SubprocessWorker
 
 
 class WorkerPool:
-    def __init__(self, max_workers: int, max_memory: int, worker_type: WorkerType = SubprocessWorker):
+    def __init__(self, max_workers: int, max_memory: int, worker_type: type[Worker] = SubprocessWorker):
         """Initialize the worker pool.
 
         Args:

@@ -4,6 +4,7 @@
 
 from hashlib import sha256
 from pathlib import Path
+from typing import NamedTuple
 
 from questionpy_common.constants import MiB
 
@@ -27,3 +28,8 @@ def calculate_hash(source: bytes | Path) -> str:
                 sha.update(chunk)
 
     return sha.hexdigest()
+
+
+class HashContainer(NamedTuple):
+    data: bytes
+    hash: str

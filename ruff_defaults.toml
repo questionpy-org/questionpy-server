@@ -109,7 +109,7 @@ pydocstyle = { convention = "google" }
 "**/scripts/*" = ["INP001", "T201"]
 "**/tests/**/*" = ["PLC1901", "PLC2701", "PLR2004", "S", "TID252", "FBT"]
 # unused-async (aiohttp handlers must be async even if they don't use it)
-"questionpy_server/api/routes/**/*" = ["RUF029"]
+"questionpy_server/web/**/*" = ["RUF029"]
 
 [lint.flake8-builtins]
 # help: (guess it's ok since built-in `help()` is for interactive use and no collisions are expected)

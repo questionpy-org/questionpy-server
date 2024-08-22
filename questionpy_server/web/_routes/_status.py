@@ -5,9 +5,9 @@
 from aiohttp import web
 
 from questionpy_server import __version__
-from questionpy_server.api.models import ServerStatus, Usage
-from questionpy_server.app import QPyServer
-from questionpy_server.web import pydantic_json_response
+from questionpy_server.models import ServerStatus, Usage
+from questionpy_server.web._utils import pydantic_json_response
+from questionpy_server.web.app import QPyServer
 
 status_routes = web.RouteTableDef()
 

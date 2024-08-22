@@ -1,8 +1,11 @@
+#  This file is part of the QuestionPy Server. (https://questionpy.org)
+#  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
+#  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import inspect
 from collections.abc import Awaitable, Callable
 from functools import wraps
 from inspect import Parameter
-from typing import Concatenate, NamedTuple, ParamSpec, TypeAlias
+from typing import Concatenate, NamedTuple, ParamSpec, TypeAlias, TypeVar
 
 from aiohttp import BodyPartReader, web
 from aiohttp.log import web_logger
@@ -10,15 +13,19 @@ from aiohttp.web_exceptions import HTTPBadRequest
 from pydantic import BaseModel, ValidationError
 
 from questionpy_common import constants
-from questionpy_server.api.models import MainBaseModel, NotFoundStatus, NotFoundStatusWhat
-from questionpy_server.app import QPyServer
 from questionpy_server.cache import CacheItemTooLargeError
+from questionpy_server.hash import HashContainer
+from questionpy_server.models import MainBaseModel
 from questionpy_server.package import Package
-from questionpy_server.types import M
-from questionpy_server.web import (
-    HashContainer,
-    read_part,
+from questionpy_server.web._errors import (
+    MainBodyMissingError,
+    PackageHashMismatchError,
+    PackageMissingByHashError,
+    PackageMissingWithoutHashError,
+    QuestionStateMissingError,
 )
+from questionpy_server.web._utils import read_part
+from questionpy_server.web.app import QPyServer
 
 _P = ParamSpec("_P")
 _HandlerFunc: TypeAlias = Callable[Concatenate[web.Request, _P], Awaitable[web.StreamResponse]]
@@ -231,58 +238,6 @@ async def _read_body_parts(request: web.Request) -> _RequestBodyParts:
     return parts
 
 
-class _ExceptionMixin(web.HTTPException):
-    """Decently pretty HTTP error which logs itself upon creation."""
-
-    def __init__(self, msg: str, body: BaseModel | None = None) -> None:
-        if body:
-            # Send structured error body as JSON.
-            super().__init__(reason=type(self).__name__, text=body.model_dump_json(), content_type="application/json")
-        else:
-            # Send the detailed message.
-            super().__init__(reason=type(self).__name__, text=msg)
-
-        # web.HTTPException uses the HTTP reason (which should be very short) as the exception message (which should be
-        # detailed). This sets the message to our detailed one.
-        Exception.__init__(self, msg)
-
-        web_logger.info(msg)
-
-
-class MainBodyMissingError(web.HTTPBadRequest, _ExceptionMixin):
-    def __init__(self) -> None:
-        super().__init__("The main body is required but was not provided.")
-
-
-class PackageMissingWithoutHashError(web.HTTPBadRequest, _ExceptionMixin):
-    def __init__(self) -> None:
-        super().__init__("The package is required but was not provided.")
-
-
-class PackageMissingByHashError(web.HTTPNotFound, _ExceptionMixin):
-    def __init__(self, package_hash: str) -> None:
-        super().__init__(
-            f"The package was not provided, is not cached and could not be found by its hash. ('{package_hash}')",
-            NotFoundStatus(what=NotFoundStatusWhat.PACKAGE),
-        )
-
-
-class PackageHashMismatchError(web.HTTPBadRequest, _ExceptionMixin):
-    def __init__(self, from_uri: str, from_body: str) -> None:
-        super().__init__(
-            f"The request URI specifies a package with hash '{from_uri}', but the sent package has a hash of "
-            f"'{from_body}'."
-        )
-
-
-class QuestionStateMissingError(web.HTTPBadRequest, _ExceptionMixin):
-    def __init__(self) -> None:
-        super().__init__(
-            "A question state part is required but was not provided.",
-            NotFoundStatus(what=NotFoundStatusWhat.QUESTION_STATE),
-        )
-
-
 async def _parse_form_data(request: web.Request) -> _RequestBodyParts:
     """Parses a multipart/form-data request.
 
@@ -309,12 +264,15 @@ async def _parse_form_data(request: web.Request) -> _RequestBodyParts:
     return _RequestBodyParts(main, package, question_state)
 
 
-def _validate_from_http(raw_body: str | bytes, param_class: type[M]) -> M:
+_M = TypeVar("_M", bound=BaseModel)
+
+
+def _validate_from_http(raw_body: str | bytes, param_class: type[_M]) -> _M:
     """Validates the given json which was presumably an HTTP body to the given Pydantic model.
 
     Args:
         raw_body: raw json body
-        param_class: the [pydantic.BaseModel][] subclass to valdiate to
+        param_class: the [pydantic.BaseModel][] subclass to validate to
     """
     try:
         return param_class.model_validate_json(raw_body)
