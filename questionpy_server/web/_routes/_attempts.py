@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 from aiohttp import web
 
 from questionpy_common.environment import RequestUser
-from questionpy_server.api.models import AttemptScoreArguments, AttemptStartArguments, AttemptViewArguments
-from questionpy_server.app import QPyServer
-from questionpy_server.decorators import ensure_required_parts
+from questionpy_server.models import AttemptScoreArguments, AttemptStartArguments, AttemptViewArguments
 from questionpy_server.package import Package
-from questionpy_server.web import pydantic_json_response
+from questionpy_server.web._decorators import ensure_required_parts
+from questionpy_server.web._utils import pydantic_json_response
+from questionpy_server.web.app import QPyServer
 from questionpy_server.worker.runtime.package_location import ZipPackageLocation
 
 if TYPE_CHECKING:

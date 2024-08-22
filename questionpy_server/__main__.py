@@ -7,8 +7,9 @@ import logging
 import os
 from pathlib import Path
 
+from questionpy_server.web.app import QPyServer
+
 from . import __version__
-from .app import QPyServer
 from .settings import Settings
 
 _DEFAULT_CONFIG_FILES = (

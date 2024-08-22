@@ -15,7 +15,6 @@ from aiohttp.test_utils import TestClient
 
 from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, KiB
 from questionpy_common.manifest import PackageFile
-from questionpy_server.app import QPyServer
 from questionpy_server.settings import (
     CollectorSettings,
     GeneralSettings,
@@ -26,6 +25,7 @@ from questionpy_server.settings import (
     WorkerSettings,
 )
 from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.web.app import QPyServer
 from questionpy_server.worker.runtime.package_location import DirPackageLocation, ZipPackageLocation
 from questionpy_server.worker.worker.thread import ThreadWorker
 

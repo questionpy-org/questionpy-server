@@ -11,10 +11,10 @@ from aiohttp.pytest_plugin import AiohttpClient
 from aiohttp.test_utils import TestClient
 from pydantic import TypeAdapter
 
-from questionpy_server.api.models import PackageVersionInfo, PackageVersionsInfo
-from questionpy_server.app import QPyServer
 from questionpy_server.collector.local_collector import LocalCollector
+from questionpy_server.models import PackageVersionInfo, PackageVersionsInfo
 from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.web.app import QPyServer
 from tests.conftest import PACKAGE
 from tests.test_data.factories import ManifestFactory
 

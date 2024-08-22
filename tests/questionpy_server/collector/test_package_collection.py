@@ -13,7 +13,7 @@ from questionpy_server.collector import PackageCollection
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
-from questionpy_server.web import HashContainer
+from questionpy_server.hash import HashContainer
 
 
 async def test_start() -> None:

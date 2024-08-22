@@ -10,7 +10,7 @@ from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_common.manifest import PackageFile
-from questionpy_server.api.models import AttemptStarted, QuestionCreated
+from questionpy_server.models import AttemptStarted, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import WorkerResources
 from questionpy_server.worker.runtime.messages import MessageToWorker
