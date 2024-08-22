@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 file_routes = web.RouteTableDef()
 
 
-@file_routes.post(r"/packages/{package_hash}/file/{namespace}/{short_name}/{path:static/.*}")  # type: ignore[arg-type]
+@file_routes.post(r"/packages/{package_hash}/file/{namespace}/{short_name}/{path:static/.*}")
 @ensure_package
 async def serve_static_file(request: web.Request, package: Package) -> web.Response:
     qpy_server = request.app[QPyServer.APP_KEY]
