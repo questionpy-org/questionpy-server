@@ -20,8 +20,8 @@ from pydantic_settings import (
 )
 
 from questionpy_common.constants import MAX_PACKAGE_SIZE, MiB
-from questionpy_server.worker.worker import Worker
-from questionpy_server.worker.worker.subprocess import SubprocessWorker
+from questionpy_server.worker import Worker
+from questionpy_server.worker.impl.subprocess import SubprocessWorker
 
 REPOSITORY_MINIMUM_INTERVAL: Final[timedelta] = timedelta(minutes=5)
 

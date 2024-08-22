@@ -17,9 +17,9 @@ from questionpy_common.environment import WorkerResourceLimits
 from questionpy_server.worker import WorkerResources
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
+from questionpy_server.worker.impl._base import BaseWorker
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
 from questionpy_server.worker.runtime.package_location import PackageLocation
-from questionpy_server.worker.worker.base import BaseWorker
 
 if TYPE_CHECKING:
     from asyncio.subprocess import Process

@@ -12,7 +12,7 @@ from questionpy_server.web.app import QPyServer
 from questionpy_server.worker.runtime.package_location import ZipPackageLocation
 
 if TYPE_CHECKING:
-    from questionpy_server.worker.worker import Worker
+    from questionpy_server.worker import Worker
 
 file_routes = web.RouteTableDef()
 
