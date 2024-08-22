@@ -91,7 +91,13 @@ class WorkerSettings(BaseModel):
     @classmethod
     def _load_worker_class(cls, value: object) -> builtins.type[Worker]:
         if isinstance(value, str):
-            value = locate(value)
+            klass = locate(value)
+
+            if klass is None:
+                msg = f"Could not locate class '{value}'"
+                raise TypeError(msg)
+
+            value = klass
 
         if not isinstance(value, type) or not issubclass(value, Worker):
             msg = f"{value} is not a subclass of Worker"
