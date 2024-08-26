@@ -36,10 +36,8 @@ routes = web.RouteTableDef()
 async def get_packages(request: web.Request) -> web.Response:
     qpyserver: "QPyServer" = request.app["qpy_server_app"]
 
-    packages = qpyserver.package_collection.get_packages()
-    data = [package.get_info() for package in packages]
-
-    return json_response(data=data)
+    package_versions_infos = qpyserver.package_collection.get_package_versions_infos()
+    return json_response(data=package_versions_infos)
 
 
 @routes.get(r"/packages/{package_hash:\w+}")

@@ -5,7 +5,7 @@
 from collections.abc import Sequence
 from hashlib import sha256
 from io import BytesIO
-from json import JSONDecodeError, loads
+from json import JSONDecodeError, dumps, loads
 from typing import TYPE_CHECKING, Literal, NamedTuple, overload
 
 from aiohttp import BodyPartReader
@@ -13,7 +13,9 @@ from aiohttp.abc import Request
 from aiohttp.log import web_logger
 from aiohttp.web_exceptions import HTTPBadRequest, HTTPRequestEntityTooLarge
 from aiohttp.web_response import Response
+from aiohttp.web_response import json_response as aiohttp_json_response
 from pydantic import BaseModel, ValidationError
+from pydantic_core import to_jsonable_python
 
 from questionpy_common import constants
 from questionpy_common.constants import KiB
@@ -36,10 +38,7 @@ def json_response(data: Sequence[BaseModel] | BaseModel, status: int = 200) -> R
     Returns:
         Response: A response object.
     """
-    if isinstance(data, Sequence):
-        json_list = f'[{",".join(x.json() for x in data)}]'
-        return Response(text=json_list, status=status, content_type="application/json")
-    return Response(text=data.model_dump_json(), status=status, content_type="application/json")
+    return aiohttp_json_response(data, status=status, dumps=lambda model: dumps(model, default=to_jsonable_python))
 
 
 def create_model_from_json(json: object | str, param_class: type[M]) -> M:

@@ -5,6 +5,7 @@
 from collections.abc import Callable
 from typing import Any
 
+from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
 from semver import Version
 
@@ -32,3 +33,8 @@ class RepoPackageVersionsFactory(CustomFactory):
 
 class ManifestFactory(CustomFactory):
     __model__ = ComparableManifest
+
+    short_name = Use(lambda: ModelFactory.__faker__.word().lower() + "_sn")
+    namespace = Use(lambda: ModelFactory.__faker__.word().lower() + "_ns")
+    url = Use(ModelFactory.__faker__.url)
+    icon = None

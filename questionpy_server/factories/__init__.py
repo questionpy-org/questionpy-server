@@ -3,7 +3,7 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from .attempt import AttemptScoredFactory
-from .package import PackageInfoFactory
+from .package import PackageVersionInfoFactory
 from .question_state import RequestBaseDataFactory
 
-__all__ = ["AttemptScoredFactory", "PackageInfoFactory", "RequestBaseDataFactory"]
+__all__ = ["AttemptScoredFactory", "PackageVersionInfoFactory", "RequestBaseDataFactory"]

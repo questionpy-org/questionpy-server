@@ -49,7 +49,7 @@ async def test_register_package_from_lms(collector: LMSCollector) -> None:
     assert len(packages_by_identifier) == 0
 
     # Package is not accessible by retrieving all packages.
-    packages = indexer.get_packages()
+    packages = indexer.get_package_versions_infos()
     assert len(packages) == 0
 
 
@@ -78,9 +78,9 @@ async def test_register_package_from_local_and_repo_collector(collector: BaseCol
     assert packages_by_identifier[package.manifest.version] is package
 
     # Package is accessible by retrieving all packages.
-    packages = indexer.get_packages()
+    packages = indexer.get_package_versions_infos()
     assert len(packages) == 1
-    assert next(iter(packages)) is package
+    assert next(iter(packages)).manifest.model_dump().items() <= package.manifest.model_dump().items()
 
 
 async def test_register_package_with_same_hash_as_existing_package() -> None:
@@ -109,9 +109,9 @@ async def test_register_package_with_same_hash_as_existing_package() -> None:
     assert len(packages_by_identifier) == 1
     assert packages_by_identifier[package.manifest.version] is package
 
-    packages = indexer.get_packages()
+    packages = indexer.get_package_versions_infos()
     assert len(packages) == 1
-    assert next(iter(packages)) is package
+    assert packages[0].manifest.model_dump().items() <= package.manifest.model_dump().items()
 
 
 async def test_register_two_packages_with_same_manifest_but_different_hashes(caplog: pytest.LogCaptureFixture) -> None:
