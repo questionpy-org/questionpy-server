@@ -202,6 +202,7 @@ class WorkerError(MessageToServer):
 
         UNKNOWN = auto()
         MEMORY_EXCEEDED = auto()
+        TIME_LIMIT_EXCEEDED = auto()
         QUESTION_STATE_INVALID = auto()
 
     message_id: ClassVar[MessageIds] = MessageIds.ERROR
@@ -217,6 +218,8 @@ class WorkerError(MessageToServer):
         """Get a WorkerError message from an exception."""
         if isinstance(error, MemoryError):
             error_type = WorkerError.ErrorType.MEMORY_EXCEEDED
+        elif isinstance(error, WorkerTimeLimitExceededError):
+            error_type = WorkerError.ErrorType.TIME_LIMIT_EXCEEDED
         elif isinstance(error, InvalidQuestionStateError):
             error_type = WorkerError.ErrorType.QUESTION_STATE_INVALID
         else:
@@ -239,6 +242,8 @@ class WorkerError(MessageToServer):
         error: Exception
         if self.type == WorkerError.ErrorType.MEMORY_EXCEEDED:
             error = WorkerMemoryLimitExceededError(self.message)
+        elif self.type == WorkerError.ErrorType.TIME_LIMIT_EXCEEDED:
+            error = WorkerTimeLimitExceededError(self.message)
         elif self.type == WorkerError.ErrorType.QUESTION_STATE_INVALID:
             error = InvalidQuestionStateError(self.message)
         else:
@@ -270,6 +275,10 @@ class InvalidMessageIdError(Exception):
 
 
 class WorkerMemoryLimitExceededError(Exception):
+    pass
+
+
+class WorkerTimeLimitExceededError(Exception):
     pass
 
 
