@@ -2,10 +2,12 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import resource
+import signal
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, NoReturn, cast
+from functools import wraps
+from typing import Any, NoReturn, cast, TypeAlias, TypeVar
 
 from questionpy_common.api.qtype import QuestionTypeInterface
 from questionpy_common.environment import (
@@ -31,8 +33,11 @@ from questionpy_server.worker.runtime.messages import (
     StartAttempt,
     ViewAttempt,
     WorkerError,
+    WorkerTimeLimitExceededError,
 )
 from questionpy_server.worker.runtime.package import ImportablePackage, load_package
+
+__all__ = ["WorkerManager"]
 
 
 @dataclass
@@ -48,6 +53,32 @@ class EnvironmentImpl(Environment):
         self._on_request_callbacks.append(callback)
 
 
+M = TypeVar("M", bound=MessageToWorker)
+OnMessageCallback: TypeAlias = Callable[[M], MessageToServer]
+
+
+def timeout_after(seconds: float) -> Callable[[OnMessageCallback], OnMessageCallback]:
+    def decorator(function: OnMessageCallback) -> OnMessageCallback:
+        @wraps(function)
+        def wrapper(msg: M) -> MessageToServer:
+            def raise_time_limit_exceeded(*_: Any) -> NoReturn:
+                raise WorkerTimeLimitExceededError
+
+            # Create a timer that raises after the given amount of cpu time.
+            signal.signal(signal.SIGVTALRM, raise_time_limit_exceeded)
+            signal.setitimer(signal.ITIMER_VIRTUAL, seconds)
+
+            try:
+                return function(msg)
+            finally:
+                # Clear the timer.
+                signal.setitimer(signal.ITIMER_VIRTUAL, 0)
+
+        return wrapper
+
+    return decorator
+
+
 class WorkerManager:
     def __init__(self, server_connection: WorkerToServerConnection):
         self._connection: WorkerToServerConnection = server_connection
@@ -60,7 +91,7 @@ class WorkerManager:
         self._env: EnvironmentImpl | None = None
         self._question_type: QuestionTypeInterface | None = None
 
-        self._message_dispatch: dict[MessageIds, Callable[[Any], MessageToServer]] = {
+        self._message_dispatch: dict[MessageIds, OnMessageCallback] = {
             LoadQPyPackage.message_id: self.on_msg_load_qpy_package,
             GetQPyPackageManifest.message_id: self.on_msg_get_qpy_package_manifest,
             GetOptionsForm.message_id: self.on_msg_get_options_form_definition,
@@ -82,6 +113,10 @@ class WorkerManager:
         if self._limits:
             # Limit memory usage.
             resource.setrlimit(resource.RLIMIT_AS, (self._limits.max_memory, self._limits.max_memory))
+            # Limit cpu time usage.
+            timeout = timeout_after(self._limits.max_cpu_time_seconds_per_call)
+            for message_id, callback in self._message_dispatch.items():
+                self._message_dispatch[message_id] = timeout(callback)
 
         self._connection.send_message(InitWorker.Response())
 
