@@ -11,9 +11,9 @@ import pytest
 from questionpy_common.constants import MiB
 from questionpy_common.environment import WorkerResourceLimits
 from questionpy_server import WorkerPool
-from questionpy_server.worker.impl import Worker
+from questionpy_server.worker import Worker
+from questionpy_server.worker.exception import WorkerCPUTimeLimitExceededError
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
-from questionpy_server.worker.runtime.messages import WorkerTimeLimitExceededError
 from questionpy_server.worker.runtime.package_location import PackageLocation
 from tests.conftest import PACKAGE
 
@@ -40,6 +40,6 @@ async def test_should_raise_timout_error(pool: WorkerPool) -> None:
         # Set the cpu time limit to a small float greater than zero.
         self.limits = WorkerResourceLimits(200 * MiB, math.ulp(0))
 
-    with pytest.raises(WorkerTimeLimitExceededError), patch.object(Worker, "__init__", worker_init):
+    with pytest.raises(WorkerCPUTimeLimitExceededError), patch.object(Worker, "__init__", worker_init):
         async with pool.get_worker(PACKAGE, 1, 1):
             pass

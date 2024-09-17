@@ -16,7 +16,7 @@ from questionpy_common.constants import KiB
 from questionpy_common.environment import WorkerResourceLimits
 from questionpy_server.worker import WorkerResources
 from questionpy_server.worker.connection import ServerToWorkerConnection
-from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
+from questionpy_server.worker.exception import WorkerCPUTimeLimitExceededError, WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.impl._base import BaseWorker
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
 from questionpy_server.worker.runtime.package_location import PackageLocation
@@ -111,10 +111,48 @@ class SubprocessWorker(BaseWorker):
             # Whether initialization was successful or not, flush the logs.
             self._stderr_buffer.flush()
 
+    async def _limit_cpu_time_usage(self, expected_response_message: type[_T]) -> None:
+        if not self._proc or self._proc.returncode is not None:
+            raise WorkerNotRunningError
+
+        if self.limits is None:
+            return
+
+        psutil_proc = psutil.Process(self._proc.pid)
+
+        # Get current cpu times and calculate the maximum cpu time for the current call.
+        cpu_times = psutil_proc.cpu_times()
+        max_cpu_time = cpu_times.user + cpu_times.system + self.limits.max_cpu_time_seconds_per_call
+
+        # CPU-time is always less or equal to real time.
+        await asyncio.sleep(self.limits.max_cpu_time_seconds_per_call)
+
+        while True:
+            cpu_times = psutil_proc.cpu_times()
+            remaining_time = max_cpu_time - (cpu_times.user + cpu_times.system)
+            if remaining_time <= 0:
+                break
+            await asyncio.sleep(max(remaining_time, 0.05))
+
+        # Set the exception and kill the process.
+        for future in [
+            fut
+            for expected_id, fut in self._expected_incoming_messages
+            if expected_id == expected_response_message.message_id
+        ]:
+            future.set_exception(WorkerCPUTimeLimitExceededError)
+            self._expected_incoming_messages.remove((expected_response_message.message_id, future))
+
+        await self.kill()
+
     async def send_and_wait_for_response(self, message: MessageToWorker, expected_response_message: type[_T]) -> _T:
+        timeout = asyncio.create_task(
+            self._limit_cpu_time_usage(expected_response_message), name="limit cpu time usage"
+        )
         try:
             return await super().send_and_wait_for_response(message, expected_response_message)
         finally:
+            timeout.cancel()
             # Write worker's stderr to log after every exchange.
             if self._stderr_buffer:
                 self._stderr_buffer.flush()
