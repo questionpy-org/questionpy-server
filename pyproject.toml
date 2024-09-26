@@ -48,6 +48,10 @@ optional = true
 [tool.ruff]
 extend = "ruff_defaults.toml"
 
+[tool.ruff.lint.extend-per-file-ignores]
+# unused-async (aiohttp handlers must be async even if they don't use it)
+"**/questionpy_server/web/**/*" = ["RUF029"]
+
 [tool.pytest.ini_options]
 # https://github.com/pytest-dev/pytest-asyncio#auto-mode
 asyncio_mode = "auto"
