@@ -84,9 +84,6 @@ class ScoredInputState(Enum):
 class ScoredInputModel(BaseModel):
     state: ScoredInputState
     score: float | None = None
-    score_max: float | None = None
-    specific_feedback: str | None = None
-    right_answer: str | None = None
 
 
 class ScoredSubquestionModel(BaseModel):
