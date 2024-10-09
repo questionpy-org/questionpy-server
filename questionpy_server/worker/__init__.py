@@ -54,6 +54,7 @@ class Worker(ABC):
     """Interface for worker implementations."""
 
     def __init__(self, package: PackageLocation, limits: WorkerResourceLimits | None) -> None:
+        super().__init__()
         self.package = package
         self.limits = limits
         self.state = WorkerState.NOT_RUNNING
