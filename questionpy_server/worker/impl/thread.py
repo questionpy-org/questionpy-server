@@ -65,7 +65,7 @@ class ThreadWorker(BaseWorker):
     _worker_type = "thread"
 
     def __init__(self, package: PackageLocation, limits: WorkerResourceLimits | None) -> None:
-        super().__init__(package, limits)
+        super().__init__(package=package, limits=limits)
 
         self._pipe: DuplexPipe | None = None
 

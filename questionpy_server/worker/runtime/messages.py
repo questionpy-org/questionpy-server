@@ -269,9 +269,13 @@ class InvalidMessageIdError(Exception):
         super().__init__(f"Received unknown message with id {message_id} and length {length}.")
 
 
-class WorkerMemoryLimitExceededError(Exception):
+class BaseWorkerError(Exception):
     pass
 
 
-class WorkerUnknownError(Exception):
+class WorkerMemoryLimitExceededError(BaseWorkerError):
+    pass
+
+
+class WorkerUnknownError(BaseWorkerError):
     pass

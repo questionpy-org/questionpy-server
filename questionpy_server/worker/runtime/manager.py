@@ -5,7 +5,7 @@ import resource
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import NoReturn, cast, TypeAlias, TypeVar
+from typing import NoReturn, TypeAlias, TypeVar, cast
 
 from questionpy_common.api.qtype import QuestionTypeInterface
 from questionpy_common.environment import (
