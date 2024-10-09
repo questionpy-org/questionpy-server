@@ -4,6 +4,7 @@
 
 import asyncio
 import logging
+import math
 import sys
 from asyncio import StreamReader
 from collections.abc import Sequence
@@ -16,8 +17,8 @@ from questionpy_common.constants import KiB
 from questionpy_common.environment import WorkerResourceLimits
 from questionpy_server.worker import WorkerResources
 from questionpy_server.worker.connection import ServerToWorkerConnection
-from questionpy_server.worker.exception import WorkerCPUTimeLimitExceededError, WorkerNotRunningError, WorkerStartError
-from questionpy_server.worker.impl._base import BaseWorker
+from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
+from questionpy_server.worker.impl._base import BaseWorker, LimitTimeUsageMixin
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
@@ -71,7 +72,7 @@ class _StderrBuffer:
         self._skipped_bytes = 0
 
 
-class SubprocessWorker(BaseWorker):
+class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
     """Worker implementation running in a non-sandboxed subprocess."""
 
     _worker_type = "process"
@@ -80,7 +81,7 @@ class SubprocessWorker(BaseWorker):
     _runtime_main = ["-m", "questionpy_server.worker.runtime"]
 
     def __init__(self, package: PackageLocation, limits: WorkerResourceLimits | None):
-        super().__init__(package, limits)
+        super().__init__(package=package, limits=limits)
 
         self._proc: Process | None = None
         self._stderr_buffer: _StderrBuffer | None = None
@@ -111,48 +112,16 @@ class SubprocessWorker(BaseWorker):
             # Whether initialization was successful or not, flush the logs.
             self._stderr_buffer.flush()
 
-    async def _limit_cpu_time_usage(self, expected_response_message: type[_T]) -> None:
-        if not self._proc or self._proc.returncode is not None:
-            raise WorkerNotRunningError
-
-        if self.limits is None:
-            return
-
-        psutil_proc = psutil.Process(self._proc.pid)
-
-        # Get current cpu times and calculate the maximum cpu time for the current call.
-        cpu_times = psutil_proc.cpu_times()
-        max_cpu_time = cpu_times.user + cpu_times.system + self.limits.max_cpu_time_seconds_per_call
-
-        # CPU-time is always less or equal to real time.
-        await asyncio.sleep(self.limits.max_cpu_time_seconds_per_call)
-
-        while True:
-            cpu_times = psutil_proc.cpu_times()
-            remaining_time = max_cpu_time - (cpu_times.user + cpu_times.system)
-            if remaining_time <= 0:
-                break
-            await asyncio.sleep(max(remaining_time, 0.05))
-
-        # Set the exception and kill the process.
-        for future in [
-            fut
-            for expected_id, fut in self._expected_incoming_messages
-            if expected_id == expected_response_message.message_id
-        ]:
-            future.set_exception(WorkerCPUTimeLimitExceededError)
-            self._expected_incoming_messages.remove((expected_response_message.message_id, future))
-
-        await self.kill()
-
-    async def send_and_wait_for_response(self, message: MessageToWorker, expected_response_message: type[_T]) -> _T:
-        timeout = asyncio.create_task(
-            self._limit_cpu_time_usage(expected_response_message), name="limit cpu time usage"
-        )
+    async def send_and_wait_for_response(
+        self, message: MessageToWorker, expected_response_message: type[_T], timeout: float | None = None
+    ) -> _T:
         try:
-            return await super().send_and_wait_for_response(message, expected_response_message)
+            if timeout is None:
+                timeout = self.limits.max_cpu_time_seconds_per_call if self.limits else math.inf
+            self._set_time_limit(timeout)
+            return await super().send_and_wait_for_response(message, expected_response_message, timeout)
         finally:
-            timeout.cancel()
+            self._reset_time_limit()
             # Write worker's stderr to log after every exchange.
             if self._stderr_buffer:
                 self._stderr_buffer.flush()
@@ -176,8 +145,20 @@ class SubprocessWorker(BaseWorker):
             *super()._get_observation_tasks(),
             asyncio.create_task(self._proc.wait(), name="wait for worker process"),
             asyncio.create_task(self._stderr_buffer.read_stderr(), name="receive stderr from worker"),
+            asyncio.create_task(self._limit_cpu_time_usage(), name="limit cpu time usage"),
         )
 
     async def kill(self) -> None:
         if self._proc and self._proc.returncode is None:
             self._proc.kill()
+
+            # Make sure that all resources of the subprocesses are getting cleaned.
+            await self._proc.wait()
+
+    def _get_cpu_time(self) -> float:
+        if not self._proc or self._proc.returncode is not None:
+            raise WorkerNotRunningError
+
+        psutil_proc = psutil.Process(self._proc.pid)
+        cpu_times = psutil_proc.cpu_times()
+        return cpu_times.user + cpu_times.system
