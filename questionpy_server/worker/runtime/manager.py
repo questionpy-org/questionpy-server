@@ -128,6 +128,8 @@ class WorkerManager:
         if not self._worker_type:
             self._raise_not_initialized(msg)
 
+        raise ValueError("Noo")
+
         package = self._loaded_packages[msg.path]
         return GetQPyPackageManifest.Response(manifest=package.manifest)
 

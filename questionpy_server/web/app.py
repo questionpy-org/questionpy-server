@@ -20,9 +20,10 @@ class QPyServer:
     def __init__(self, settings: Settings):
         # We import here, so we don't have to work around circular imports.
         from questionpy_server.web._routes import routes  # noqa: PLC0415
+        from questionpy_server.web._middlewares import middlewares
 
         self.settings: Settings = settings
-        self.web_app = web.Application(client_max_size=settings.webservice.max_main_size)
+        self.web_app = web.Application(client_max_size=settings.webservice.max_main_size, middlewares=middlewares)
         self.web_app.add_routes(routes)
         self.web_app[self.APP_KEY] = self
 

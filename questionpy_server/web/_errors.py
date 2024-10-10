@@ -3,16 +3,17 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 from aiohttp import web
 from aiohttp.log import web_logger
-from pydantic import BaseModel
 
-from questionpy_server.models import NotFoundStatus, NotFoundStatusWhat
+from questionpy_server.models import RequestErrorCode, RequestError
 
 
 class _ExceptionMixin(web.HTTPException):
-    def __init__(self, msg: str, body: BaseModel | None = None) -> None:
+    def __init__(self, msg: str, body: RequestError | None = None) -> None:
         if body:
             # Send structured error body as JSON.
             super().__init__(reason=type(self).__name__, text=body.model_dump_json(), content_type="application/json")
+            if body.reason:
+                msg += f": {body.reason}"
         else:
             # Send the detailed message.
             super().__init__(reason=type(self).__name__, text=msg)
@@ -24,35 +25,71 @@ class _ExceptionMixin(web.HTTPException):
         web_logger.info(msg)
 
 
-class MainBodyMissingError(web.HTTPBadRequest, _ExceptionMixin):
-    def __init__(self) -> None:
-        super().__init__("The main body is required but was not provided.")
-
-
-class PackageMissingWithoutHashError(web.HTTPBadRequest, _ExceptionMixin):
-    def __init__(self) -> None:
-        super().__init__("The package is required but was not provided.")
-
-
-class PackageMissingByHashError(web.HTTPNotFound, _ExceptionMixin):
-    def __init__(self, package_hash: str) -> None:
+class WorkerTimeoutError(web.HTTPBadRequest, _ExceptionMixin):
+    def __init__(self, *, temporary: bool) -> None:
         super().__init__(
-            f"The package was not provided, is not cached and could not be found by its hash. ('{package_hash}')",
-            NotFoundStatus(what=NotFoundStatusWhat.PACKAGE),
+            "Question package did not answer in a reasonable amount of time",
+            RequestError(
+                error_code=RequestErrorCode.OUT_OF_MEMORY,
+                temporary=temporary,
+            ),
         )
 
 
-class PackageHashMismatchError(web.HTTPBadRequest, _ExceptionMixin):
-    def __init__(self, from_uri: str, from_body: str) -> None:
+class OutOfMemoryError(web.HTTPBadRequest, _ExceptionMixin):
+    def __init__(self, *, temporary: bool) -> None:
         super().__init__(
-            f"The request URI specifies a package with hash '{from_uri}', but the sent package has a hash of "
-            f"'{from_body}'."
+            "Question package reached its memory limit",
+            RequestError(
+                error_code=RequestErrorCode.OUT_OF_MEMORY,
+                temporary=temporary,
+            ),
         )
 
 
-class QuestionStateMissingError(web.HTTPBadRequest, _ExceptionMixin):
-    def __init__(self) -> None:
+class InvalidPackageError(web.HTTPBadRequest, _ExceptionMixin):
+    def __init__(self, *, reason: str) -> None:
         super().__init__(
-            "A question state part is required but was not provided.",
-            NotFoundStatus(what=NotFoundStatusWhat.QUESTION_STATE),
+            "Invalid package was provided",
+            RequestError(
+                error_code=RequestErrorCode.INVALID_PACKAGE,
+                temporary=False,
+                reason=reason,
+            ),
+        )
+
+
+class InvalidRequestError(web.HTTPBadRequest, _ExceptionMixin):
+    def __init__(self, *, reason: str) -> None:
+        super().__init__(
+            "Invalid request body was provided",
+            RequestError(
+                error_code=RequestErrorCode.INVALID_REQUEST,
+                temporary=False,
+                reson=reason,
+            ),
+        )
+
+
+class PackageError(web.HTTPBadRequest, _ExceptionMixin):
+    def __init__(self, *, reason: str, temporary: bool) -> None:
+        super().__init__(
+            "An error occurred within the package",
+            RequestError(
+                error_code=RequestErrorCode.PACKAGE_ERROR,
+                temporary=temporary,
+                reason=reason,
+            ),
+        )
+
+
+class ServerError(web.HTTPInternalServerError, _ExceptionMixin):
+    def __init__(self, *, reason: str) -> None:
+        super().__init__(
+            "There was an internal server error",
+            RequestError(
+                error_code=RequestErrorCode.SERVER_ERROR,
+                temporary=True,
+                reason=reason,
+            ),
         )

@@ -13,7 +13,9 @@ from questionpy_server.package import Package
 from questionpy_server.web._decorators import ensure_package, ensure_required_parts
 from questionpy_server.web._utils import pydantic_json_response
 from questionpy_server.web.app import QPyServer
+from questionpy_server.worker.exception import WorkerNotRunningError
 from questionpy_server.worker.runtime.package_location import ZipPackageLocation
+from tests.questionpy_server.web.routes.test_files import package
 
 if TYPE_CHECKING:
     from questionpy_server.worker import Worker
@@ -24,8 +26,10 @@ package_routes = web.RouteTableDef()
 @package_routes.get("/packages")
 async def get_packages(request: web.Request) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
-
     package_versions_infos = qpyserver.package_collection.get_package_versions_infos()
+    path = await qpyserver.package_collection.get(package_versions_infos[0].versions[0].package_hash).get_path()
+    async with qpyserver.worker_pool.get_worker(ZipPackageLocation(path), 0, None) as worker:
+        _ = await worker.get_manifest()
     return pydantic_json_response(data=package_versions_infos)
 
 
@@ -77,8 +81,7 @@ async def post_question(
 
 @package_routes.post(r"/packages/{package_hash:\w+}/question/migrate")
 async def post_question_migrate(_request: web.Request) -> web.Response:
-    msg = ""
-    raise HTTPMethodNotAllowed(msg, "")
+    raise HTTPMethodNotAllowed("POST", [])
 
 
 @package_routes.post(r"/package-extract-info")
