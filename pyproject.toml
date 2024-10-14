@@ -51,6 +51,7 @@ extend = "ruff_defaults.toml"
 [tool.pytest.ini_options]
 # https://github.com/pytest-dev/pytest-asyncio#auto-mode
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope="function"
 
 # This section is read automatically by Coverage.py when its working directory is .
 # https://coverage.readthedocs.io/en/6.5.0/config.html#configuration-reference
