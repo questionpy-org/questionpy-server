@@ -38,7 +38,7 @@ pytest-md = "^0.2.0"
 coverage = { extras = ["toml"], version = "^7.4.4" }
 
 [tool.poetry.group.linter]
-dependencies = { ruff = "^0.6.1" }
+dependencies = { ruff = "^0.6.3" }
 optional = true
 
 [tool.poetry.group.type-checker]
