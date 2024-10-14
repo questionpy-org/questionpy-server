@@ -1,4 +1,7 @@
 # Partly based on https://github.com/pypa/hatch/blob/master/ruff_defaults.toml
+# Edit this file in the qpy-dev repository and sync it to other repositories using `poe config:ruff`.
+# Common Ruff configurations are included here; project-specific configurations should be placed in `pyproject.toml`
+# under `[tool.ruff]`.
 
 target-version = "py311"
 line-length = 120
