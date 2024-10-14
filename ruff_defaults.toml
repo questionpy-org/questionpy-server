@@ -72,6 +72,12 @@ extend-select = [
 ]
 
 ignore = [
+  # builtin-module-shadowing (relative module names such as 'abc' or 'types' are pretty normal)
+  "A005",
+
+  # allow async functions with timeout parameter
+  "ASYNC109",
+
   # Relax on missing docstrings
   "D1",
 
@@ -102,8 +108,6 @@ ignore = [
   # ruff doesn't track inheritance across files, disabling to prevent false positives
   # https://github.com/astral-sh/ruff/issues/5243#issuecomment-1860862939
   "RUF012",
-  "A005", # builtin-module-shadowing (relative module names such as 'abc' or 'types' are pretty normal)
-  "ASYNC109"  # async-function-with-timeout
 ]
 
 pydocstyle = { convention = "google" }
@@ -111,8 +115,6 @@ pydocstyle = { convention = "google" }
 [lint.per-file-ignores]
 "**/scripts/*" = ["INP001", "T201"]
 "**/tests/**/*" = ["PLC1901", "PLC2701", "PLR2004", "S", "TID252", "FBT"]
-# unused-async (aiohttp handlers must be async even if they don't use it)
-"questionpy_server/web/**/*" = ["RUF029"]
 
 [lint.flake8-builtins]
 # help: (guess it's ok since built-in `help()` is for interactive use and no collisions are expected)
