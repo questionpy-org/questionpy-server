@@ -9,7 +9,7 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, JsonValue
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
-from questionpy_common.api.qtype import InvalidQuestionStateError
+from questionpy_common.api.qtype import InvalidQuestionStateError, OptionsFormValidationError
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestUser, WorkerResourceLimits
@@ -203,11 +203,13 @@ class WorkerError(MessageToServer):
         UNKNOWN = auto()
         MEMORY_EXCEEDED = auto()
         QUESTION_STATE_INVALID = auto()
+        FORM_OPTIONS_INVALID = auto()
 
     message_id: ClassVar[MessageIds] = MessageIds.ERROR
     expected_response_id: MessageIds
     type: ErrorType
     message: str | None
+    error_data: dict[str, str] | None = None
 
     original_stacktrace: str | None = None
     """The original worker-side stacktrace."""
@@ -215,10 +217,15 @@ class WorkerError(MessageToServer):
     @classmethod
     def from_exception(cls, error: Exception, cause: MessageToWorker) -> "WorkerError":
         """Get a WorkerError message from an exception."""
+        error_data: dict[str, str] | None = None
+
         if isinstance(error, MemoryError):
             error_type = WorkerError.ErrorType.MEMORY_EXCEEDED
         elif isinstance(error, InvalidQuestionStateError):
             error_type = WorkerError.ErrorType.QUESTION_STATE_INVALID
+        elif isinstance(error, OptionsFormValidationError):
+            error_type = WorkerError.ErrorType.FORM_OPTIONS_INVALID
+            error_data = error.errors
         else:
             error_type = WorkerError.ErrorType.UNKNOWN
 
@@ -232,6 +239,7 @@ class WorkerError(MessageToServer):
             message=str(error),
             expected_response_id=cause.Response.message_id,
             original_stacktrace=original_stacktrace,
+            error_data=error_data,
         )
 
     def to_exception(self) -> Exception:
@@ -241,6 +249,8 @@ class WorkerError(MessageToServer):
             error = WorkerMemoryLimitExceededError(self.message)
         elif self.type == WorkerError.ErrorType.QUESTION_STATE_INVALID:
             error = InvalidQuestionStateError(self.message)
+        elif self.type == WorkerError.ErrorType.FORM_OPTIONS_INVALID:
+            error = OptionsFormValidationError(self.error_data or {})
         else:
             error = WorkerUnknownError(self.message)
 
