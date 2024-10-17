@@ -69,7 +69,6 @@ class WorkerPool:
             worker = None
             reserved_memory = False
             try:
-                # TODO: ???
                 limits = WorkerResourceLimits(max_memory=200 * MiB, max_cpu_time_seconds_per_call=10)
                 if self.max_memory < limits.max_memory:
                     msg = "The worker needs more memory than available."

@@ -5,7 +5,7 @@ import resource
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, NoReturn, cast
+from typing import NoReturn, TypeAlias, TypeVar, cast
 
 from questionpy_common.api.qtype import QuestionTypeInterface
 from questionpy_common.environment import (
@@ -34,6 +34,8 @@ from questionpy_server.worker.runtime.messages import (
 )
 from questionpy_server.worker.runtime.package import ImportablePackage, load_package
 
+__all__ = ["WorkerManager"]
+
 
 @dataclass
 class EnvironmentImpl(Environment):
@@ -48,6 +50,10 @@ class EnvironmentImpl(Environment):
         self._on_request_callbacks.append(callback)
 
 
+M = TypeVar("M", bound=MessageToWorker)
+OnMessageCallback: TypeAlias = Callable[[M], MessageToServer]
+
+
 class WorkerManager:
     def __init__(self, server_connection: WorkerToServerConnection):
         self._connection: WorkerToServerConnection = server_connection
@@ -60,7 +66,7 @@ class WorkerManager:
         self._env: EnvironmentImpl | None = None
         self._question_type: QuestionTypeInterface | None = None
 
-        self._message_dispatch: dict[MessageIds, Callable[[Any], MessageToServer]] = {
+        self._message_dispatch: dict[MessageIds, OnMessageCallback] = {
             LoadQPyPackage.message_id: self.on_msg_load_qpy_package,
             GetQPyPackageManifest.message_id: self.on_msg_get_qpy_package_manifest,
             GetOptionsForm.message_id: self.on_msg_get_options_form_definition,
