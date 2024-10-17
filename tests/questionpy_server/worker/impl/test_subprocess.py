@@ -4,7 +4,7 @@
 import resource
 from collections.abc import Iterator
 from contextlib import contextmanager
-from time import process_time, sleep
+from time import process_time, sleep, time
 from unittest.mock import patch
 
 import psutil
@@ -53,10 +53,13 @@ def _make_get_manifest_busy_wait() -> Iterator[None]:
 
 async def test_should_raise_cpu_timout_error(pool: WorkerPool) -> None:
     with patch_worker_pool(pool, _make_get_manifest_busy_wait):
+        start_time = time()
+        # Change the timeout for faster testing.
         with pytest.raises(WorkerStartError) as exc_info, patch.object(BaseWorker, "_init_worker_timeout", 0.05):
             async with pool.get_worker(PACKAGE, 1, 1):
                 pass
         assert isinstance(exc_info.value.__cause__, WorkerCPUTimeLimitExceededError)
+        assert 0.05 < (time() - start_time) < 0.5
 
 
 @contextmanager
@@ -72,11 +75,14 @@ async def test_should_raise_real_timout_error(pool: WorkerPool) -> None:
     with patch_worker_pool(pool, _make_get_manifest_sleep):
         # The timeout should not be too short, because the Python interpreter also needs some time to start up, which
         # is accounted for the init worker step. Otherwise, a WorkerCPUTimeLimitExceededError is raised.
+        start_time = time()
         with (
             pytest.raises(WorkerStartError) as exc_info,
+            # Change the timeout and factor for faster testing.
             patch.object(BaseWorker, "_init_worker_timeout", 0.6),
-            patch.object(LimitTimeUsageMixin, "_real_time_limit_factor", 0.1),
+            patch.object(LimitTimeUsageMixin, "_real_time_limit_factor", 1.0),
         ):
             async with pool.get_worker(PACKAGE, 1, 1) as worker:
                 await worker.get_manifest()
         assert isinstance(exc_info.value.__cause__, WorkerRealTimeLimitExceededError)
+        assert 0.6 < (time() - start_time) < 2.0
