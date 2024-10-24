@@ -17,7 +17,7 @@ from questionpy_common.constants import KiB
 from questionpy_common.environment import WorkerResourceLimits
 from questionpy_server.worker import WorkerResources
 from questionpy_server.worker.connection import ServerToWorkerConnection
-from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
+from questionpy_server.worker.exception import WorkerNotRunningError
 from questionpy_server.worker.impl._base import BaseWorker, LimitTimeUsageMixin
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
 from questionpy_server.worker.runtime.package_location import PackageLocation
@@ -101,7 +101,8 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
         )
 
         if self._proc.stdout is None or self._proc.stderr is None or self._proc.stdin is None:
-            raise WorkerStartError
+            msg = "Could not start the worker process."
+            raise RuntimeError(msg)
 
         self._stderr_buffer = _StderrBuffer(self._proc.stderr)
         self._connection = ServerToWorkerConnection(self._proc.stdout, self._proc.stdin)

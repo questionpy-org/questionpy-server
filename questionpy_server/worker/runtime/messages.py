@@ -13,6 +13,7 @@ from questionpy_common.api.qtype import InvalidQuestionStateError
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestUser, WorkerResourceLimits
+from questionpy_common.error import QPyBaseError
 from questionpy_common.manifest import Manifest
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
@@ -195,7 +196,10 @@ class ScoreAttempt(MessageToWorker):
 
 
 class WorkerError(MessageToServer):
-    """Error message."""
+    """Error message.
+
+    TODO: add a CUSTOM-ErrorType which the package can raise?
+    """
 
     class ErrorType(StrEnum):
         """Error types."""
@@ -264,12 +268,12 @@ def get_message_bytes(message: Message) -> tuple[bytes, bytes | None]:
     return header, json_bytes
 
 
-class InvalidMessageIdError(Exception):
+class InvalidMessageIdError(QPyBaseError):
     def __init__(self, message_id: int, length: int):
         super().__init__(f"Received unknown message with id {message_id} and length {length}.")
 
 
-class BaseWorkerError(Exception):
+class BaseWorkerError(QPyBaseError):
     pass
 
 

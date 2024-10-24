@@ -107,11 +107,11 @@ class BaseWorker(Worker, ABC):
             )
         except BaseWorkerError as e:
             msg = "Worker has exited before or during initialization."
-            raise WorkerStartError(msg) from e
+            raise WorkerStartError(msg, temporary=e.temporary) from e
 
     def send(self, message: MessageToWorker) -> None:
         if self._connection is None or self._observe_task is None or self._observe_task.done():
-            raise WorkerNotRunningError
+            raise WorkerNotRunningError(temporary=True)
         self._connection.send_message(message)
 
     async def send_and_wait_for_response(
