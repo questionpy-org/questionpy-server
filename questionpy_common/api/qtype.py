@@ -7,6 +7,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Protocol
 
 from questionpy_common.api.package import BasePackageInterface
+from questionpy_common.error import QPyBaseError
 
 if TYPE_CHECKING:
     from pydantic import JsonValue
@@ -56,12 +57,12 @@ class QuestionTypeInterface(BasePackageInterface, Protocol):
         """
 
 
-class OptionsFormValidationError(Exception):
+class OptionsFormValidationError(QPyBaseError):
     def __init__(self, errors: dict[str, str]):
         """There was at least one validation error."""
         self.errors = errors  # input element name -> error description
         super().__init__("Form input data could not be validated successfully.")
 
 
-class InvalidQuestionStateError(Exception):
+class InvalidQuestionStateError(QPyBaseError):
     """Error to raise when your package cannot parse the question state it is given."""

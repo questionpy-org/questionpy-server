@@ -24,7 +24,6 @@ package_routes = web.RouteTableDef()
 @package_routes.get("/packages")
 async def get_packages(request: web.Request) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
-
     package_versions_infos = qpyserver.package_collection.get_package_versions_infos()
     return pydantic_json_response(data=package_versions_infos)
 
@@ -77,8 +76,8 @@ async def post_question(
 
 @package_routes.post(r"/packages/{package_hash:\w+}/question/migrate")
 async def post_question_migrate(_request: web.Request) -> web.Response:
-    msg = ""
-    raise HTTPMethodNotAllowed(msg, "")
+    method = "POST"
+    raise HTTPMethodNotAllowed(method, [])
 
 
 @package_routes.post(r"/package-extract-info")
