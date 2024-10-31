@@ -8,6 +8,7 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from os.path import commonpath, normpath
 from typing import TYPE_CHECKING, Any, TypeVar
 from zipfile import ZipFile
 
@@ -278,6 +279,12 @@ class BaseWorker(Worker, ABC):
         if isinstance(self.package, ZipPackageLocation):
             with ZipFile(self.package.path) as zip_file:
                 dist_path = f"{DIST_DIR}/{path}"
+                if commonpath((DIST_DIR, normpath(dist_path))) != DIST_DIR:
+                    # This isn't strictly necessary from a security perspective, since we only look inside the ZIP.
+                    # We'll still check it for consistency with dir packages.
+                    log.info("Refusing to serve static file '%s', which lies outside the dist dir", path)
+                    raise FileNotFoundError(path)
+
                 try:
                     zipinfo = zip_file.getinfo(dist_path)
                 except KeyError as e:
@@ -288,7 +295,16 @@ class BaseWorker(Worker, ABC):
                 return PackageFileData(zipinfo.file_size, manifest_entry.mime_type, zip_file.read(dist_path))
 
         elif isinstance(self.package, DirPackageLocation):
-            full_path: Path = self.package.path / path
+            full_path: Path = (self.package.path / path).resolve()
+
+            if not full_path.is_relative_to(self.package.path):
+                log.info(
+                    "Refusing to serve static file '%s', which lies outside the dist dir (resolves to '%s')",
+                    path,
+                    full_path,
+                )
+                raise FileNotFoundError(path)
+
             try:
                 real_size = full_path.stat().st_size
             except FileNotFoundError:

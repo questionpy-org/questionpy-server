@@ -1,8 +1,10 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
+import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING, Literal, NoReturn
 from unittest.mock import patch
 
@@ -59,6 +61,53 @@ async def test_should_raise_file_not_found_error_when_not_in_manifest(
     async with worker_pool.get_worker(package, 1, 1) as worker:
         with pytest.raises(FileNotFoundError):
             await worker.get_static_file(_STATIC_FILE_NAME)
+
+
+@pytest.mark.parametrize("package_type", ["dir", "zip"])
+async def test_should_raise_file_not_found_error_when_file_is_outside(
+    worker_pool: WorkerPool,
+    package_factory: TestPackageFactory,
+    package_type: Literal["dir", "zip"],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    dir_package = package_factory.to_dir_package(PACKAGE)
+
+    # Write a file next to the dist folder. The worker should refuse to read it and pretend it doesn't exist.
+    content = b"top secret!"
+    (dir_package.path.parent / "my_secret_file").write_bytes(content)
+    dir_package.inject_static_file_into_manifest("static/../../my_secret_file", len(content), "text/plain")
+
+    package: PackageLocation = (
+        dir_package
+        if package_type == "dir"
+        else package_factory.to_zip_package(dir_package, include_siblings=("my_secret_file",))
+    )
+
+    async with worker_pool.get_worker(package, 1, 1) as worker:
+        with caplog.at_level(logging.INFO), pytest.raises(FileNotFoundError):
+            await worker.get_static_file("static/../../my_secret_file")
+
+    assert "Refusing to serve" in caplog.text
+
+
+async def test_should_raise_file_not_found_error_when_symlink_target_is_outside(
+    worker_pool: WorkerPool, package_factory: TestPackageFactory, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    package = package_factory.to_dir_package(PACKAGE)
+
+    content = b"top secret!"
+    secret_file_path = tmp_path / "my_secret_file"
+    secret_file_path.write_bytes(content)
+    (package.path / "static").mkdir(parents=True, exist_ok=True)
+    (package.path / "static" / "my_secret_file").symlink_to(secret_file_path)
+
+    package.inject_static_file_into_manifest("static/my_secret_file", len(content), "text/plain")
+
+    async with worker_pool.get_worker(package, 1, 1) as worker:
+        with caplog.at_level(logging.INFO), pytest.raises(FileNotFoundError):
+            await worker.get_static_file("static/my_secret_file")
+
+    assert "Refusing to serve" in caplog.text
 
 
 @pytest.mark.parametrize("package_type", ["dir", "zip"])
