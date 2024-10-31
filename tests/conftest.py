@@ -4,6 +4,7 @@
 
 import mimetypes
 import tempfile
+from collections.abc import Iterable
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
@@ -96,17 +97,26 @@ class TestPackageFactory:
         self.temp_package_dir = temp_package_dir
 
     def to_dir_package(self, package: ZipPackageLocation) -> TestDirPackage:
+        """Unpacks the given ZIP-based package to create a temporary folder-based package."""
         target_dir = tempfile.mkdtemp(prefix="package-", dir=self.temp_package_dir)
         with ZipFile(package.path) as zip_file:
             zip_file.extractall(target_dir)
 
         return TestDirPackage(Path(target_dir) / DIST_DIR)
 
-    def to_zip_package(self, package: DirPackageLocation) -> TestZipPackage:
+    def to_zip_package(self, package: DirPackageLocation, *, include_siblings: Iterable[str] = ()) -> TestZipPackage:
+        """Archives the given dist folder to create a temporary ZIP-based package from the given folder-based package.
+
+        By default, only the dist folder is archived. Set [include_siblings][] to also copy selected files from next to
+        the dist dir.
+        """
         target_filename = tempfile.mktemp(prefix="package-", suffix=".qpy", dir=self.temp_package_dir)
         with ZipFile(target_filename, "w") as zipfile:
             for subpath in package.path.glob("**/*"):
                 zipfile.write(subpath, DIST_DIR / subpath.relative_to(package.path))
+
+            for sibling_filename in include_siblings:
+                zipfile.write(package.path.parent / sibling_filename, sibling_filename)
 
         return TestZipPackage(Path(target_filename))
 
