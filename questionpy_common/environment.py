@@ -6,7 +6,7 @@ from collections.abc import Callable, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass
 from importlib.resources.abc import Traversable
-from typing import Protocol, TypeAlias
+from typing import NamedTuple, Protocol, TypeAlias
 
 from questionpy_common.api.package import QPyPackageInterface
 from questionpy_common.api.qtype import QuestionTypeInterface
@@ -18,6 +18,7 @@ __all__ = [
     "OnRequestCallback",
     "Package",
     "PackageInitFunction",
+    "PackageNamespaceAndShortName",
     "RequestUser",
     "WorkerResourceLimits",
     "get_qpy_environment",
@@ -42,10 +43,8 @@ class WorkerResourceLimits:
 
 class Package(Protocol):
     @property
-    @abstractmethod
     def manifest(self) -> Manifest: ...
 
-    @abstractmethod
     def get_path(self, path: str) -> Traversable:
         """Gets a [Traversable][] object which allows reading files from the package.
 
@@ -57,6 +56,13 @@ class Package(Protocol):
 
 
 OnRequestCallback: TypeAlias = Callable[[RequestUser], None]
+
+
+class PackageNamespaceAndShortName(NamedTuple):
+    """Tuple of namespace and short name, identifying any version of a specific package."""
+
+    namespace: str
+    short_name: str
 
 
 class Environment(Protocol):
@@ -81,8 +87,11 @@ class Environment(Protocol):
     """
     main_package: Package
     """The main package whose entrypoint was called."""
-    packages: Mapping[str, Package]
-    """All packages loaded in the worker, including the main package."""
+    packages: Mapping[PackageNamespaceAndShortName, Package]
+    """All packages loaded in the worker, including the main package.
+
+    Keys are the package namespace and short name. Only one version of a package can be loaded at a time.
+    """
 
     @abstractmethod
     def register_on_request_callback(self, callback: OnRequestCallback) -> None:

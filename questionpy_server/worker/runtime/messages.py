@@ -118,7 +118,6 @@ class GetQPyPackageManifest(MessageToWorker):
     """Get the manifest data of the main package, which must previously have been loaded."""
 
     message_id: ClassVar[MessageIds] = MessageIds.GET_QPY_PACKAGE_MANIFEST
-    path: str
 
     class Response(MessageToServer):
         """Execute a QuestionPy package."""
