@@ -11,6 +11,7 @@ from questionpy_common.api.qtype import QuestionTypeInterface
 from questionpy_common.environment import (
     Environment,
     OnRequestCallback,
+    PackageNamespaceAndShortName,
     RequestUser,
     WorkerResourceLimits,
     get_qpy_environment,
@@ -41,7 +42,7 @@ __all__ = ["WorkerManager"]
 class EnvironmentImpl(Environment):
     type: str
     main_package: ImportablePackage
-    packages: dict[str, ImportablePackage]
+    packages: dict[PackageNamespaceAndShortName, ImportablePackage]
     _on_request_callbacks: list[OnRequestCallback]
     request_user: RequestUser | None = None
     limits: WorkerResourceLimits | None = None
@@ -59,7 +60,7 @@ class WorkerManager:
         self._connection: WorkerToServerConnection = server_connection
 
         self._worker_type: str | None = None
-        self._loaded_packages: dict[str, ImportablePackage] = {}
+        self._loaded_packages: dict[PackageNamespaceAndShortName, ImportablePackage] = {}
 
         self._limits: WorkerResourceLimits | None = None
 
@@ -127,15 +128,15 @@ class WorkerManager:
         if msg.main:
             self._question_type = cast(QuestionTypeInterface, package_interface)
 
-        self._loaded_packages[str(msg.location)] = package
+        nssn = PackageNamespaceAndShortName(package.manifest.namespace, package.manifest.short_name)
+        self._loaded_packages[nssn] = package
         return LoadQPyPackage.Response()
 
     def on_msg_get_qpy_package_manifest(self, msg: GetQPyPackageManifest) -> MessageToServer:
-        if not self._worker_type:
-            self._raise_not_initialized(msg)
+        if not self._env:
+            self._raise_no_main_package_loaded(msg)
 
-        package = self._loaded_packages[msg.path]
-        return GetQPyPackageManifest.Response(manifest=package.manifest)
+        return GetQPyPackageManifest.Response(manifest=self._env.main_package.manifest)
 
     def on_msg_get_options_form_definition(self, msg: GetOptionsForm) -> MessageToServer:
         if not self._worker_type:

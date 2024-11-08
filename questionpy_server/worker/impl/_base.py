@@ -203,8 +203,7 @@ class BaseWorker(Worker, ABC):
                 log.info("Worker was killed because it did not stop gracefully")
 
     async def get_manifest(self) -> ComparableManifest:
-        msg = GetQPyPackageManifest(path=str(self.package))
-        ret = await self.send_and_wait_for_response(msg, GetQPyPackageManifest.Response)
+        ret = await self.send_and_wait_for_response(GetQPyPackageManifest(), GetQPyPackageManifest.Response)
         return ComparableManifest(**ret.manifest.model_dump())
 
     async def get_options_form(
