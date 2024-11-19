@@ -1,6 +1,8 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
+from typing import Any
+
 from aiohttp import web
 from aiohttp.log import web_logger
 
@@ -46,49 +48,49 @@ class OutOfMemoryError(web.HTTPInternalServerError, _ExceptionMixin):
 
 
 class InvalidAttemptStateError(web.HTTPBadRequest, _ExceptionMixin):
-    def __init__(self, *, reason: str | None, temporary: bool) -> None:
+    def __init__(self, *, reason: str | None, **_: Any) -> None:
         super().__init__(
             "Invalid attempt state was provided",
             RequestError(
                 error_code=RequestErrorCode.INVALID_ATTEMPT_STATE,
                 reason=reason,
-                temporary=temporary,
+                temporary=False,
             ),
         )
 
 
 class InvalidQuestionStateError(web.HTTPBadRequest, _ExceptionMixin):
-    def __init__(self, *, reason: str | None, temporary: bool) -> None:
+    def __init__(self, *, reason: str | None, **_: Any) -> None:
         super().__init__(
             "Invalid question state was provided",
             RequestError(
                 error_code=RequestErrorCode.INVALID_QUESTION_STATE,
                 reason=reason,
-                temporary=temporary,
+                temporary=False,
             ),
         )
 
 
 class InvalidPackageError(web.HTTPBadRequest, _ExceptionMixin):
-    def __init__(self, *, reason: str | None, temporary: bool) -> None:
+    def __init__(self, *, reason: str | None, **_: Any) -> None:
         super().__init__(
             "Invalid package was provided",
             RequestError(
                 error_code=RequestErrorCode.INVALID_PACKAGE,
                 reason=reason,
-                temporary=temporary,
+                temporary=False,
             ),
         )
 
 
 class InvalidRequestError(web.HTTPUnprocessableEntity, _ExceptionMixin):
-    def __init__(self, *, reason: str | None, temporary: bool) -> None:
+    def __init__(self, *, reason: str | None, **_: Any) -> None:
         super().__init__(
             "Invalid request body was provided",
             RequestError(
                 error_code=RequestErrorCode.INVALID_REQUEST,
                 reason=reason,
-                temporary=temporary,
+                temporary=False,
             ),
         )
 

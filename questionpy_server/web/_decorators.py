@@ -100,7 +100,7 @@ def ensure_question_state(handler: _HandlerFunc, *, param: inspect.Parameter | N
             kwargs[param.name] = parts.question_state
         elif param.default is Parameter.empty:
             _msg = "A question state part is required but was not provided."
-            raise InvalidRequestError(reason=_msg, temporary=False)
+            raise InvalidRequestError(reason=_msg)
 
         return await handler(request, *args, **kwargs)
 
@@ -132,7 +132,7 @@ def ensure_main_body(handler: _HandlerFunc, *, param: inspect.Parameter | None =
 
         if parts.main is None:
             _msg = "The main body is required but was not provided."
-            raise InvalidRequestError(reason=_msg, temporary=False)
+            raise InvalidRequestError(reason=_msg)
 
         kwargs[param.name] = _validate_from_http(parts.main, param.annotation)
         return await handler(request, *args, **kwargs)
@@ -151,7 +151,7 @@ async def _get_package_from_request(request: web.Request) -> Package:
             f"The request URI specifies a package with hash '{uri_package_hash}', but the sent package has a hash of"
             f" '{parts.package.hash}'."
         )
-        raise InvalidPackageError(reason=msg, temporary=False)
+        raise InvalidPackageError(reason=msg)
 
     package = None
     if uri_package_hash:
@@ -171,7 +171,7 @@ async def _get_package_from_request(request: web.Request) -> Package:
             )
             raise PackageNotFoundError(reason=msg, temporary=False)
         msg = "The package is required but was not provided."
-        raise InvalidRequestError(reason=msg, temporary=False)
+        raise InvalidRequestError(reason=msg)
 
     return package
 
@@ -285,4 +285,5 @@ def _validate_from_http(raw_body: str | bytes, param_class: type[_M]) -> _M:
     try:
         return param_class.model_validate_json(raw_body)
     except ValidationError as error:
-        raise InvalidRequestError(reason="Invalid JSON body", temporary=False) from error
+        msg = "Invalid JSON body"
+        raise InvalidRequestError(reason=msg) from error
