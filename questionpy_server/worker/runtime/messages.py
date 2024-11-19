@@ -196,10 +196,7 @@ class ScoreAttempt(MessageToWorker):
 
 
 class WorkerError(MessageToServer):
-    """Error message.
-
-    TODO: add a CUSTOM-ErrorType which the package can raise?
-    """
+    """Error message."""
 
     class ErrorType(StrEnum):
         """Error types."""

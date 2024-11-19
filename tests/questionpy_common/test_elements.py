@@ -57,9 +57,13 @@ async def test_should_validate_main_body_when_question_state_is_not_given(client
     with patch.object(PackageCollection, "get"):
         # Even though the question state is optional, the body is still required to be valid JSON.
         res = await client.request(_METHOD, _URL, data=b"{not_valid!}", headers={"Content-Type": "application/json"})
-        assert res.status == 400
+        assert res.status == 422
         res_data = await res.json()
-        assert res_data == {"error_code": RequestErrorCode.INVALID_REQUEST.value, "temporary": False, "reason": None}
+        assert res_data == {
+            "error_code": RequestErrorCode.INVALID_REQUEST.value,
+            "temporary": False,
+            "reason": "Invalid JSON body",
+        }
 
 
 async def test_no_package(client: TestClient) -> None:
@@ -70,9 +74,9 @@ async def test_no_package(client: TestClient) -> None:
 
     res = await client.request(_METHOD, _URL, data=payload)
 
-    assert res.status == 400
+    assert res.status == 404
     res_data = await res.json()
-    assert res_data == {"error_code": RequestErrorCode.INVALID_REQUEST.value, "temporary": False, "reason": None}
+    assert {"error_code": RequestErrorCode.PACKAGE_NOT_FOUND.value, "temporary": False}.items() <= res_data.items()
 
 
 async def test_data_gets_cached(client: TestClient) -> None:

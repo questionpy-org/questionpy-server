@@ -21,6 +21,7 @@ from questionpy_server.web.app import QPyServer
 from questionpy_server.web.errors import (
     InvalidPackageError,
     InvalidRequestError,
+    PackageNotFoundError,
 )
 
 _P = ParamSpec("_P")
@@ -168,7 +169,7 @@ async def _get_package_from_request(request: web.Request) -> Package:
                 f"The package was not provided, is not cached and could not be found by its hash. "
                 f"('{uri_package_hash}')"
             )
-            raise InvalidRequestError(reason=msg, temporary=False)
+            raise PackageNotFoundError(reason=msg, temporary=False)
         msg = "The package is required but was not provided."
         raise InvalidRequestError(reason=msg, temporary=False)
 
@@ -284,6 +285,4 @@ def _validate_from_http(raw_body: str | bytes, param_class: type[_M]) -> _M:
     try:
         return param_class.model_validate_json(raw_body)
     except ValidationError as error:
-        # TODO: Remove double logging? (Here and in the errors mixin.)
-        web_logger.info("JSON does not match model: %s", error)
         raise InvalidRequestError(reason="Invalid JSON body", temporary=False) from error

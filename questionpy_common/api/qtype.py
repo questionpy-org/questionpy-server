@@ -16,7 +16,12 @@ if TYPE_CHECKING:
 
     from .question import QuestionInterface
 
-__all__ = ["InvalidQuestionStateError", "OptionsFormValidationError", "QuestionTypeInterface"]
+__all__ = [
+    "InvalidAttemptStateError",
+    "InvalidQuestionStateError",
+    "OptionsFormValidationError",
+    "QuestionTypeInterface",
+]
 
 
 class QuestionTypeInterface(BasePackageInterface, Protocol):
@@ -62,6 +67,10 @@ class OptionsFormValidationError(QPyBaseError):
         """There was at least one validation error."""
         self.errors = errors  # input element name -> error description
         super().__init__("Form input data could not be validated successfully.")
+
+
+class InvalidAttemptStateError(QPyBaseError):
+    """Error to raise when your package cannot parse the attempt state it is given."""
 
 
 class InvalidQuestionStateError(QPyBaseError):

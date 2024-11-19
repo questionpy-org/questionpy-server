@@ -1037,18 +1037,24 @@ components:
             - QUEUE_WAITING_TIMEOUT
             - WORKER_TIMEOUT
             - OUT_OF_MEMORY
+            - INVALID_ATTEMPT_STATE
+            - INVALID_QUESTION_STATE
             - INVALID_PACKAGE
             - INVALID_REQUEST
             - PACKAGE_ERROR
+            - PACKAGE_NOT_FOUND
             - CALLBACK_API_ERROR
             - SERVER_ERROR
           description: >
             * `QUEUE_WAITING_TIMEOUT` - The request has been waiting too long in a job queue. Try again later.
             * `WORKER_TIMEOUT` - Question package did not answer in a reasonable amount of time.
             * `OUT_OF_MEMORY` - Question package reached its memory limit.
+            * `INVALID_ATTEMPT_STATE` - Invalid attempt state.
+            * `INVALID_QUESTION_STATE` - Invalid question state.
             * `INVALID_PACKAGE` - The package file is corrupt, the manifest is invalid or there is a checksum mismatch.
             * `INVALID_REQUEST` - Invalid request body.
             * `PACKAGE_ERROR` - An error occurred within the package.
+            * `PACKAGE_NOT_FOUND` - The package was not found.
             * `CALLBACK_API_ERROR` - An error occurred while contacting the LMS Callback API.
             * `SERVER_ERROR` - Some other server error has occurred.
         temporary:

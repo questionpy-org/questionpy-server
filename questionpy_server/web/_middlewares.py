@@ -4,38 +4,31 @@
 from collections.abc import Iterable
 
 from aiohttp import web
+from aiohttp.log import web_logger
 from aiohttp.typedefs import Handler, Middleware
 from aiohttp.web_request import Request
 from aiohttp.web_response import StreamResponse
 
-from questionpy_common.api.qtype import InvalidQuestionStateError
+import questionpy_server.web.errors as web_error
+from questionpy_common.api.qtype import InvalidAttemptStateError, InvalidQuestionStateError
 from questionpy_common.error import QPyBaseError
-from questionpy_server.web.errors import (
-    InvalidPackageError,
-    OutOfMemoryError,
-    PackageError,
-    QpyWebError,
-    ServerError,
-    WorkerTimeoutError,
-)
 from questionpy_server.worker.exception import (
     StaticFileSizeMismatchError,
     WorkerCPUTimeLimitExceededError,
-    WorkerNotRunningError,
     WorkerRealTimeLimitExceededError,
     WorkerStartError,
 )
 from questionpy_server.worker.runtime.messages import WorkerMemoryLimitExceededError, WorkerUnknownError
 
-exception_map: dict[type[QPyBaseError], type[QpyWebError]] = {
-    InvalidQuestionStateError: InvalidPackageError,
-    StaticFileSizeMismatchError: InvalidPackageError,
-    WorkerNotRunningError: InvalidPackageError,
-    WorkerCPUTimeLimitExceededError: WorkerTimeoutError,
-    WorkerRealTimeLimitExceededError: WorkerTimeoutError,
-    WorkerStartError: ServerError,
-    WorkerMemoryLimitExceededError: OutOfMemoryError,
-    WorkerUnknownError: PackageError,
+exception_map: dict[type[QPyBaseError], type[web_error.QpyWebError]] = {
+    InvalidAttemptStateError: web_error.InvalidAttemptStateError,
+    InvalidQuestionStateError: web_error.InvalidQuestionStateError,
+    StaticFileSizeMismatchError: web_error.InvalidPackageError,
+    WorkerCPUTimeLimitExceededError: web_error.WorkerTimeoutError,
+    WorkerRealTimeLimitExceededError: web_error.WorkerTimeoutError,
+    WorkerStartError: web_error.ServerError,
+    WorkerMemoryLimitExceededError: web_error.OutOfMemoryError,
+    WorkerUnknownError: web_error.PackageError,
 }
 
 
@@ -52,13 +45,14 @@ async def error_middleware(request: Request, handler: Handler) -> StreamResponse
     """
     try:
         return await handler(request)
-    except web.HTTPException:
-        raise
+    except web.HTTPException as e:
+        return e
     except tuple(exception_map.keys()) as e:
-        exception = exception_map[e.__class__]
-        raise exception(reason=e.reason, temporary=e.temporary) from e
-    except Exception as e:
-        raise ServerError(reason=e.__class__.__name__, temporary=True) from e
+        exception = exception_map[type(e)]
+        return exception(reason=e.reason, temporary=e.temporary)
+    except Exception:  # noqa: BLE001
+        web_logger.exception("There was an unexpected error while processing the request.")
+        return web_error.ServerError(reason="unknown", temporary=True)
 
 
 middlewares: Iterable[Middleware] = {error_middleware}

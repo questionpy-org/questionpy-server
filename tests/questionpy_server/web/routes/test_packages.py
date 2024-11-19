@@ -96,6 +96,10 @@ async def test_extract_info_faulty(client: TestClient) -> None:
 
     res = await client.request("POST", "/package-extract-info", data=payload)
 
-    assert res.status == 400
+    assert res.status == 422
     res_data = await res.json()
-    assert res_data == {"error_code": RequestErrorCode.INVALID_REQUEST.value, "temporary": False, "reason": None}
+    assert res_data == {
+        "error_code": RequestErrorCode.INVALID_REQUEST.value,
+        "temporary": False,
+        "reason": "The package is required but was not provided.",
+    }

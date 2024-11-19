@@ -1,6 +1,7 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
+import logging
 from typing import Any, NoReturn
 
 import pytest
@@ -130,10 +131,14 @@ class MyVeryCustomError(Exception): ...
     "error",
     [Exception(), Exception("Oh no!"), MyVeryCustomError("Oh no!")],
 )
-async def test_unexpected_exception_should_return_server_error(aiohttp_client: AiohttpClient, error: Exception) -> None:
+async def test_unexpected_exception_should_return_server_error(
+    aiohttp_client: AiohttpClient, caplog: pytest.LogCaptureFixture, error: Exception
+) -> None:
     server = error_server(error)
     client = await aiohttp_client(server)
-    response = await client.get("")
+
+    with caplog.at_level(logging.ERROR):
+        response = await client.get("")
 
     assert response.status == 500
     data = await response.json()
@@ -142,6 +147,12 @@ async def test_unexpected_exception_should_return_server_error(aiohttp_client: A
         == {
             "error_code": RequestErrorCode.SERVER_ERROR.value,
             "temporary": True,
-            "reason": error.__class__.__name__,
+            "reason": "unknown",
         }.items()
     )
+
+    assert len(caplog.record_tuples) == 1
+    [(logger_name, log_level, message)] = caplog.record_tuples
+    assert logger_name == "aiohttp.web"
+    assert "unexpected error" in message
+    assert log_level == logging.ERROR
