@@ -57,25 +57,29 @@ class ImportablePackage(ABC, Package):
         return main_module.init(*(self, env)[: len(signature.parameters)])
 
 
-class ZipBasedPackage(ZipFile, ImportablePackage):
+class ZipBasedPackage(ImportablePackage):
     """A 'regular', zip-formatted QuestionPy package."""
 
     def __init__(self, path: Path):
-        super().__init__(path, "r")
-        self.path = path
+        self._path = path
+        self._zip_file = ZipFile(path)
 
     @cached_property
     def manifest(self) -> Manifest:
         """Load QuestionPy manifest from package."""
-        data = self.read(f"{DIST_DIR}/{MANIFEST_FILENAME}")
+        data = self._zip_file.read(f"{DIST_DIR}/{MANIFEST_FILENAME}")
         return Manifest.model_validate_json(data)
+
+    @property
+    def path(self) -> Path:
+        return self._path
 
     def get_path(self, path: str) -> Traversable:
         # Intuitively, a path beginning with '/' should be absolute within the package, but ZipFile behaves differently.
         path = path.lstrip("/")
 
         # According to the docs, zipfile.Path implements Traversable.
-        return cast(Traversable, zipfile.Path(self, path))
+        return cast(Traversable, zipfile.Path(self._zip_file, path))
 
     def setup_imports(self) -> None:
         for new_path in (
