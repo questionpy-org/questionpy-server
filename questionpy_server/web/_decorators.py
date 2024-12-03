@@ -9,7 +9,6 @@ from typing import Concatenate, NamedTuple, ParamSpec, TypeAlias, TypeVar
 
 from aiohttp import BodyPartReader, web
 from aiohttp.log import web_logger
-from aiohttp.web_exceptions import HTTPBadRequest
 from pydantic import BaseModel, ValidationError
 
 from questionpy_common import constants
@@ -17,15 +16,13 @@ from questionpy_server.cache import CacheItemTooLargeError
 from questionpy_server.hash import HashContainer
 from questionpy_server.models import MainBaseModel
 from questionpy_server.package import Package
-from questionpy_server.web._errors import (
-    MainBodyMissingError,
-    PackageHashMismatchError,
-    PackageMissingByHashError,
-    PackageMissingWithoutHashError,
-    QuestionStateMissingError,
-)
 from questionpy_server.web._utils import read_part
 from questionpy_server.web.app import QPyServer
+from questionpy_server.web.errors import (
+    InvalidPackageError,
+    InvalidRequestError,
+    PackageNotFoundError,
+)
 
 _P = ParamSpec("_P")
 _HandlerFunc: TypeAlias = Callable[Concatenate[web.Request, _P], Awaitable[web.StreamResponse]]
@@ -102,7 +99,8 @@ def ensure_question_state(handler: _HandlerFunc, *, param: inspect.Parameter | N
         if parts.question_state is not None:
             kwargs[param.name] = parts.question_state
         elif param.default is Parameter.empty:
-            raise QuestionStateMissingError
+            _msg = "A question state part is required but was not provided."
+            raise InvalidRequestError(reason=_msg)
 
         return await handler(request, *args, **kwargs)
 
@@ -133,7 +131,8 @@ def ensure_main_body(handler: _HandlerFunc, *, param: inspect.Parameter | None =
         parts = await _read_body_parts(request)
 
         if parts.main is None:
-            raise MainBodyMissingError
+            _msg = "The main body is required but was not provided."
+            raise InvalidRequestError(reason=_msg)
 
         kwargs[param.name] = _validate_from_http(parts.main, param.annotation)
         return await handler(request, *args, **kwargs)
@@ -148,7 +147,11 @@ async def _get_package_from_request(request: web.Request) -> Package:
     parts = await _read_body_parts(request)
 
     if parts.package and uri_package_hash and uri_package_hash != parts.package.hash:
-        raise PackageHashMismatchError(uri_package_hash, parts.package.hash)
+        msg = (
+            f"The request URI specifies a package with hash '{uri_package_hash}', but the sent package has a hash of"
+            f" '{parts.package.hash}'."
+        )
+        raise InvalidPackageError(reason=msg)
 
     package = None
     if uri_package_hash:
@@ -162,8 +165,13 @@ async def _get_package_from_request(request: web.Request) -> Package:
 
     if not package:
         if uri_package_hash:
-            raise PackageMissingByHashError(uri_package_hash)
-        raise PackageMissingWithoutHashError
+            msg = (
+                f"The package was not provided, is not cached and could not be found by its hash. "
+                f"('{uri_package_hash}')"
+            )
+            raise PackageNotFoundError(reason=msg, temporary=False)
+        msg = "The package is required but was not provided."
+        raise InvalidRequestError(reason=msg)
 
     return package
 
@@ -277,5 +285,5 @@ def _validate_from_http(raw_body: str | bytes, param_class: type[_M]) -> _M:
     try:
         return param_class.model_validate_json(raw_body)
     except ValidationError as error:
-        web_logger.info("JSON does not match model: %s", error)
-        raise HTTPBadRequest(reason="Invalid JSON Body") from error
+        msg = "Invalid JSON body"
+        raise InvalidRequestError(reason=msg) from error

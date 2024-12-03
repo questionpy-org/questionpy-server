@@ -12,7 +12,7 @@ from aiohttp.test_utils import TestClient
 from pydantic import TypeAdapter
 
 from questionpy_server.collector.local_collector import LocalCollector
-from questionpy_server.models import PackageVersionInfo, PackageVersionsInfo
+from questionpy_server.models import PackageVersionInfo, PackageVersionsInfo, RequestErrorCode
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.web.app import QPyServer
 from tests.conftest import PACKAGE
@@ -96,5 +96,10 @@ async def test_extract_info_faulty(client: TestClient) -> None:
 
     res = await client.request("POST", "/package-extract-info", data=payload)
 
-    assert res.status == 400
-    assert res.reason == "PackageMissingWithoutHashError"
+    assert res.status == 422
+    res_data = await res.json()
+    assert res_data == {
+        "error_code": RequestErrorCode.INVALID_REQUEST.value,
+        "temporary": False,
+        "reason": "The package is required but was not provided.",
+    }

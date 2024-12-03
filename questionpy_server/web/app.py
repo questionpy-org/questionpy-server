@@ -11,6 +11,7 @@ from questionpy_server import __version__
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector import PackageCollection
 from questionpy_server.settings import Settings
+from questionpy_server.web._middlewares import middlewares
 from questionpy_server.worker.pool import WorkerPool
 
 
@@ -22,7 +23,7 @@ class QPyServer:
         from questionpy_server.web._routes import routes  # noqa: PLC0415
 
         self.settings: Settings = settings
-        self.web_app = web.Application(client_max_size=settings.webservice.max_main_size)
+        self.web_app = web.Application(client_max_size=settings.webservice.max_main_size, middlewares=middlewares)
         self.web_app.add_routes(routes)
         self.web_app[self.APP_KEY] = self
 

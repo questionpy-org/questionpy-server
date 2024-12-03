@@ -71,11 +71,7 @@ paths:
                     $ref: "#/components/schemas/FormData"
                 required: [ definition, form_data ]
         404:
-          description: Package or question_state not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundStatus"
+          description: Package not found.
         500:
           description: Error occurred.
           content:
@@ -120,11 +116,7 @@ paths:
               schema:
                 type: object
         404:
-          description: Package or question_state not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundStatus"
+          description: Package not found.
         500:
           description: Error occurred.
           content:
@@ -164,11 +156,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/QuestionStateMigrationError"
         404:
-          description: Package or question_state not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundStatus"
+          description: Package not found.
         500:
           description: Error occurred.
           content:
@@ -202,11 +190,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Question"
         404:
-          description: Package or question_state not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundStatus"
+          description: Package not found.
         500:
           description: Error occurred.
           content:
@@ -239,11 +223,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/AttemptStarted"
         404:
-          description: Package or question_state not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundStatus"
+          description: Package not found.
         500:
           description: Error occurred.
           content:
@@ -276,11 +256,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Attempt"
         404:
-          description: Package or question_state not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundStatus"
+          description: Package not found.
         500:
           description: Error occurred.
           content:
@@ -325,11 +301,7 @@ paths:
                     description: Async scoring job uuid.
                 required: [ scoring_job_uuid ]
         404:
-          description: Package or question_state not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundStatus"
+          description: Package not found.
         500:
           description: Error occurred.
           content:
@@ -396,17 +368,13 @@ paths:
             schema:
               $ref: "#/components/schemas/RequestBaseData"
       responses:
-        "200":
+        200:
           description: Static file data
           content:
             "*/*": {}
-        "404":
+        404:
           description: Package or its static file not found.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/NotFoundStatus"
-        "500":
+        500:
           description: Error occurred.
           content:
             application/json:
@@ -1069,18 +1037,24 @@ components:
             - QUEUE_WAITING_TIMEOUT
             - WORKER_TIMEOUT
             - OUT_OF_MEMORY
+            - INVALID_ATTEMPT_STATE
+            - INVALID_QUESTION_STATE
             - INVALID_PACKAGE
             - INVALID_REQUEST
             - PACKAGE_ERROR
+            - PACKAGE_NOT_FOUND
             - CALLBACK_API_ERROR
             - SERVER_ERROR
           description: >
             * `QUEUE_WAITING_TIMEOUT` - The request has been waiting too long in a job queue. Try again later.
             * `WORKER_TIMEOUT` - Question package did not answer in a reasonable amount of time.
             * `OUT_OF_MEMORY` - Question package reached its memory limit.
+            * `INVALID_ATTEMPT_STATE` - Invalid attempt state.
+            * `INVALID_QUESTION_STATE` - Invalid question state.
             * `INVALID_PACKAGE` - The package file is corrupt, the manifest is invalid or there is a checksum mismatch.
             * `INVALID_REQUEST` - Invalid request body.
             * `PACKAGE_ERROR` - An error occurred within the package.
+            * `PACKAGE_NOT_FOUND` - The package was not found.
             * `CALLBACK_API_ERROR` - An error occurred while contacting the LMS Callback API.
             * `SERVER_ERROR` - Some other server error has occurred.
         temporary:
@@ -1092,19 +1066,6 @@ components:
           default: null
           description: Optional human-readable reason for the error.
       required: [ error_code, temporary ]
-
-    NotFoundStatus:
-      type: object
-      properties:
-        what:
-          type: string
-          enum:
-            - PACKAGE
-            - QUESTION_STATE
-          description: >
-            * `PACKAGE` - Could not find the requested package.
-            * `QUESTION_STATE` - Could not find the question_state.
-      required: [ what ]
 
     QuestionStateMigrationError:
       type: object

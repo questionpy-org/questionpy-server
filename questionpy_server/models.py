@@ -91,13 +91,26 @@ class AttemptScoreArguments(AttemptViewArguments):
     generate_hint: bool
 
 
-class NotFoundStatusWhat(Enum):
-    PACKAGE = "PACKAGE"
-    QUESTION_STATE = "QUESTION_STATE"
+class RequestErrorCode(Enum):
+    QUEUE_WAITING_TIMEOUT = "QUEUE_WAITING_TIMEOUT"
+    WORKER_TIMEOUT = "WORKER_TIMEOUT"
+    OUT_OF_MEMORY = "OUT_OF_MEMORY"
+    INVALID_ATTEMPT_STATE = "INVALID_ATTEMPT_STATE"
+    INVALID_QUESTION_STATE = "INVALID_QUESTION_STATE"
+    INVALID_PACKAGE = "INVALID_PACKAGE"
+    INVALID_REQUEST = "INVALID_REQUEST"
+    PACKAGE_ERROR = "PACKAGE_ERROR"
+    PACKAGE_NOT_FOUND = "PACKAGE_NOT_FOUND"
+    CALLBACK_API_ERROR = "CALLBACK_API_ERROR"
+    SERVER_ERROR = "SERVER_ERROR"
 
 
-class NotFoundStatus(BaseModel):
-    what: NotFoundStatusWhat
+class RequestError(BaseModel):
+    model_config = ConfigDict(use_enum_values=True)
+
+    error_code: RequestErrorCode
+    temporary: bool
+    reason: str | None = None
 
 
 class QuestionStateMigrationErrorCode(Enum):
@@ -112,7 +125,7 @@ class QuestionStateMigrationErrorCode(Enum):
 class QuestionStateMigrationError(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
-    code: QuestionStateMigrationErrorCode
+    error_code: QuestionStateMigrationErrorCode
     reason: str | None = None
 
 
