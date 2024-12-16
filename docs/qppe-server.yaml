@@ -1429,6 +1429,17 @@ components:
           minItems: 1
       required: [ kind, name, initial_elements, increment, elements ]
 
+    GeneratedIdElement:
+      type: object
+      description: Generates a unique ID which won't change across form saves.
+      properties:
+        kind:
+          type: string
+          enum: [ id ]
+        name:
+          $ref: "#/components/schemas/FormName"
+      required: [ kind, name ]
+
     FormElement:
       oneOf:
         - $ref: "#/components/schemas/StaticTextElement"
@@ -1440,6 +1451,7 @@ components:
         - $ref: "#/components/schemas/HiddenElement"
         - $ref: "#/components/schemas/GroupElement"
         - $ref: "#/components/schemas/RepetitionElement"
+        - $ref: "#/components/schemas/GeneratedIdElement"
 
     FormSection:
       type: object
