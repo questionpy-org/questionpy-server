@@ -14,6 +14,7 @@ __all__ = [
     "CheckboxGroupElement",
     "FormElement",
     "FormSection",
+    "GeneratedIdElement",
     "GroupElement",
     "HiddenElement",
     "Option",
@@ -167,6 +168,15 @@ class RepetitionElement(_BaseElement):
     """Elements that will be repeated."""
 
 
+class GeneratedIdElement(_BaseElement):
+    """Generates a unique ID which won't change across form saves.
+
+    Useful to distinguish repetitions without relying on their index, which may change when repetitions are removed.
+    """
+
+    kind: Literal["id"] = "id"
+
+
 FormElement: TypeAlias = Annotated[
     CheckboxElement
     | CheckboxGroupElement
@@ -174,6 +184,7 @@ FormElement: TypeAlias = Annotated[
     | HiddenElement
     | RadioGroupElement
     | RepetitionElement
+    | GeneratedIdElement
     | SelectElement
     | StaticTextElement
     | TextInputElement
