@@ -5,8 +5,9 @@ import logging
 from typing import Any, NoReturn
 
 import pytest
-from aiohttp import web
+from aiohttp import MultipartWriter, web
 from aiohttp.pytest_plugin import AiohttpClient
+from aiohttp.test_utils import TestClient
 from aiohttp.web_exceptions import HTTPBadRequest, HTTPException, HTTPMethodNotAllowed, HTTPNotFound
 
 from questionpy_common.api.qtype import InvalidQuestionStateError
@@ -30,6 +31,7 @@ from questionpy_server.worker.exception import (
     WorkerStartError,
 )
 from questionpy_server.worker.runtime.messages import WorkerMemoryLimitExceededError, WorkerUnknownError
+from tests.conftest import PACKAGE
 
 
 def error_server(error: Exception) -> web.Application:
@@ -156,3 +158,30 @@ async def test_unexpected_exception_should_return_server_error(
     assert logger_name == "aiohttp.web"
     assert "unexpected error" in message
     assert log_level == logging.ERROR
+
+
+async def test_invalid_options_form_data_error(client: TestClient) -> None:
+    with PACKAGE.path.open("rb") as package_fd, MultipartWriter("form-data") as writer:
+        part = writer.append(package_fd)
+        part.set_content_disposition("form-data", name="package")
+
+        part = writer.append_json({"form_data": {}})
+        part.set_content_disposition("form-data", name="main")
+
+        res = await client.post(
+            f"/packages/{PACKAGE.hash}/question",
+            data=writer,
+        )
+
+    assert res.status == 422
+    data = await res.json()
+    assert (
+        data.items()
+        >= {
+            "error_code": RequestErrorCode.INVALID_OPTIONS_FORM.value,
+            "temporary": False,
+            "reason": None,
+        }.items()
+    )
+
+    assert data["errors"].items() == {"my_hidden": "Field required", "my_repetition": "Field required"}.items()

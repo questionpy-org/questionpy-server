@@ -6,7 +6,7 @@ from typing import Any
 from aiohttp import web
 from aiohttp.log import web_logger
 
-from questionpy_server.models import RequestError, RequestErrorCode
+from questionpy_server.models import OptionsFormValidationError, RequestError, RequestErrorCode
 
 
 class _ExceptionMixin(web.HTTPException):
@@ -91,6 +91,19 @@ class InvalidRequestError(web.HTTPUnprocessableEntity, _ExceptionMixin):
                 error_code=RequestErrorCode.INVALID_REQUEST,
                 reason=reason,
                 temporary=False,
+            ),
+        )
+
+
+class InvalidOptionsFormError(web.HTTPUnprocessableEntity, _ExceptionMixin):
+    def __init__(self, *, reason: str | None, errors: dict[str, str]) -> None:
+        super().__init__(
+            "Invalid form data was provided",
+            OptionsFormValidationError(
+                error_code=RequestErrorCode.INVALID_OPTIONS_FORM,
+                reason=reason,
+                temporary=False,
+                errors=errors,
             ),
         )
 

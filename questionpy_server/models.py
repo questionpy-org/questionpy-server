@@ -99,6 +99,7 @@ class RequestErrorCode(Enum):
     INVALID_QUESTION_STATE = "INVALID_QUESTION_STATE"
     INVALID_PACKAGE = "INVALID_PACKAGE"
     INVALID_REQUEST = "INVALID_REQUEST"
+    INVALID_OPTIONS_FORM = "INVALID_OPTIONS_FORM"
     PACKAGE_ERROR = "PACKAGE_ERROR"
     PACKAGE_NOT_FOUND = "PACKAGE_NOT_FOUND"
     CALLBACK_API_ERROR = "CALLBACK_API_ERROR"
@@ -111,6 +112,10 @@ class RequestError(BaseModel):
     error_code: RequestErrorCode
     temporary: bool
     reason: str | None = None
+
+
+class OptionsFormValidationError(RequestError):
+    errors: dict[str, str]
 
 
 class QuestionStateMigrationErrorCode(Enum):
