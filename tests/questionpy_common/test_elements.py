@@ -11,19 +11,6 @@ from aiohttp.test_utils import TestClient
 from polyfactory.factories.pydantic_factory import ModelFactory
 from pydantic import BaseModel
 
-from questionpy_common.dev.factories import (
-    CheckboxElementFactory,
-    CheckboxGroupElementFactory,
-    FormSectionFactory,
-    GroupElementFactory,
-    HiddenElementFactory,
-    OptionFactory,
-    OptionsFormDefinitionFactory,
-    RadioGroupElementFactory,
-    SelectElementFactory,
-    StaticTextElementFactory,
-    TextInputElementFactory,
-)
 from questionpy_common.elements import (
     CanHaveConditions,
     CheckboxElement,
@@ -42,6 +29,20 @@ from questionpy_common.elements import (
 from questionpy_server.collector import PackageCollection
 from questionpy_server.models import RequestErrorCode
 from tests.conftest import get_file_hash, package_dir, test_data_path
+
+from .factories import (
+    CheckboxElementFactory,
+    CheckboxGroupElementFactory,
+    FormSectionFactory,
+    GroupElementFactory,
+    HiddenElementFactory,
+    OptionFactory,
+    OptionsFormDefinitionFactory,
+    RadioGroupElementFactory,
+    SelectElementFactory,
+    StaticTextElementFactory,
+    TextInputElementFactory,
+)
 
 _PACKAGE = package_dir / "package_1.qpy"
 _PACKAGE_HASH = get_file_hash(_PACKAGE)
