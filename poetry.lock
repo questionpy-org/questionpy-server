@@ -998,6 +998,23 @@ pytest-asyncio = ">=0.17.2"
 testing = ["coverage (==6.2)", "mypy (==0.931)"]
 
 [[package]]
+name = "pytest-archon"
+version = "0.0.6"
+description = "Rule your architecture like a real developer"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pytest-archon-0.0.6.tar.gz", hash = "sha256:5af260a7617fc0a9e8bcd7a62adc42ed1ad466e20ae128b218589f49f73b1bcf"},
+    {file = "pytest_archon-0.0.6-py3-none-any.whl", hash = "sha256:f49b6b1f33a541dda1cab8a733b93b8a712594a002f03283294a624d0b394e83"},
+]
+
+[package.dependencies]
+pytest = ">=7.2"
+
+[package.extras]
+dev = ["black", "check-manifest", "check-wheel-contents", "coverage", "flake8", "mypy", "pyroma"]
+
+[[package]]
 name = "pytest-asyncio"
 version = "0.25.2"
 description = "Pytest support for asyncio"
@@ -1274,4 +1291,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "a48b746d5585c54a0557001064e6e4a9d20cba95583dd6ee138cd3e2591cae43"
+content-hash = "4d43c84e98af22a97e6fcea4d829c7e095fa45133118f18c20ef97d757093642"
