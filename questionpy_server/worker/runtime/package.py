@@ -26,8 +26,8 @@ from questionpy_server.worker.runtime.package_location import (
 
 
 class NoInitFunctionError(Exception):
-    def __init__(self, module: ModuleType) -> None:
-        super().__init__(f"The module '{module.__name__}' contains no 'init' function")
+    def __init__(self, module: ModuleType, init_function_name: str) -> None:
+        super().__init__(f"The module '{module.__name__}' contains no '{init_function_name}' function")
 
 
 class ImportablePackage(ABC, Package):
@@ -51,7 +51,7 @@ class ImportablePackage(ABC, Package):
             main_module = import_module(f"{self.manifest.namespace}.{self.manifest.short_name}")
 
         if not hasattr(main_module, "init") or not callable(main_module.init):
-            raise NoInitFunctionError(main_module)
+            raise NoInitFunctionError(main_module, "init")
 
         signature = inspect.signature(main_module.init)
         return main_module.init(*(self, env)[: len(signature.parameters)])
@@ -150,7 +150,7 @@ class FunctionBasedPackage(ImportablePackage):
         main_module = import_module(self.module_name)
         init_function = getattr(main_module, self.function_name, None)
         if not init_function or not callable(init_function):
-            raise NoInitFunctionError(main_module)
+            raise NoInitFunctionError(main_module, self.function_name)
 
         signature = inspect.signature(init_function)
         return init_function(*(self, env)[: len(signature.parameters)])
