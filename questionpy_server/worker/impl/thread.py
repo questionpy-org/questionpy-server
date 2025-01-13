@@ -51,6 +51,13 @@ class _WorkerThread(threading.Thread):
 
             sys.path = original_path
             for module_name in sys.modules.keys() - original_module_names:
+                if getattr(sys.modules[module_name], "__loader__", None) is None:
+                    log.debug(
+                        "Not unloading '%s', as it doesn't have a '__loader__' attribute and was probably added "
+                        "manually.",
+                        sys.modules[module_name].__name__,
+                    )
+                    continue
                 # Having reset the path, this forces questionpy and any package modules to be reloaded upon next import.
                 del sys.modules[module_name]
 
