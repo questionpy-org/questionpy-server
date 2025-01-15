@@ -45,14 +45,14 @@ async def error_middleware(request: Request, handler: Handler) -> StreamResponse
     """
     try:
         return await handler(request)
-    except web.HTTPException as e:
-        return e
+    except web.HTTPException:
+        raise
     except tuple(exception_map.keys()) as e:
         exception = exception_map[type(e)]
-        return exception(reason=e.reason, temporary=e.temporary)
-    except Exception:  # noqa: BLE001
+        raise exception(reason=e.reason, temporary=e.temporary) from e
+    except Exception as e:
         web_logger.exception("There was an unexpected error while processing the request.")
-        return web_error.ServerError(reason="unknown", temporary=True)
+        raise web_error.ServerError(reason="unknown", temporary=True) from e
 
 
 middlewares: Iterable[Middleware] = {error_middleware}
