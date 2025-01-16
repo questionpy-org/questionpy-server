@@ -130,7 +130,7 @@ class WorkerManager:
 
         nssn = PackageNamespaceAndShortName(package.manifest.namespace, package.manifest.short_name)
         self._loaded_packages[nssn] = package
-        return LoadQPyPackage.Response()
+        return LoadQPyPackage.Response(nssn=nssn)
 
     def on_msg_get_qpy_package_manifest(self, msg: GetQPyPackageManifest) -> MessageToServer:
         if not self._env:

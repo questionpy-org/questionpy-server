@@ -63,13 +63,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  definition:
-                    $ref: "#/components/schemas/OptionsFormDefinition"
-                  form_data:
-                    $ref: "#/components/schemas/FormData"
-                required: [ definition, form_data ]
+                $ref: "#/components/schemas/Options"
         404:
           description: Package not found.
         500:
@@ -591,6 +585,17 @@ components:
             - OPT_1
             - OPT_2
 
+    Options:
+      allOf:
+        - type: object
+          properties:
+            definition:
+              $ref: "#/components/schemas/OptionsFormDefinition"
+            form_data:
+              $ref: "#/components/schemas/FormData"
+          required: [ definition, form_data ]
+        - $ref: '#/components/schemas/PackageDependencies'
+
     RequestBaseData:
       type: object
       properties:
@@ -757,98 +762,119 @@ components:
           required: [ variant ]
 
     Attempt:
-      type: object
-      properties:
-        variant:
-          type: integer
-          minimum: 1
-          description: Which variant of this question, between 1 and question.num_variants.
-        question_summary:
-          type: string
-          nullable: true
-          default: null
-          description: Plain-text summary of the question.
-        right_answer_summary:
-          type: string
-          nullable: true
-          default: null
-          description: Plain-text summary of the right answer.
-        ui:
-          type: object
+      allOf:
+        - type: object
           properties:
-            fields:
-              type: array
-              items:
-                type: object
-                properties:
-                  name:
-                    type: string
-                  type:
-                    type: string
-                    description: Type of the input field.
-                  default:
-                    type: string
-                    nullable: true
-                  validation_regex:
-                    type: string
-                    nullable: true
-                    description: Validate response with this regex. If the response does not match, the response might not be scorable.
-                  required:
-                    type: boolean
-                    description: This field is required. Otherwise the response will not be scorable.
-                  correct_response:
-                    type: string
-                    nullable: true
-                required: [ name, type, default, validation_regex, required, correct_response ]
-            text:
-              type: string
-              format: text/html
-              description: Answer input area
-              example: '<label>Enter your answer: <input type="text"/></label>'
-            include_inline_css:
+            variant:
+              type: integer
+              minimum: 1
+              description: Which variant of this question, between 1 and question.num_variants.
+            question_summary:
               type: string
               nullable: true
-            include_css_file:
+              default: null
+              description: Plain-text summary of the question.
+            right_answer_summary:
               type: string
               nullable: true
-            include_javascript_modules:
-              type: array
-              default: [ ]
-              items:
-                type: string
-            call_javascript:
-              type: array
-              default: [ ]
-              items:
-                type: object
-                properties:
-                  module:
-                    type: string
-                  function:
-                    type: string
-                  args:
-                    type: string
-                required: [ module, function, args ]
-            files:
-              type: array
-              default: [ ]
-              items:
-                type: object
-                properties:
-                  name:
-                    type: string
-                    description: file name
-                  data:
-                    type: string
-                    format: base64
-                    description: file data
-                  mime_type:
-                    type: string
-                    nullable: true
-                required: [ name, data, mime_type ]
-          required: [ fields, text ]
-          readOnly: true
-      required: [ variant, ui ]
+              default: null
+              description: Plain-text summary of the right answer.
+            ui:
+              type: object
+              properties:
+                fields:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      type:
+                        type: string
+                        description: Type of the input field.
+                      default:
+                        type: string
+                        nullable: true
+                      validation_regex:
+                        type: string
+                        nullable: true
+                        description: Validate response with this regex. If the response does not match, the response might not be scorable.
+                      required:
+                        type: boolean
+                        description: This field is required. Otherwise the response will not be scorable.
+                      correct_response:
+                        type: string
+                        nullable: true
+                    required: [ name, type, default, validation_regex, required, correct_response ]
+                text:
+                  type: string
+                  format: text/html
+                  description: Answer input area
+                  example: '<label>Enter your answer: <input type="text"/></label>'
+                include_inline_css:
+                  type: string
+                  nullable: true
+                include_css_file:
+                  type: string
+                  nullable: true
+                javascript_calls:
+                  type: array
+                  default: [ ]
+                  items:
+                    type: object
+                    properties:
+                      module:
+                        type: string
+                        pattern: '^[a-zA-Z0-9_$/@.]+$'
+                        description: JS module name like @[package namespace]/[package short name]/[module].js
+                      function:
+                        type: string
+                        pattern: '^[a-zA-Z0-9_$]+$'
+                        description: Name of a callable value within the JS module.
+                      data:
+                        type: string
+                        nullable: true
+                        description: JSON data given as argument to the function
+                      if_role:
+                        type: string
+                        nullable: true
+                        description: Function is called only if the user has this role.
+                        enum:
+                          - TEACHER
+                          - DEVELOPER
+                          - SCORER
+                          - PROCTOR
+                      if_feedback_type:
+                        type: string
+                        nullable: true
+                        description: Function is called only if the user is allowed to view this type of feedback.
+                        enum:
+                          - SPECIFIC_FEEDBACK
+                          - GENERAL_FEEDBACK
+                          - RIGHT_ANSWER
+                          - HINT
+                    required: [ module, function, data, if_role, if_feedback_type ]
+                files:
+                  type: array
+                  default: [ ]
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: file name
+                      data:
+                        type: string
+                        format: base64
+                        description: file data
+                      mime_type:
+                        type: string
+                        nullable: true
+                    required: [ name, data, mime_type ]
+              required: [ fields, text ]
+              readOnly: true
+          required: [ variant, ui ]
+        - $ref: "#/components/schemas/PackageDependencies"
 
     AttemptStarted:
       allOf:
@@ -998,6 +1024,28 @@ components:
               description: Give specific feedback
           required: [ scoring_state, scoring_code, score ]
         - $ref: "#/components/schemas/Attempt"
+
+    PackageDependencies:
+      type: object
+      properties:
+        package_dependencies:
+          type: array
+          items:
+            type: object
+            properties:
+              namespace:
+                type: string
+                description: Namespace of a package.
+              short_name:
+                type: string
+                description: Short name of a package.
+              hash:
+                type: string
+                description: SHA256 hash of a package.
+            required: [ namespace, short_name, hash ]
+          description: Listing of all QuestionPy packages that were involved for this response. This information will
+            be used by the LMS to resolve a QPy-URI and other references.
+      required: [ package_dependencies ]
 
     AttemptAsyncScoringStatus:
       type: object

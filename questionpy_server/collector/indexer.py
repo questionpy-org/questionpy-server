@@ -128,7 +128,9 @@ class Indexer:
                 # Create new package...
                 if isinstance(path_or_manifest, Path):
                     # ...from path.
-                    async with self._worker_pool.get_worker(ZipPackageLocation(path_or_manifest), 0, None) as worker:
+                    async with self._worker_pool.get_worker(
+                        ZipPackageLocation(path_or_manifest, package_hash), 0, None
+                    ) as worker:
                         manifest = await worker.get_manifest()
                     package = Package(package_hash, manifest, source, path_or_manifest)
                 else:

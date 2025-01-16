@@ -17,7 +17,7 @@ from questionpy_common.constants import DIST_DIR
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestUser
 from questionpy_common.manifest import Manifest, PackageFile
-from questionpy_server.models import QuestionCreated
+from questionpy_server.models import LoadedPackage, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import PackageFileData, Worker, WorkerState
 from questionpy_server.worker.exception import (
@@ -101,10 +101,14 @@ class BaseWorker(Worker, ABC):
                 InitWorker.Response,
                 self._init_worker_timeout,
             )
-            await self.send_and_wait_for_response(
+            loaded = await self.send_and_wait_for_response(
                 LoadQPyPackage(location=self.package, main=True),
                 LoadQPyPackage.Response,
                 self._load_qpy_package_timeout,
+            )
+            packagehash = self.package.hash if isinstance(self.package, ZipPackageLocation) else None
+            self.loaded_packages.append(
+                LoadedPackage(namespace=loaded.nssn.namespace, short_name=loaded.nssn.short_name, hash=packagehash)
             )
         except BaseWorkerError as e:
             msg = "Worker has exited before or during initialization."

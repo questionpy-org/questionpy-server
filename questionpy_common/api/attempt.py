@@ -2,7 +2,7 @@
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Annotated
 
 from pydantic import BaseModel, Field
@@ -17,7 +17,13 @@ __all__ = [
     "AttemptUi",
     "CacheControl",
     "ClassifiedResponse",
+    "DisplayRole",
+    "FeedbackType",
+    "JsModuleCall",
     "ScoreModel",
+    "ScoredInputModel",
+    "ScoredInputState",
+    "ScoredSubquestionModel",
     "ScoringCode",
 ]
 
@@ -26,6 +32,33 @@ class CacheControl(Enum):
     SHARED_CACHE = "SHARED_CACHE"
     PRIVATE_CACHE = "PRIVATE_CACHE"
     NO_CACHE = "NO_CACHE"
+
+
+class DisplayRole(StrEnum):
+    DEVELOPER = "DEVELOPER"
+    PROCTOR = "PROCTOR"
+    SCORER = "SCORER"
+    TEACHER = "TEACHER"
+
+
+class FeedbackType(StrEnum):
+    GENERAL_FEEDBACK = "GENERAL_FEEDBACK"
+    SPECIFIC_FEEDBACK = "SPECIFIC_FEEDBACK"
+    RIGHT_ANSWER = "RIGHT_ANSWER"
+    HINT = "HINT"
+
+
+class JsModuleCall(BaseModel):
+    module: Annotated[str, Field(pattern=r"^[a-zA-Z0-9_$/@.]+$")]
+    """JS module name like @[package namespace]/[package short name]/[module].js"""
+    function: Annotated[str, Field(pattern=r"^[a-zA-Z0-9_$]+$")]
+    """Name of a callable value within the JS module."""
+    data: str | None
+    """JSON data given as argument to the function"""
+    if_role: DisplayRole | None
+    """Function is only called if the user has this role."""
+    if_feedback_type: FeedbackType | None
+    """Function is only called if the user is allowed to view this feedback type."""
 
 
 class AttemptFile(BaseModel):
@@ -47,6 +80,7 @@ class AttemptUi(BaseModel):
     placeholders: dict[str, str] = {}
     """Names and values of the ``<?p`` placeholders that appear in content."""
     css_files: list[str] = []
+    javascript_calls: list[JsModuleCall] = []
     files: dict[str, AttemptFile] = {}
     cache_control: CacheControl = CacheControl.PRIVATE_CACHE
 

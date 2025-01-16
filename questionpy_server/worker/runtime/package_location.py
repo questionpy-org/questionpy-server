@@ -14,10 +14,11 @@ class ZipPackageLocation:
     """The path to a 'regular', zip-formatted QuestionPy package."""
 
     path: Path
+    hash: str
     kind: Literal["zip"] = field(default="zip", init=False)
 
     def __str__(self) -> str:
-        return str(self.path)
+        return f"{self.path} (sha256:{self.hash})"
 
 
 @dataclass

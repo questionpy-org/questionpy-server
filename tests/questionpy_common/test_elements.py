@@ -27,8 +27,9 @@ from questionpy_common.elements import (
     is_form_element,
 )
 from questionpy_server.collector import PackageCollection
+from questionpy_server.hash import calculate_hash
 from questionpy_server.models import RequestErrorCode
-from tests.conftest import get_file_hash, package_dir, test_data_path
+from tests.conftest import package_dir, test_data_path
 
 from .factories import (
     CheckboxElementFactory,
@@ -45,7 +46,7 @@ from .factories import (
 )
 
 _PACKAGE = package_dir / "package_1.qpy"
-_PACKAGE_HASH = get_file_hash(_PACKAGE)
+_PACKAGE_HASH = calculate_hash(_PACKAGE)
 
 _METHOD = "POST"
 _URL = f"packages/{_PACKAGE_HASH}/options"
