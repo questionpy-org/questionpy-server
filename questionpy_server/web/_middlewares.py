@@ -10,7 +10,7 @@ from aiohttp.web_request import Request
 from aiohttp.web_response import StreamResponse
 
 import questionpy_server.web.errors as web_error
-from questionpy_common.api.qtype import InvalidAttemptStateError, InvalidQuestionStateError
+from questionpy_common.api.qtype import InvalidAttemptStateError, InvalidQuestionStateError, OptionsFormValidationError
 from questionpy_common.error import QPyBaseError
 from questionpy_server.worker.exception import (
     StaticFileSizeMismatchError,
@@ -50,6 +50,8 @@ async def error_middleware(request: Request, handler: Handler) -> StreamResponse
     except tuple(exception_map.keys()) as e:
         exception = exception_map[type(e)]
         raise exception(reason=e.reason, temporary=e.temporary) from e
+    except OptionsFormValidationError as e:
+        raise web_error.InvalidOptionsFormError(reason=e.reason, errors=e.errors) from e
     except Exception as e:
         web_logger.exception("There was an unexpected error while processing the request.")
         raise web_error.ServerError(reason="unknown", temporary=True) from e

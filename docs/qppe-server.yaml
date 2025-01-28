@@ -106,7 +106,9 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/QuestionCreated"
-        400:
+        404:
+          description: Package not found.
+        422:
           description: Validation error
           headers:
             Content-Language:
@@ -114,9 +116,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-        404:
-          description: Package not found.
+                $ref: "#/components/schemas/OptionsFormValidationError"
         500:
           description: Error occurred.
           content:
@@ -1066,6 +1066,14 @@ components:
           default: null
           description: Optional human-readable reason for the error.
       required: [ error_code, temporary ]
+
+    OptionsFormValidationError:
+      allOf:
+        - $ref: "#/components/schemas/RequestError"
+        - type: object
+          properties:
+            errors:
+              type: object
 
     QuestionStateMigrationError:
       type: object
