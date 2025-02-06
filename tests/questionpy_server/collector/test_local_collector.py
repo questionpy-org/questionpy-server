@@ -302,3 +302,25 @@ async def test_package_filenames_get_swapped(tmp_path_factory: TempPathFactory) 
             # Packages should neither get registered in nor unregistered from the indexer.
             mock_register.assert_not_awaited()
             mock_unregister.assert_not_awaited()
+
+
+async def test_local_collector_is_resilient_to_faulty_packages(tmp_path_factory: TempPathFactory) -> None:
+    local_collector, directory = create_local_collector(tmp_path_factory)
+
+    invalid_package_content = b"this is a invalid package"
+    invalid_package_path = directory / "invalid.qpy"
+    invalid_package_path.write_bytes(invalid_package_content)
+
+    valid_package_path = Path(copy(PACKAGE.path, directory))
+    valid_package = Package(PACKAGE.hash, PACKAGE.manifest)
+
+    async with local_collector:
+        assert invalid_package_content not in local_collector.map.paths
+
+        # Valid files should still be registered.
+        await local_collector.update()
+        assert valid_package_path == await local_collector.get_path(valid_package)
+
+    # Corrupt package should not get removed or modified.
+    assert invalid_package_path.is_file()
+    assert invalid_package_path.read_bytes() == invalid_package_content

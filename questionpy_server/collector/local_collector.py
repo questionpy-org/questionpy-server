@@ -14,6 +14,7 @@ from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff,
 
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.hash import calculate_hash
+from questionpy_server.worker.runtime.messages import BaseWorkerError
 
 if TYPE_CHECKING:
     from questionpy_server.collector.indexer import Indexer
@@ -120,7 +121,7 @@ class LocalCollector(BaseCollector):
         self.directory: Path = directory
         self.map: PathToHash = PathToHash()
 
-        self._lock: Lock | None = None
+        self._lock = Lock()
         self._snapshot: DirectorySnapshot | None = None
         self._log = logging.getLogger("questionpy-server:local-collector")
 
@@ -162,15 +163,21 @@ class LocalCollector(BaseCollector):
                     if entry.is_file() and entry.name.endswith(".qpy"):
                         yield entry
 
-        async def add_package(pkg_hash: str, pkg_path: Path) -> None:
+        async def add_package(pkg_hash: str, pkg_path: Path) -> bool:
             """Adds a package to the map and registers it in the indexer.
 
             Args:
                 pkg_hash (str): The hash of the package.
                 pkg_path (Path): The path of the package.
             """
-            self.map.insert(pkg_hash, pkg_path)
-            await self.indexer.register_package(pkg_hash, pkg_path, self)
+            try:
+                await self.indexer.register_package(pkg_hash, pkg_path, self)
+                self.map.insert(pkg_hash, pkg_path)
+            except BaseWorkerError:
+                self._log.warning("'%s' is an invalid package. Skipping.", pkg_path)
+                self._log.debug("Following error was thrown.", exc_info=True)
+                return False
+            return True
 
         async def remove_package(pkg_path: Path) -> None:
             """Removes a package from the map and unregisters it from the indexer.
@@ -184,9 +191,6 @@ class LocalCollector(BaseCollector):
                 # There are no other packages with the same hash - unregister it.
                 await self.indexer.unregister_package(pkg_hash, self)
 
-        if not self._lock:
-            self._lock = Lock()
-
         async with self._lock:
             # If no snapshot exists, use EmptyDirectorySnapshot to get all files as created.
             old_snapshot = self._snapshot or EmptyDirectorySnapshot()
@@ -195,10 +199,13 @@ class LocalCollector(BaseCollector):
             )
             difference = DirectorySnapshotDiff(old_snapshot, new_snapshot)
 
+            corrupt_created_package = 0
+            corrupt_modified_package = 0
+
             for path in difference.files_created:
                 package_path = Path(ensure_str(path))
                 package_hash = await to_thread(calculate_hash, package_path)
-                await add_package(package_hash, package_path)
+                corrupt_created_package += not await add_package(package_hash, package_path)
 
             for path in difference.files_deleted:
                 package_path = Path(ensure_str(path))
@@ -208,7 +215,7 @@ class LocalCollector(BaseCollector):
                 package_path = Path(ensure_str(path))
                 package_hash = await to_thread(calculate_hash, package_path)
                 await remove_package(package_path)
-                await add_package(package_hash, package_path)
+                corrupt_modified_package += not await add_package(package_hash, package_path)
 
                 self._log.warning(
                     "Package %s was modified. This will cause unexpected behavior if the package is "
@@ -232,9 +239,9 @@ class LocalCollector(BaseCollector):
         if with_log:
             self._log.info(
                 "Updated packages: %d created, %d deleted, %d modified, %d moved.",
-                len(difference.files_created),
+                len(difference.files_created) - corrupt_created_package,
                 len(difference.files_deleted),
-                len(difference.files_modified),
+                len(difference.files_modified) - corrupt_modified_package,
                 len(difference.files_moved),
             )
 
