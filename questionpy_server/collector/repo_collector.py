@@ -56,8 +56,8 @@ class RepoCollector(CachedCollector):
                 len(self._index),
                 self._update_interval,
             )
-        except DownloadError as error:
-            self._log.error("Download failed on startup: %s", error)
+        except DownloadError:
+            self._log.exception("Download failed on startup.")
 
         # Create updater task even if the initial update failed.
         self._task = create_task(self._updater(), name=f"RepoCollector updater for {self._url}")
@@ -74,8 +74,8 @@ class RepoCollector(CachedCollector):
             try:
                 # TODO: retry after a failed update?
                 await self.update()
-            except DownloadError as error:
-                self._log.error("Download failed on update: %s", error)
+            except DownloadError:
+                self._log.exception("Download failed on update.")
 
     async def update(self, *, with_log: bool = True) -> None:
         new_meta = await self._repository.get_meta()
@@ -119,7 +119,7 @@ class RepoCollector(CachedCollector):
         try:
             package_bytes = await self._repository.get_package(repo_package)
         except DownloadError as error:
-            self._log.warning(error)
+            self._log.exception("Could not get the package.")
             raise FileNotFoundError from error
 
         return await self._cache.put(package.hash, package_bytes)
