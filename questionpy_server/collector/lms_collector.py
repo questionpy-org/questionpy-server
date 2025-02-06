@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector.abc import CachedCollector
+from questionpy_server.worker.runtime.messages import BaseWorkerError
 
 if TYPE_CHECKING:
     from questionpy_server.collector.indexer import Indexer
@@ -28,14 +29,20 @@ class LMSCollector(CachedCollector):
 
     async def start(self) -> None:
         count = 0
+        invalid_count = 0
         # We assume that existing packages in the cache are from an LMS as it has the most strict visibility i.e. the
         # package can only be accessed by the hash.
         for package_hash, file in self._cache.files.items():
-            await self.indexer.register_package(package_hash, file.path, self)
-            count += 1
+            try:
+                await self.indexer.register_package(package_hash, file.path, self)
+                count += 1
+            except BaseWorkerError:
+                invalid_count += 1
+                await self._cache.remove(package_hash)
 
         log = logging.getLogger("questionpy-server:lms-collector")
         log.info("Started with %s package(s).", count)
+        log.debug("Removed %s invalid package(s).", invalid_count)
 
     async def get_path(self, package: "Package") -> Path:
         return self._cache.get(package.hash)
@@ -46,4 +53,10 @@ class LMSCollector(CachedCollector):
             package_path = self._cache.get(package_container.hash)
         except FileNotFoundError:
             package_path = await self._cache.put(package_container.hash, package_container.data)
-        return await self.indexer.register_package(package_container.hash, package_path, self)
+
+        try:
+            return await self.indexer.register_package(package_container.hash, package_path, self)
+        except BaseWorkerError:
+            # Faulty package - remove the file.
+            await self._cache.remove(package_container.hash)
+            raise
