@@ -191,10 +191,10 @@ class Worker(ABC):
     async def get_static_file_index(self) -> dict[str, PackageFile]:
         """Returns the index of static files as declared in the package's manifest."""
 
+    @abstractmethod
     def get_loaded_packages(self, *, only_with_hash: bool = True) -> list[LoadedPackage]:
         """Get all loaded packages in the worker.
 
         Args:
             only_with_hash: Only return packages that have a hash (i.e. only ZIP packages).
         """
-        return [p for p in self.loaded_packages if p.hash is not None or not only_with_hash]

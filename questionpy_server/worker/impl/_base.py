@@ -332,6 +332,9 @@ class BaseWorker(Worker, ABC):
     async def get_static_file_index(self) -> dict[str, PackageFile]:
         return (await self.get_manifest()).static_files
 
+    def get_loaded_packages(self, *, only_with_hash: bool = True) -> list[LoadedPackage]:
+        return [p for p in self.loaded_packages if p.hash is not None or not only_with_hash]
+
 
 class LimitTimeUsageMixin(Worker, ABC):
     """Implements a CPU and real time usage limit for a worker.
