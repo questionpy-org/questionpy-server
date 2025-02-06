@@ -12,8 +12,9 @@ from questionpy_server import WorkerPool
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
-from questionpy_server.hash import HashContainer
+from questionpy_server.hash import HashContainer, calculate_hash
 from questionpy_server.package import Package
+from questionpy_server.worker.runtime.messages import BaseWorkerError
 from tests.conftest import PACKAGE
 
 
@@ -86,3 +87,35 @@ async def test_get_non_existing_file(tmp_path_factory: TempPathFactory) -> None:
 
     with pytest.raises(FileNotFoundError):
         await lms_collector.get_path(package)
+
+
+async def test_lms_collector_is_resilient_to_faulty_packages_on_start(tmp_path_factory: TempPathFactory) -> None:
+    lms_collector, cache = create_lms_collector(tmp_path_factory)
+
+    invalid_package = b"this is a invalid package"
+    file = cache.directory / f"{calculate_hash(invalid_package)}.qpy"
+    file.write_bytes(invalid_package)
+
+    valid_package = PACKAGE.path.read_bytes()
+    hash_container = HashContainer(valid_package, PACKAGE.hash)
+
+    async with lms_collector:
+        # The corrupt package should be removed from the cache.
+        assert not cache.contains(hash_container.hash)
+
+        # Valid packages can still be registered.
+        package = await lms_collector.put(hash_container)
+        assert cache.get(hash_container.hash) == await lms_collector.get_path(package)
+
+
+async def test_lms_collector_raises_error_on_faulty_package_on_put(tmp_path_factory: TempPathFactory) -> None:
+    lms_collector, cache = create_lms_collector(tmp_path_factory)
+
+    invalid_package = b"this is a invalid package"
+    hash_container = HashContainer(invalid_package, calculate_hash(invalid_package))
+
+    with pytest.raises(BaseWorkerError):
+        await lms_collector.put(hash_container)
+
+    # The corrupt package should be removed from the cache.
+    assert not cache.contains(hash_container.hash)
