@@ -2,7 +2,9 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import inspect
+import shutil
 import sys
+import tempfile
 import zipfile
 from abc import ABC, abstractmethod
 from functools import cached_property
@@ -95,6 +97,36 @@ class ZipBasedPackage(ImportablePackage):
     __str__ = __repr__
 
 
+class UnpackingZipBasedPackage(ImportablePackage):
+    def __init__(self, path: Path) -> None:
+        self._path = path
+        self._dir_package: DirBasedPackage | None = None
+
+    def _ensure_unpacked(self) -> "DirBasedPackage":
+        if not self._dir_package:
+            temp_dir = tempfile.mkdtemp()
+            with ZipFile(self._path) as zip_file:
+                zip_file.extractall(temp_dir)
+            self._dir_package = DirBasedPackage(Path(temp_dir) / DIST_DIR)
+
+        return self._dir_package
+
+    def setup_imports(self) -> None:
+        self._ensure_unpacked().setup_imports()
+
+    @property
+    def manifest(self) -> Manifest:
+        return self._ensure_unpacked().manifest
+
+    def get_path(self, path: str) -> Traversable:
+        return self._ensure_unpacked().get_path(path)
+
+    def __del__(self) -> None:
+        if self._dir_package:
+            shutil.rmtree(self._dir_package.path)
+            self._dir_package = None
+
+
 class DirBasedPackage(ImportablePackage):
     """A package's dist directory to be used directly."""
 
@@ -164,7 +196,7 @@ class FunctionBasedPackage(ImportablePackage):
 def load_package(location: PackageLocation) -> ImportablePackage:
     """Turn a pure :class:`PackageLocation` into an :class:`ImportablePackage` which can be imported and executed."""
     if isinstance(location, ZipPackageLocation):
-        return ZipBasedPackage(location.path)
+        return UnpackingZipBasedPackage(location.path)
     if isinstance(location, DirPackageLocation):
         return DirBasedPackage(location.path)
     if isinstance(location, FunctionPackageLocation):
