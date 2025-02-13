@@ -63,13 +63,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  definition:
-                    $ref: "#/components/schemas/OptionsFormDefinition"
-                  form_data:
-                    $ref: "#/components/schemas/FormData"
-                required: [ definition, form_data ]
+                $ref: "#/components/schemas/Options"
         404:
           description: Package not found.
         500:
@@ -591,6 +585,17 @@ components:
             - OPT_1
             - OPT_2
 
+    Options:
+      type: object
+      properties:
+        definition:
+          $ref: "#/components/schemas/OptionsFormDefinition"
+        form_data:
+          $ref: "#/components/schemas/FormData"
+        package_dependencies:
+          $ref: "#/components/schemas/PackageDependencies"
+      required: [ definition, form_data, package_dependencies ]
+
     RequestBaseData:
       type: object
       properties:
@@ -811,12 +816,7 @@ components:
             include_css_file:
               type: string
               nullable: true
-            include_javascript_modules:
-              type: array
-              default: [ ]
-              items:
-                type: string
-            call_javascript:
+            javascript_calls:
               type: array
               default: [ ]
               items:
@@ -824,11 +824,35 @@ components:
                 properties:
                   module:
                     type: string
+                    pattern: '^[a-zA-Z0-9_$/@.]+$'
+                    description: JS module name like @[package namespace]/[package short name]/[module].js
                   function:
                     type: string
-                  args:
+                    pattern: '^[a-zA-Z0-9_$]+$'
+                    description: Name of a callable value within the JS module.
+                  data:
                     type: string
-                required: [ module, function, args ]
+                    nullable: true
+                    description: JSON data given as argument to the function
+                  if_role:
+                    type: string
+                    nullable: true
+                    description: Function is called only if the user has this role.
+                    enum:
+                      - TEACHER
+                      - DEVELOPER
+                      - SCORER
+                      - PROCTOR
+                  if_feedback_type:
+                    type: string
+                    nullable: true
+                    description: Function is called only if the user is allowed to view this type of feedback.
+                    enum:
+                      - SPECIFIC_FEEDBACK
+                      - GENERAL_FEEDBACK
+                      - RIGHT_ANSWER
+                      - HINT
+                required: [ module, function, data, if_role, if_feedback_type ]
             files:
               type: array
               default: [ ]
@@ -848,7 +872,9 @@ components:
                 required: [ name, data, mime_type ]
           required: [ fields, text ]
           readOnly: true
-      required: [ variant, ui ]
+        package_dependencies:
+          $ref: "#/components/schemas/PackageDependencies"
+      required: [ variant, ui, package_dependencies ]
 
     AttemptStarted:
       allOf:
@@ -998,6 +1024,24 @@ components:
               description: Give specific feedback
           required: [ scoring_state, scoring_code, score ]
         - $ref: "#/components/schemas/Attempt"
+
+    PackageDependencies:
+      type: array
+      items:
+        type: object
+        properties:
+          namespace:
+            type: string
+            description: Namespace of a package.
+          short_name:
+            type: string
+            description: Short name of a package.
+          hash:
+            type: string
+            description: SHA256 hash of a package.
+        required: [ namespace, short_name, hash ]
+      description: Listing of all QuestionPy packages that were involved for this response. This information will
+        be used by the LMS to resolve a QPy-URI and other references.
 
     AttemptAsyncScoringStatus:
       type: object

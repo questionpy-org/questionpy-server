@@ -17,7 +17,7 @@ from questionpy_common.constants import DIST_DIR
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestUser
 from questionpy_common.manifest import Manifest, PackageFile
-from questionpy_server.models import QuestionCreated
+from questionpy_server.models import LoadedPackage, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import PackageFileData, Worker, WorkerState
 from questionpy_server.worker.exception import (
@@ -101,10 +101,14 @@ class BaseWorker(Worker, ABC):
                 InitWorker.Response,
                 self._init_worker_timeout,
             )
-            await self.send_and_wait_for_response(
+            loaded = await self.send_and_wait_for_response(
                 LoadQPyPackage(location=self.package, main=True),
                 LoadQPyPackage.Response,
                 self._load_qpy_package_timeout,
+            )
+            packagehash = self.package.hash if isinstance(self.package, ZipPackageLocation) else None
+            self.loaded_packages.append(
+                LoadedPackage(namespace=loaded.nssn.namespace, short_name=loaded.nssn.short_name, hash=packagehash)
             )
         except BaseWorkerError as e:
             msg = "Worker has exited before or during initialization."
@@ -327,6 +331,9 @@ class BaseWorker(Worker, ABC):
 
     async def get_static_file_index(self) -> dict[str, PackageFile]:
         return (await self.get_manifest()).static_files
+
+    def get_loaded_packages(self, *, only_with_hash: bool = True) -> list[LoadedPackage]:
+        return [p for p in self.loaded_packages if p.hash is not None or not only_with_hash]
 
 
 class LimitTimeUsageMixin(Worker, ABC):

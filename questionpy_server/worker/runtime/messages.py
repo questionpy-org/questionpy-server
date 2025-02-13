@@ -12,7 +12,7 @@ from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, Atte
 from questionpy_common.api.qtype import InvalidQuestionStateError, OptionsFormValidationError
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import RequestUser, WorkerResourceLimits
+from questionpy_common.environment import PackageNamespaceAndShortName, RequestUser, WorkerResourceLimits
 from questionpy_common.error import QPyBaseError
 from questionpy_common.manifest import Manifest
 from questionpy_server.worker.runtime.package_location import PackageLocation
@@ -113,6 +113,7 @@ class LoadQPyPackage(MessageToWorker):
         """Success message in return to LoadQPyPackage."""
 
         message_id: ClassVar[MessageIds] = MessageIds.LOADED_QPY_PACKAGE
+        nssn: PackageNamespaceAndShortName
 
 
 class GetQPyPackageManifest(MessageToWorker):

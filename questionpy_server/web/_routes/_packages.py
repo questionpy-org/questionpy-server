@@ -13,7 +13,6 @@ from questionpy_server.package import Package
 from questionpy_server.web._decorators import ensure_package, ensure_required_parts
 from questionpy_server.web._utils import pydantic_json_response
 from questionpy_server.web.app import QPyServer
-from questionpy_server.worker.runtime.package_location import ZipPackageLocation
 
 if TYPE_CHECKING:
     from questionpy_server.worker import Worker
@@ -47,14 +46,17 @@ async def post_options(
     """Get the options form definition that allow a question creator to customize a question."""
     qpyserver = request.app[QPyServer.APP_KEY]
 
-    package_path = await package.get_path()
+    location = await package.get_zip_package_location()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
         definition, form_data = await worker.get_options_form(
             RequestUser(["de", "en"]), question_state.decode() if question_state else None
         )
+        packages = worker.get_loaded_packages()
 
-    return pydantic_json_response(data=QuestionEditFormResponse(definition=definition, form_data=form_data))
+    return pydantic_json_response(
+        data=QuestionEditFormResponse(definition=definition, form_data=form_data, package_dependencies=packages)
+    )
 
 
 @package_routes.post(r"/packages/{package_hash:\w+}/question")
@@ -64,9 +66,9 @@ async def post_question(
 ) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
-    package_path = await package.get_path()
+    location = await package.get_zip_package_location()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
         question = await worker.create_question_from_options(
             RequestUser(["de", "en"]), question_state.decode() if question_state else None, data.form_data
         )

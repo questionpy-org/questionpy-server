@@ -7,12 +7,18 @@ from typing import TYPE_CHECKING
 from aiohttp import web
 
 from questionpy_common.environment import RequestUser
-from questionpy_server.models import AttemptScoreArguments, AttemptStartArguments, AttemptViewArguments
+from questionpy_server.models import (
+    AttemptResponse,
+    AttemptScoreArguments,
+    AttemptScoredResponse,
+    AttemptStartArguments,
+    AttemptStartedResponse,
+    AttemptViewArguments,
+)
 from questionpy_server.package import Package
 from questionpy_server.web._decorators import ensure_required_parts
 from questionpy_server.web._utils import pydantic_json_response
 from questionpy_server.web.app import QPyServer
-from questionpy_server.worker.runtime.package_location import ZipPackageLocation
 
 if TYPE_CHECKING:
     from questionpy_server.worker import Worker
@@ -27,12 +33,14 @@ async def post_attempt_start(
 ) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
-    package_path = await package.get_path()
+    location = await package.get_zip_package_location()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
         attempt = await worker.start_attempt(RequestUser(["de", "en"]), question_state.decode(), data.variant)
+        packages = worker.get_loaded_packages()
 
-    return pydantic_json_response(data=attempt, status=201)
+    resp = AttemptStartedResponse(**dict(attempt), package_dependencies=packages)
+    return pydantic_json_response(data=resp, status=201)
 
 
 @attempt_routes.post(r"/packages/{package_hash:\w+}/attempt/view")
@@ -42,9 +50,9 @@ async def post_attempt_view(
 ) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
-    package_path = await package.get_path()
+    location = await package.get_zip_package_location()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
         attempt = await worker.get_attempt(
             request_user=RequestUser(["de", "en"]),
             question_state=question_state.decode(),
@@ -52,8 +60,10 @@ async def post_attempt_view(
             scoring_state=data.scoring_state,
             response=data.response,
         )
+        packages = worker.get_loaded_packages()
 
-    return pydantic_json_response(data=attempt, status=201)
+    resp = AttemptResponse(**dict(attempt), package_dependencies=packages)
+    return pydantic_json_response(data=resp, status=201)
 
 
 @attempt_routes.post(r"/packages/{package_hash:\w+}/attempt/score")
@@ -63,9 +73,9 @@ async def post_attempt_score(
 ) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
-    package_path = await package.get_path()
+    location = await package.get_zip_package_location()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(ZipPackageLocation(package_path), 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
         attempt_scored = await worker.score_attempt(
             request_user=RequestUser(["de", "en"]),
             question_state=question_state.decode(),
@@ -73,5 +83,7 @@ async def post_attempt_score(
             scoring_state=data.scoring_state,
             response=data.response,
         )
+        packages = worker.get_loaded_packages()
 
-    return pydantic_json_response(data=attempt_scored, status=201)
+    resp = AttemptScoredResponse(**dict(attempt_scored), package_dependencies=packages)
+    return pydantic_json_response(data=resp, status=201)

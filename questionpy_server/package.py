@@ -12,6 +12,7 @@ from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.models import PackageVersionInfo
 from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.worker.runtime.package_location import ZipPackageLocation
 
 if TYPE_CHECKING:
     from questionpy_server.collector.abc import BaseCollector
@@ -152,3 +153,6 @@ class Package:
         if not (self._path and self._path.is_file()):
             self._path = await self.sources.get_path()
         return self._path
+
+    async def get_zip_package_location(self) -> ZipPackageLocation:
+        return ZipPackageLocation(await self.get_path(), self.hash)

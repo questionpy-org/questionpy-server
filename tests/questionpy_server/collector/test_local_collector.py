@@ -18,8 +18,9 @@ from questionpy_common.constants import MiB
 from questionpy_server import WorkerPool
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.local_collector import LocalCollector
+from questionpy_server.hash import calculate_hash
 from questionpy_server.package import Package
-from tests.conftest import PACKAGE, PACKAGE_2, get_file_hash
+from tests.conftest import PACKAGE, PACKAGE_2
 
 
 def create_local_collector(tmp_path_factory: TempPathFactory) -> tuple[LocalCollector, Path]:
@@ -115,7 +116,7 @@ async def test_package_exists_before_init(tmp_path_factory: TempPathFactory) -> 
         actual_package_path = await local_collector.get_path(package)
         assert actual_package_path.is_file()
         assert str(actual_package_path) == package_path
-        assert get_file_hash(actual_package_path) == package.hash
+        assert calculate_hash(actual_package_path) == package.hash
 
 
 async def test_package_gets_created(tmp_path_factory: TempPathFactory) -> None:

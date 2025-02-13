@@ -6,7 +6,6 @@ import mimetypes
 import tempfile
 from collections.abc import Iterable
 from dataclasses import dataclass
-from hashlib import sha256
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -14,8 +13,9 @@ import pytest
 from aiohttp.pytest_plugin import AiohttpClient
 from aiohttp.test_utils import TestClient
 
-from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, KiB, MiB
+from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, MiB
 from questionpy_common.manifest import PackageFile
+from questionpy_server.hash import calculate_hash
 from questionpy_server.settings import (
     CollectorSettings,
     GeneralSettings,
@@ -33,22 +33,13 @@ from questionpy_server.worker.pool import WorkerPool
 from questionpy_server.worker.runtime.package_location import DirPackageLocation, ZipPackageLocation
 
 
-def get_file_hash(path: Path) -> str:
-    hash_value = sha256()
-    with path.open("rb") as file:
-        while chunk := file.read(4 * KiB):
-            hash_value.update(chunk)
-    return hash_value.hexdigest()
-
-
 @dataclass
 class TestZipPackage(ZipPackageLocation):
     __test__ = False
 
     def __init__(self, path: Path):
-        super().__init__(path)
+        super().__init__(path, calculate_hash(path))
 
-        self.hash = get_file_hash(self.path)
         with ZipFile(self.path) as package:
             self.manifest = ComparableManifest.model_validate_json(package.read(f"{DIST_DIR}/{MANIFEST_FILENAME}"))
 

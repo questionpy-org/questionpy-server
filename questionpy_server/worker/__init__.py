@@ -12,7 +12,7 @@ from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, Atte
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_common.manifest import PackageFile
-from questionpy_server.models import QuestionCreated
+from questionpy_server.models import LoadedPackage, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
 from questionpy_server.worker.runtime.package_location import PackageLocation
@@ -58,6 +58,8 @@ class Worker(ABC):
         self.package = package
         self.limits = limits
         self.state = WorkerState.NOT_RUNNING
+        self.loaded_packages: list[LoadedPackage] = []
+        """All loaded packages in the worker."""
 
     @abstractmethod
     async def start(self) -> None:
@@ -188,3 +190,11 @@ class Worker(ABC):
     @abstractmethod
     async def get_static_file_index(self) -> dict[str, PackageFile]:
         """Returns the index of static files as declared in the package's manifest."""
+
+    @abstractmethod
+    def get_loaded_packages(self, *, only_with_hash: bool = True) -> list[LoadedPackage]:
+        """Get all loaded packages in the worker.
+
+        Args:
+            only_with_hash: Only return packages that have a hash (i.e. only ZIP packages).
+        """

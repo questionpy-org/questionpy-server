@@ -7,6 +7,7 @@ from typing import Annotated, Any
 
 from pydantic import BaseModel, ByteSize, ConfigDict, Field
 
+from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.manifest import PackageType
@@ -50,6 +51,12 @@ class PackageVersionsInfo(BaseModel):
     versions: list[PackageVersionSpecificInfo]
 
 
+class LoadedPackage(BaseModel):
+    namespace: str
+    short_name: str
+    hash: str | None
+
+
 class MainBaseModel(BaseModel):
     pass
 
@@ -58,7 +65,11 @@ class RequestBaseData(MainBaseModel):
     context: int | None = None
 
 
-class QuestionEditFormResponse(BaseModel):
+class PackageDependenciesModel(BaseModel):
+    package_dependencies: list[LoadedPackage]
+
+
+class QuestionEditFormResponse(PackageDependenciesModel):
     definition: OptionsFormDefinition
     form_data: dict[str, object]
 
@@ -89,6 +100,18 @@ class AttemptScoreArguments(AttemptViewArguments):
     response: dict[str, Any]
     responses: list[dict[str, object]] | None = None
     generate_hint: bool
+
+
+class AttemptStartedResponse(AttemptStartedModel, PackageDependenciesModel):
+    pass
+
+
+class AttemptResponse(AttemptModel, PackageDependenciesModel):
+    pass
+
+
+class AttemptScoredResponse(AttemptScoredModel, PackageDependenciesModel):
+    pass
 
 
 class RequestErrorCode(Enum):
