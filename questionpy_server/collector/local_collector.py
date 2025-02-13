@@ -20,6 +20,13 @@ if TYPE_CHECKING:
     from questionpy_server.package import Package
 
 
+def ensure_str(path: bytes | str) -> str:
+    """Ensure that a path is a string because the watchdog lib might return paths as bytes."""
+    if isinstance(path, bytes):
+        return path.decode()
+    return path
+
+
 class PathToHash:
     """A class that maps paths to hashes.
 
@@ -189,16 +196,16 @@ class LocalCollector(BaseCollector):
             difference = DirectorySnapshotDiff(old_snapshot, new_snapshot)
 
             for path in difference.files_created:
-                package_path = Path(path)
+                package_path = Path(ensure_str(path))
                 package_hash = await to_thread(calculate_hash, package_path)
                 await add_package(package_hash, package_path)
 
             for path in difference.files_deleted:
-                package_path = Path(path)
+                package_path = Path(ensure_str(path))
                 await remove_package(package_path)
 
             for path in difference.files_modified:
-                package_path = Path(path)
+                package_path = Path(ensure_str(path))
                 package_hash = await to_thread(calculate_hash, package_path)
                 await remove_package(package_path)
                 await add_package(package_hash, package_path)
@@ -213,8 +220,8 @@ class LocalCollector(BaseCollector):
             entries = []
             for old_path, new_path in difference.files_moved:
                 # Remove old path and save the package hash.
-                if existing_hash := self.map.pop(Path(old_path)):
-                    entries.append((existing_hash, Path(new_path)))
+                if existing_hash := self.map.pop(Path(ensure_str(old_path))):
+                    entries.append((existing_hash, Path(ensure_str(new_path))))
             for entry in entries:
                 # Insert package hash with new path.
                 self.map.insert(*entry)
