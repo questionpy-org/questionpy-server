@@ -96,7 +96,7 @@ class CheckboxElement(_BaseElement, CanHaveConditions, CanHaveHelp):
     """Default state of the checkbox."""
 
 
-class CheckboxGroupElement(_BaseElement):
+class CheckboxGroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     """Adds a 'Select all/none' button after multiple checkboxes."""
 
     kind: Literal["checkbox_group"] = "checkbox_group"
