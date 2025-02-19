@@ -60,7 +60,7 @@ class WorkerManager:
         self._connection: WorkerToServerConnection = server_connection
 
         self._worker_type: str | None = None
-        self._loaded_packages: dict[PackageNamespaceAndShortName, ImportablePackage] = {}
+        self._packages: dict[PackageNamespaceAndShortName, ImportablePackage] = {}
 
         self._limits: WorkerResourceLimits | None = None
 
@@ -110,13 +110,15 @@ class WorkerManager:
             self._raise_not_initialized(msg)
 
         package = load_package(msg.location)
-        package.setup_imports()
+
+        nssn = PackageNamespaceAndShortName(package.manifest.namespace, package.manifest.short_name)
+        self._packages[nssn] = package
 
         if msg.main:
             self._env = EnvironmentImpl(
                 type=self._worker_type,
                 limits=self._limits,
-                packages=self._loaded_packages,
+                packages=self._packages,
                 main_package=package,
                 _on_request_callbacks=self._on_request_callbacks,
             )
@@ -124,12 +126,12 @@ class WorkerManager:
         elif not self._env:
             self._raise_no_main_package_loaded(msg)
 
+        package.setup_imports()
+
         package_interface = package.init(self._env)
         if msg.main:
             self._question_type = cast(QuestionTypeInterface, package_interface)
 
-        nssn = PackageNamespaceAndShortName(package.manifest.namespace, package.manifest.short_name)
-        self._loaded_packages[nssn] = package
         return LoadQPyPackage.Response(nssn=nssn)
 
     def on_msg_get_qpy_package_manifest(self, msg: GetQPyPackageManifest) -> MessageToServer:
