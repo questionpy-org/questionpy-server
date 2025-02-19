@@ -5,6 +5,8 @@ from abc import abstractmethod
 from collections.abc import Callable, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass
+from enum import Enum
+from functools import total_ordering
 from importlib.resources.abc import Traversable
 from typing import NamedTuple, Protocol, TypeAlias
 
@@ -19,6 +21,7 @@ __all__ = [
     "Package",
     "PackageInitFunction",
     "PackageNamespaceAndShortName",
+    "PackageState",
     "RequestUser",
     "WorkerResourceLimits",
     "get_qpy_environment",
@@ -41,6 +44,21 @@ class WorkerResourceLimits:
     max_cpu_time_seconds_per_call: float
 
 
+@total_ordering
+class PackageState(Enum):
+    PREPARED = 1
+    """The package is present and in the process of being loaded, but none of its code has been executed yet."""
+    LOADED = 2
+    """The package entrypoint has been imported."""
+    INITIALIZED = 3
+    """The package's `init` function, if any, has been executed."""
+
+    def __lt__(self, other: object) -> bool:
+        if isinstance(other, PackageState):
+            return self.value < other.value
+        return NotImplemented
+
+
 class Package(Protocol):
     @property
     def manifest(self) -> Manifest: ...
@@ -53,6 +71,9 @@ class Package(Protocol):
         Args:
             path: Path relative to the root of the package.
         """
+
+    @property
+    def state(self) -> PackageState: ...
 
 
 OnRequestCallback: TypeAlias = Callable[[RequestUser], None]
@@ -90,7 +111,8 @@ class Environment(Protocol):
     packages: Mapping[PackageNamespaceAndShortName, Package]
     """All packages loaded in the worker, including the main package.
 
-    Keys are the package namespace and short name. Only one version of a package can be loaded at a time.
+    Keys are the package namespace and short name. Only one version of a package can be loaded at a time. This may
+    include packages which are not yet initialized (i.e. their `init` function has not finished yet).
     """
 
     @abstractmethod

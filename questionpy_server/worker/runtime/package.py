@@ -15,7 +15,7 @@ from zipfile import ZipFile
 
 from questionpy_common.api.package import QPyPackageInterface
 from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME
-from questionpy_common.environment import Environment, Package
+from questionpy_common.environment import Environment, Package, PackageState
 from questionpy_common.manifest import Manifest
 from questionpy_server.worker.runtime.package_location import (
     DirPackageLocation,
@@ -32,6 +32,9 @@ class NoInitFunctionError(Exception):
 
 class ImportablePackage(ABC, Package):
     """Adds methods needed for loading and running the package to :class:`Package`."""
+
+    def __init__(self) -> None:
+        self._state = PackageState.PREPARED
 
     @abstractmethod
     def setup_imports(self) -> None:
@@ -50,17 +53,26 @@ class ImportablePackage(ABC, Package):
         else:
             main_module = import_module(f"{self.manifest.namespace}.{self.manifest.short_name}")
 
+        self._state = PackageState.LOADED
+
         if not hasattr(main_module, "init") or not callable(main_module.init):
             raise NoInitFunctionError(main_module, "init")
 
         signature = inspect.signature(main_module.init)
-        return main_module.init(*(self, env)[: len(signature.parameters)])
+        package_interface = main_module.init(*(self, env)[: len(signature.parameters)])
+        self._state = PackageState.INITIALIZED
+        return package_interface
+
+    @property
+    def state(self) -> PackageState:
+        return self._state
 
 
 class ZipBasedPackage(ImportablePackage):
     """A 'regular', zip-formatted QuestionPy package."""
 
     def __init__(self, path: Path):
+        super().__init__()
         self._path = path
         self._zip_file = ZipFile(path)
 
@@ -99,6 +111,7 @@ class DirBasedPackage(ImportablePackage):
     """A package's dist directory to be used directly."""
 
     def __init__(self, path: Path) -> None:
+        super().__init__()
         self.path = path
 
     @cached_property
@@ -131,6 +144,7 @@ class FunctionBasedPackage(ImportablePackage):
     """
 
     def __init__(self, module_name: str, function_name: str, manifest: Manifest) -> None:
+        super().__init__()
         self.module_name = module_name
         self.function_name = function_name
         self._manifest = manifest
@@ -148,12 +162,17 @@ class FunctionBasedPackage(ImportablePackage):
 
     def init(self, env: Environment) -> QPyPackageInterface:
         main_module = import_module(self.module_name)
+
+        self._state = PackageState.LOADED
+
         init_function = getattr(main_module, self.function_name, None)
         if not init_function or not callable(init_function):
             raise NoInitFunctionError(main_module, self.function_name)
 
         signature = inspect.signature(init_function)
-        return init_function(*(self, env)[: len(signature.parameters)])
+        package_interface = init_function(*(self, env)[: len(signature.parameters)])
+        self._state = PackageState.INITIALIZED
+        return package_interface
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.module_name, self.function_name})"
