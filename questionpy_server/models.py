@@ -22,7 +22,7 @@ class PackageInfo(BaseModel):
     type: PackageType
     author: str | None
     url: str | None
-    languages: set[str] | None
+    languages: list[str] | None
     description: dict[str, str] | None
     icon: str | None
     license: str | None
