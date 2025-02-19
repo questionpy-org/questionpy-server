@@ -14,13 +14,14 @@ minimal_manifest: dict[str, Any] = {
     "version": "0.1.0",
     "api_version": "0.1",
     "author": "John Doe",
+    "languages": ["en"],
 }
 maximal_manifest = {
     **minimal_manifest,
     "name": {"en": "test_name"},
     "entrypoint": "test_entrypoint",
     "url": "https://example.com/package",
-    "languages": {"en"},
+    "languages": ["de", "en", "en-AU"],
     "description": {"en": "test_description"},
     "icon": "https://example.com/icon.png",
     "type": PackageType.QUESTIONTYPE,
@@ -64,7 +65,7 @@ def test_ignore_additional_properties(data: dict[str, Any]) -> None:
     ("data", "error_message"),
     [
         # no manifest
-        ({}, r"4 validation errors for \w"),
+        ({}, r"5 validation errors for \w"),
         # 'name' is not a dict
         ({**minimal_manifest, "name": "test_name"}, r"1 validation error for \w"),
         # 'type' is not a valid PackageType

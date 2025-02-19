@@ -7,7 +7,7 @@ from enum import StrEnum
 from keyword import iskeyword, issoftkeyword
 from typing import Annotated
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, conset
 from pydantic.fields import Field
 
 
@@ -88,7 +88,12 @@ class SourceManifest(BaseModel):
     name: dict[str, str] = {}
     entrypoint: str | None = None
     url: str | None = None
-    languages: set[str] = set()
+    languages: list[str] = Field(min_length=1)
+    """Languages supported by the package, in BCP-47 format.
+
+    The first entry should by the language that the package is written in, i.e. the language used when no translation is
+    done. If the package does not support localization, that should be the only entry.
+    """
     description: dict[str, str] = {}
     icon: str | None = None
     type: PackageType = DEFAULT_PACKAGETYPE
