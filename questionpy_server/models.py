@@ -10,7 +10,7 @@ from pydantic import BaseModel, ByteSize, ConfigDict, Field
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.manifest import PackageType
+from questionpy_common.manifest import Bcp47LanguageTag, PackageType
 
 
 class PackageInfo(BaseModel):
@@ -18,12 +18,12 @@ class PackageInfo(BaseModel):
 
     short_name: str
     namespace: str
-    name: dict[str, str]
+    name: dict[Bcp47LanguageTag, str]
     type: PackageType
     author: str | None
     url: str | None
-    languages: list[str] | None
-    description: dict[str, str] | None
+    languages: list[Bcp47LanguageTag] | None
+    description: dict[Bcp47LanguageTag, str] | None
     icon: str | None
     license: str | None
     tags: set[str] | None

@@ -12,7 +12,7 @@ from typing import NamedTuple, Protocol, TypeAlias
 
 from questionpy_common.api.package import QPyPackageInterface
 from questionpy_common.api.qtype import QuestionTypeInterface
-from questionpy_common.manifest import Manifest
+from questionpy_common.manifest import Bcp47LanguageTag, Manifest
 
 __all__ = [
     "Environment",
@@ -33,7 +33,7 @@ __all__ = [
 class RequestUser:
     """Preferences of the user that a request is being processed for."""
 
-    preferred_languages: Sequence[str]
+    preferred_languages: Sequence[Bcp47LanguageTag]
 
 
 @dataclass

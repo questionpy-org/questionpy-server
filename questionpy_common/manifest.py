@@ -5,9 +5,9 @@
 import re
 from enum import StrEnum
 from keyword import iskeyword, issoftkeyword
-from typing import Annotated
+from typing import Annotated, NewType
 
-from pydantic import BaseModel, field_validator, conset
+from pydantic import BaseModel, field_validator
 from pydantic.fields import Field
 
 
@@ -74,6 +74,9 @@ def ensure_is_valid_name(name: str) -> str:
     return name
 
 
+Bcp47LanguageTag = NewType("Bcp47LanguageTag", str)
+
+
 class SourceManifest(BaseModel):
     """Represents the fields in a package source directory.
 
@@ -85,16 +88,16 @@ class SourceManifest(BaseModel):
     version: Annotated[str, Field(pattern=RE_SEMVER)]
     api_version: Annotated[str, Field(pattern=RE_API)]
     author: str
-    name: dict[str, str] = {}
+    name: dict[Bcp47LanguageTag, str] = {}
     entrypoint: str | None = None
     url: str | None = None
-    languages: list[str] = Field(min_length=1)
-    """Languages supported by the package, in BCP-47 format.
+    languages: list[Bcp47LanguageTag] = Field(min_length=1)
+    """Languages supported by the package, in BCP 47 format.
 
     The first entry should by the language that the package is written in, i.e. the language used when no translation is
     done. If the package does not support localization, that should be the only entry.
     """
-    description: dict[str, str] = {}
+    description: dict[Bcp47LanguageTag, str] = {}
     icon: str | None = None
     type: PackageType = DEFAULT_PACKAGETYPE
     license: str | None = None
