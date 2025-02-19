@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from aiohttp import web
 
-from questionpy_common.environment import RequestUser
 from questionpy_server.models import (
     AttemptResponse,
     AttemptScoreArguments,
@@ -17,7 +16,7 @@ from questionpy_server.models import (
 )
 from questionpy_server.package import Package
 from questionpy_server.web._decorators import ensure_required_parts
-from questionpy_server.web._utils import pydantic_json_response
+from questionpy_server.web._utils import DEFAULT_REQUEST_USER, pydantic_json_response
 from questionpy_server.web.app import QPyServer
 
 if TYPE_CHECKING:
@@ -36,7 +35,7 @@ async def post_attempt_start(
     location = await package.get_zip_package_location()
     worker: Worker
     async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
-        attempt = await worker.start_attempt(RequestUser(["de", "en"]), question_state.decode(), data.variant)
+        attempt = await worker.start_attempt(DEFAULT_REQUEST_USER, question_state.decode(), data.variant)
         packages = worker.get_loaded_packages()
 
     resp = AttemptStartedResponse(**dict(attempt), package_dependencies=packages)
@@ -54,7 +53,7 @@ async def post_attempt_view(
     worker: Worker
     async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
         attempt = await worker.get_attempt(
-            request_user=RequestUser(["de", "en"]),
+            request_user=DEFAULT_REQUEST_USER,
             question_state=question_state.decode(),
             attempt_state=data.attempt_state,
             scoring_state=data.scoring_state,
@@ -77,7 +76,7 @@ async def post_attempt_score(
     worker: Worker
     async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
         attempt_scored = await worker.score_attempt(
-            request_user=RequestUser(["de", "en"]),
+            request_user=DEFAULT_REQUEST_USER,
             question_state=question_state.decode(),
             attempt_state=data.attempt_state,
             scoring_state=data.scoring_state,

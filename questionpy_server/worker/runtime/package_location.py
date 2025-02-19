@@ -6,7 +6,7 @@ from typing import Annotated, Literal, TypeAlias
 from pydantic import Field, SerializeAsAny
 
 from questionpy_common.environment import PackageInitFunction
-from questionpy_common.manifest import Manifest
+from questionpy_common.manifest import Bcp47LanguageTag, Manifest
 
 
 @dataclass
@@ -65,6 +65,7 @@ class FunctionPackageLocation:
                 version="0.1.0-debug",
                 api_version="0.1",
                 author="Debug Modulovitch",
+                languages=[Bcp47LanguageTag("en")],
             )
 
         self.module_name = module_name

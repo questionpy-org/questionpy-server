@@ -13,6 +13,8 @@ from aiohttp.web_exceptions import HTTPRequestEntityTooLarge
 from aiohttp.web_response import Response
 
 from questionpy_common.constants import KiB
+from questionpy_common.environment import RequestUser
+from questionpy_common.manifest import Bcp47LanguageTag
 from questionpy_server.hash import HashContainer
 
 
@@ -63,3 +65,7 @@ async def read_part(part: BodyPartReader, max_size: int, *, calculate_hash: bool
     if calculate_hash:
         return HashContainer(data=buffer.getvalue(), hash=hash_object.hexdigest())
     return buffer.getvalue()
+
+
+# TODO: Replace with Accept-Language header contents.
+DEFAULT_REQUEST_USER = RequestUser([Bcp47LanguageTag("de"), Bcp47LanguageTag("en")])

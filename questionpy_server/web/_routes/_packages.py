@@ -7,11 +7,10 @@ from typing import TYPE_CHECKING
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPMethodNotAllowed, HTTPNotFound
 
-from questionpy_common.environment import RequestUser
 from questionpy_server.models import QuestionCreateArguments, QuestionEditFormResponse, RequestBaseData
 from questionpy_server.package import Package
 from questionpy_server.web._decorators import ensure_package, ensure_required_parts
-from questionpy_server.web._utils import pydantic_json_response
+from questionpy_server.web._utils import DEFAULT_REQUEST_USER, pydantic_json_response
 from questionpy_server.web.app import QPyServer
 
 if TYPE_CHECKING:
@@ -50,7 +49,7 @@ async def post_options(
     worker: Worker
     async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
         definition, form_data = await worker.get_options_form(
-            RequestUser(["de", "en"]), question_state.decode() if question_state else None
+            DEFAULT_REQUEST_USER, question_state.decode() if question_state else None
         )
         packages = worker.get_loaded_packages()
 
@@ -70,7 +69,7 @@ async def post_question(
     worker: Worker
     async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
         question = await worker.create_question_from_options(
-            RequestUser(["de", "en"]), question_state.decode() if question_state else None, data.form_data
+            DEFAULT_REQUEST_USER, question_state.decode() if question_state else None, data.form_data
         )
 
     return pydantic_json_response(data=question)
