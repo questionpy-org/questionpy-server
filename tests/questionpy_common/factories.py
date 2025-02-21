@@ -2,38 +2,52 @@
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import random
+from abc import ABC
+from collections.abc import Callable
+from typing import Any, get_args
 
 from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory as _ModelFactory
 
 import questionpy_common.elements as _elements
+from questionpy_common import TranslatableString
 
 
-class StaticTextElementFactory(_ModelFactory):
+class _BaseFactory(_ModelFactory, ABC):
+    __is_base_factory__ = True
+
+    @classmethod
+    def get_provider_map(cls) -> dict[Any, Callable[[], Any]]:
+        provider_map = super().get_provider_map()
+        provider_map[TranslatableString] = provider_map[get_args(TranslatableString)[0]] = provider_map[str]
+        return provider_map
+
+
+class StaticTextElementFactory(_BaseFactory):
     __model__ = _elements.StaticTextElement
 
 
-class TextInputElementFactory(_ModelFactory):
+class TextInputElementFactory(_BaseFactory):
     __model__ = _elements.TextInputElement
 
 
-class CheckboxElementFactory(_ModelFactory):
+class CheckboxElementFactory(_BaseFactory):
     __model__ = _elements.CheckboxElement
 
 
-class OptionFactory(_ModelFactory):
+class OptionFactory(_BaseFactory):
     __model__ = _elements.Option
 
 
-class RadioGroupElementFactory(_ModelFactory):
+class RadioGroupElementFactory(_BaseFactory):
     __model__ = _elements.RadioGroupElement
 
 
-class SelectElementFactory(_ModelFactory):
+class SelectElementFactory(_BaseFactory):
     __model__ = _elements.SelectElement
 
 
-class HiddenElementFactory(_ModelFactory):
+class HiddenElementFactory(_BaseFactory):
     __model__ = _elements.HiddenElement
 
 
@@ -55,19 +69,19 @@ def _one_of_each_element() -> list[_elements.FormElement]:
     return one_of_each
 
 
-class GroupElementFactory(_ModelFactory):
+class GroupElementFactory(_BaseFactory):
     __model__ = _elements.GroupElement
 
     elements = Use(_one_of_each_element)
 
 
-class FormSectionFactory(_ModelFactory):
+class FormSectionFactory(_BaseFactory):
     __model__ = _elements.FormSection
 
     elements = Use(_one_of_each_element)
 
 
-class OptionsFormDefinitionFactory(_ModelFactory):
+class OptionsFormDefinitionFactory(_BaseFactory):
     __model__ = _elements.OptionsFormDefinition
 
     general = Use(_one_of_each_element)
