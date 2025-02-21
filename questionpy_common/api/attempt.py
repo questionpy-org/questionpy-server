@@ -1,11 +1,12 @@
 #  This file is part of QuestionPy. (https://questionpy.org)
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-
 from enum import Enum, StrEnum
 from typing import Annotated
 
 from pydantic import BaseModel, Field
+
+from questionpy_common import TranslatableString
 
 from . import Localized
 
@@ -68,16 +69,16 @@ class AttemptFile(BaseModel):
 
 
 class AttemptUi(BaseModel):
-    formulation: str
+    formulation: str | TranslatableString
     """X(H)ML markup of the formulation part of the question."""
-    general_feedback: str | None = None
+    general_feedback: str | TranslatableString | None = None
     """X(H)ML markup of the general feedback part of the question."""
-    specific_feedback: str | None = None
+    specific_feedback: str | TranslatableString | None = None
     """X(H)ML markup of the response-specific feedback part of the question."""
-    right_answer: str | None = None
+    right_answer: str | TranslatableString | None = None
     """X(H)ML markup of the part of the question which explains the correct answer."""
 
-    placeholders: dict[str, str] = {}
+    placeholders: dict[str, str | TranslatableString] = {}
     """Names and values of the ``<?p`` placeholders that appear in content."""
     css_files: list[str] = []
     javascript_calls: list[JsModuleCall] = []
@@ -124,7 +125,7 @@ class ScoredSubquestionModel(BaseModel):
     score: float | None = None
     score_final: float | None = None
     scoring_code: ScoringCode | None = None
-    response_summary: str
+    response_summary: str | TranslatableString
     response_class: str
 
 

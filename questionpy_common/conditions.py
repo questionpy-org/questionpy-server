@@ -7,7 +7,9 @@ from typing import Annotated, Literal, TypeAlias
 
 from pydantic import BaseModel, Field
 
-_Value: TypeAlias = str | int | bool
+from questionpy_common import TranslatableString
+
+_Value: TypeAlias = str | TranslatableString | int | bool
 
 
 class _BaseCondition(ABC, BaseModel):

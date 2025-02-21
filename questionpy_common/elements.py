@@ -1,11 +1,11 @@
 #  This file is part of QuestionPy. (https://questionpy.org)
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-
 from typing import Annotated, Literal, TypeAlias, TypeGuard, get_args
 
 from pydantic import BaseModel, Field, PositiveInt
 
+from questionpy_common import TranslatableString
 from questionpy_common.conditions import Condition
 
 __all__ = [
@@ -36,7 +36,7 @@ class _BaseElement(BaseModel):
 
 
 class _Labelled(BaseModel):
-    label: str
+    label: str | TranslatableString
     """Text describing the element, shown verbatim."""
 
 
@@ -52,7 +52,7 @@ class CanHaveConditions(BaseModel):
 class CanHaveHelp(BaseModel):
     """Mixin class for elements that can have a help text hidden behind a button."""
 
-    help: str | None = None
+    help: str | TranslatableString | None = None
     """Text to be shown when the help button is clicked."""
 
 
@@ -60,16 +60,16 @@ class StaticTextElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp)
     """Some static text with a label."""
 
     kind: Literal["static_text"] = "static_text"
-    text: str
+    text: str | TranslatableString
 
 
 class TextInputElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     kind: Literal["input"] = "input"
     required: bool = False
     """Require some non-empty input to be entered before the form can be submitted."""
-    default: str | None = None
+    default: str | TranslatableString | None = None
     """Default value of the input when first loading the form. Part of the submitted form data."""
-    placeholder: str | None = None
+    placeholder: str | TranslatableString | None = None
     """Placeholder to show when no value has been entered yet. Not part of the submitted form data."""
 
 
@@ -77,17 +77,17 @@ class TextAreaElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     kind: Literal["textarea"] = "textarea"
     required: bool = False
     """Require some non-empty input to be entered before the form can be submitted."""
-    default: str | None = None
+    default: str | TranslatableString | None = None
     """Default value of the input when first loading the form. Part of the submitted form data."""
-    placeholder: str | None = None
+    placeholder: str | TranslatableString | None = None
     """Placeholder to show when no value has been entered yet. Not part of the submitted form data."""
 
 
 class CheckboxElement(_BaseElement, CanHaveConditions, CanHaveHelp):
     kind: Literal["checkbox"] = "checkbox"
-    left_label: str | None = None
+    left_label: str | TranslatableString | None = None
     """Label shown the same way as labels on other element types."""
-    right_label: str | None = None
+    right_label: str | TranslatableString | None = None
     """Additional label shown to the right of the checkbox."""
     required: bool = False
     """Require this checkbox to be selected before the form can be submitted."""
@@ -98,9 +98,9 @@ class CheckboxElement(_BaseElement, CanHaveConditions, CanHaveHelp):
 class Option(BaseModel):
     """A possible option for radio groups and drop-downs."""
 
-    label: str
+    label: str | TranslatableString
     """Text describing the option, shown verbatim."""
-    value: str
+    value: str | TranslatableString
     """Value that will be taken by the radio group or drop-down when this option is selected."""
     selected: bool = False
     """Default state of the option."""
@@ -132,7 +132,7 @@ class HiddenElement(_BaseElement, CanHaveConditions):
     """An element that isn't shown to the user but still submits its fixed value."""
 
     kind: Literal["hidden"] = "hidden"
-    value: str
+    value: str | TranslatableString
 
 
 class GroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
@@ -153,7 +153,7 @@ class RepetitionElement(_BaseElement):
     """Minimum number of repetitions, at or below which removal is not possible."""
     increment: PositiveInt
     """Number of repetitions to add with each click of the button."""
-    button_label: str | None = None
+    button_label: str | TranslatableString | None = None
     """Label for the button that adds more repetitions, or None to use default provided by LMS."""
 
     elements: list["FormElement"]
@@ -189,7 +189,7 @@ class FormSection(BaseModel):
 
     name: str
     """Name that will later identify the element in submitted form data."""
-    header: str
+    header: str | TranslatableString
     """Header to be shown at the top of the section."""
     elements: list[FormElement] = []
     """Elements contained in the section."""
