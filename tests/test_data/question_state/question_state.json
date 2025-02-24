@@ -2,7 +2,7 @@
   "package_name": "example",
   "package_version": "0.1.0",
   "options": {
-    "input": "",
+    "input": "bar",
     "my_hidden": "foo",
     "my_repetition": [],
     "name_group": {}
