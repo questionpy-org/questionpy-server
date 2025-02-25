@@ -53,6 +53,9 @@ extend = "ruff_defaults.toml"
 # unused-async (aiohttp handlers must be async even if they don't use it)
 "**/questionpy_server/web/**/*" = ["RUF029"]
 
+[tool.ruff.lint.pylint]
+allow-dunder-method-names = ["__get_pydantic_core_schema__"]
+
 [tool.pytest.ini_options]
 # https://github.com/pytest-dev/pytest-asyncio#auto-mode
 asyncio_mode = "auto"

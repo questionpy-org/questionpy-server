@@ -4,7 +4,7 @@
 import random
 from abc import ABC
 from collections.abc import Callable
-from typing import Any, get_args
+from typing import Any
 
 from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory as _ModelFactory
@@ -19,7 +19,7 @@ class _BaseFactory(_ModelFactory, ABC):
     @classmethod
     def get_provider_map(cls) -> dict[Any, Callable[[], Any]]:
         provider_map = super().get_provider_map()
-        provider_map[TranslatableString] = provider_map[get_args(TranslatableString)[0]] = provider_map[str]
+        provider_map[TranslatableString] = provider_map[str]
         return provider_map
 
 
