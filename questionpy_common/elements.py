@@ -100,7 +100,7 @@ class Option(BaseModel):
 
     label: str | TranslatableString
     """Text describing the option, shown verbatim."""
-    value: str | TranslatableString
+    value: str
     """Value that will be taken by the radio group or drop-down when this option is selected."""
     selected: bool = False
     """Default state of the option."""
@@ -132,7 +132,7 @@ class HiddenElement(_BaseElement, CanHaveConditions):
     """An element that isn't shown to the user but still submits its fixed value."""
 
     kind: Literal["hidden"] = "hidden"
-    value: str | TranslatableString
+    value: str
 
 
 class GroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
