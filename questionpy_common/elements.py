@@ -203,6 +203,19 @@ class OptionsFormDefinition(BaseModel):
 
 
 def is_form_element(value: object) -> TypeGuard[FormElement]:
-    # unions don't support runtime type checking through isinstance
-    # this checks if value is an instance of any of the union members
+    """Checks if `value` is a form element instance.
+
+    Unions don't support runtime type checking through isinstance, so this function checks if `value` is an instance
+    of any of the union members.
+
+    Examples:
+        >>> is_form_element(TextInputElement(name="my_input", label="My Input"))
+        True
+        >>> is_form_element(FormSection(name="my_section", header="My Section"))
+        False
+        >>> is_form_element("abcdefg")
+        False
+        >>> is_form_element(None)
+        False
+    """
     return isinstance(value, get_args(get_args(FormElement)[0]))
