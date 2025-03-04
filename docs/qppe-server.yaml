@@ -1298,21 +1298,6 @@ components:
           $ref: "#/components/schemas/FormHelp"
       required: [ kind, name ]
 
-    CheckboxGroupElement:
-      type: object
-      properties:
-        kind:
-          type: string
-          enum: [ checkbox_group ]
-        name:
-          $ref: "#/components/schemas/FormName"
-        checkboxes:
-          type: array
-          items:
-            $ref: "#/components/schemas/CheckboxElement"
-          minItems: 1
-      required: [ kind, checkboxes ]
-
     RadioGroupElement:
       type: object
       properties:
@@ -1497,7 +1482,6 @@ components:
         - $ref: "#/components/schemas/StaticTextElement"
         - $ref: "#/components/schemas/TextInputElement"
         - $ref: "#/components/schemas/CheckboxElement"
-        - $ref: "#/components/schemas/CheckboxGroupElement"
         - $ref: "#/components/schemas/RadioGroupElement"
         - $ref: "#/components/schemas/SelectElement"
         - $ref: "#/components/schemas/HiddenElement"

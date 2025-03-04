@@ -11,7 +11,6 @@ from questionpy_common.conditions import Condition
 __all__ = [
     "CanHaveConditions",
     "CheckboxElement",
-    "CheckboxGroupElement",
     "FormElement",
     "FormSection",
     "GeneratedIdElement",
@@ -96,13 +95,6 @@ class CheckboxElement(_BaseElement, CanHaveConditions, CanHaveHelp):
     """Default state of the checkbox."""
 
 
-class CheckboxGroupElement(_BaseElement):
-    """Adds a 'Select all/none' button after multiple checkboxes."""
-
-    kind: Literal["checkbox_group"] = "checkbox_group"
-    checkboxes: list[CheckboxElement]
-
-
 class Option(BaseModel):
     """A possible option for radio groups and drop-downs."""
 
@@ -179,7 +171,6 @@ class GeneratedIdElement(_BaseElement):
 
 FormElement: TypeAlias = Annotated[
     CheckboxElement
-    | CheckboxGroupElement
     | GroupElement
     | HiddenElement
     | RadioGroupElement

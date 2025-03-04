@@ -21,10 +21,6 @@ class CheckboxElementFactory(_ModelFactory):
     __model__ = _elements.CheckboxElement
 
 
-class CheckboxGroupElementFactory(_ModelFactory):
-    __model__ = _elements.CheckboxGroupElement
-
-
 class OptionFactory(_ModelFactory):
     __model__ = _elements.Option
 
@@ -50,7 +46,6 @@ def _one_of_each_element() -> list[_elements.FormElement]:
             StaticTextElementFactory,
             TextInputElementFactory,
             CheckboxElementFactory,
-            CheckboxGroupElementFactory,
             RadioGroupElementFactory,
             SelectElementFactory,
             HiddenElementFactory,
