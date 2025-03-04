@@ -14,7 +14,6 @@ from pydantic import BaseModel
 from questionpy_common.elements import (
     CanHaveConditions,
     CheckboxElement,
-    CheckboxGroupElement,
     FormSection,
     GroupElement,
     HiddenElement,
@@ -33,7 +32,6 @@ from tests.conftest import package_dir, test_data_path
 
 from .factories import (
     CheckboxElementFactory,
-    CheckboxGroupElementFactory,
     FormSectionFactory,
     GroupElementFactory,
     HiddenElementFactory,
@@ -110,7 +108,6 @@ async def test_data_gets_cached(client: TestClient) -> None:
         (StaticTextElementFactory, StaticTextElement),
         (TextInputElementFactory, TextInputElement),
         (CheckboxElementFactory, CheckboxElement),
-        (CheckboxGroupElementFactory, CheckboxGroupElement),
         (OptionFactory, Option),
         (RadioGroupElementFactory, RadioGroupElement),
         (SelectElementFactory, SelectElement),
@@ -131,7 +128,6 @@ def test_factory_builds_valid_model(factory: ModelFactory, model: type[BaseModel
         (StaticTextElementFactory, StaticTextElement),
         (TextInputElementFactory, TextInputElement),
         (CheckboxElementFactory, CheckboxElement),
-        (CheckboxGroupElementFactory, CheckboxGroupElement),
         (OptionFactory, Option),
         (RadioGroupElementFactory, RadioGroupElement),
         (SelectElementFactory, SelectElement),
@@ -153,7 +149,6 @@ def test_ignore_additional_properties(factory: ModelFactory, model: type[BaseMod
         StaticTextElementFactory,
         TextInputElementFactory,
         CheckboxElementFactory,
-        CheckboxGroupElementFactory,
         RadioGroupElementFactory,
         SelectElementFactory,
         HiddenElementFactory,
