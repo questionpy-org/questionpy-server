@@ -3,13 +3,9 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from abc import ABC
-from typing import Annotated, Literal, TypeAlias
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
-
-from questionpy_common import TranslatableString
-
-_Value: TypeAlias = str | TranslatableString | int | bool
 
 
 class _BaseCondition(ABC, BaseModel):
@@ -27,17 +23,17 @@ class IsNotChecked(_BaseCondition):
 
 class Equals(_BaseCondition):
     kind: Literal["equals"] = "equals"
-    value: _Value
+    value: str | int | bool
 
 
 class DoesNotEqual(_BaseCondition):
     kind: Literal["does_not_equal"] = "does_not_equal"
-    value: _Value
+    value: str | int | bool
 
 
 class In(_BaseCondition):
     kind: Literal["in"] = "in"
-    value: list[_Value]
+    value: list[str | int | bool]
 
 
 Condition = Annotated[IsChecked | IsNotChecked | Equals | DoesNotEqual | In, Field(discriminator="kind")]
