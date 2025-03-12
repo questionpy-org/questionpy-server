@@ -20,6 +20,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/PackageVersionsInfo"
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
 
   /packages/{package_hash}:
     parameters:
@@ -35,6 +37,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PackageVersionInfo"
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
         404:
           description: Not Found
 
@@ -64,6 +68,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Options"
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
         404:
           description: Package not found.
         500:
@@ -100,6 +106,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/QuestionCreated"
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
         404:
           description: Package not found.
         422:
@@ -149,6 +157,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/QuestionStateMigrationError"
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
         404:
           description: Package not found.
         500:
@@ -183,6 +193,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Question"
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
         404:
           description: Package not found.
         500:
@@ -216,6 +228,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AttemptStarted"
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
         404:
           description: Package not found.
         500:
@@ -249,6 +263,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Attempt"
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
         404:
           description: Package not found.
         500:
@@ -294,6 +310,8 @@ paths:
                     type: string
                     description: Async scoring job uuid.
                 required: [ scoring_job_uuid ]
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
         404:
           description: Package not found.
         500:
@@ -317,6 +335,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AttemptAsyncScoringStatus'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
         404:
           description: Job not found.
     delete:
@@ -324,6 +344,8 @@ paths:
       responses:
         204:
           description: Job cancelled.
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
         404:
           description: Job not found.
 
@@ -366,6 +388,8 @@ paths:
           description: Static file data
           content:
             "*/*": {}
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
         404:
           description: Package or its static file not found.
         500:
@@ -400,6 +424,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PackageVersionInfo"
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
         500:
           description: Error occurred.
           content:
@@ -419,6 +445,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServerStatus"
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
 
 components:
   parameters:
@@ -470,6 +498,19 @@ components:
       required: true
       schema:
         type: string
+
+  responses:
+    UnauthorizedError:
+      description: Authentication information is missing or invalid
+      headers:
+        WWW_Authenticate:
+          schema:
+            type: string
+
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
 
   schemas:
     PackageInfo:
@@ -1551,3 +1592,6 @@ components:
           type: integer
           description: Amount of requests waiting to be processed
       required: [requests_in_process, requests_in_queue]
+
+security:
+  - BasicAuth: []
