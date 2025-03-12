@@ -190,6 +190,34 @@ class CollectorSettings(BaseModel):
         return value
 
 
+class AuthSettings(BaseModel):
+    enabled: bool = True
+    users: dict[str, str] = {}
+
+    @field_validator("users", mode="before")
+    @classmethod
+    def transform_to_username_password_map(cls, value: str) -> dict[str, str]:
+        users: dict[str, str] = {}
+
+        for line in value.splitlines():
+            if not line:
+                continue
+
+            if ":" not in line:
+                msg = f"must contain username:password pairs: failed for {line}"
+                raise ValueError(msg)
+
+            username, password = line.split(":", maxsplit=1)
+
+            if username in users:
+                msg = f"must contain unique usernames: failed for {username}"
+                raise ValueError(msg)
+
+            users[username] = password
+
+        return users
+
+
 class CustomEnvSettingsSource(EnvSettingsSource):
     """Load settings from environment variables.
 
@@ -243,6 +271,7 @@ class Settings(BaseSettings):
     cache_package: PackageCacheSettings
     cache_repo_index: RepoIndexCacheSettings
     collector: CollectorSettings
+    auth: AuthSettings
 
     config_files: tuple[Path, ...] = ()
 

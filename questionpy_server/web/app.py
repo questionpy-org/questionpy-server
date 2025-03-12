@@ -11,7 +11,7 @@ from questionpy_server import __version__
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector import PackageCollection
 from questionpy_server.settings import Settings
-from questionpy_server.web._middlewares import middlewares
+from questionpy_server.web.middlewares import middlewares
 from questionpy_server.worker.pool import WorkerPool
 
 

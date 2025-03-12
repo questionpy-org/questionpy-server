@@ -13,7 +13,6 @@ from aiohttp.web_exceptions import HTTPBadRequest, HTTPException, HTTPMethodNotA
 from questionpy_common.api.qtype import InvalidQuestionStateError
 from questionpy_common.error import QPyBaseError
 from questionpy_server.models import RequestError, RequestErrorCode
-from questionpy_server.web._middlewares import error_middleware
 from questionpy_server.web.errors import (
     InvalidPackageError,
     InvalidRequestError,
@@ -23,6 +22,7 @@ from questionpy_server.web.errors import (
     ServerError,
     WorkerTimeoutError,
 )
+from questionpy_server.web.middlewares._error import error_middleware
 from questionpy_server.worker.exception import (
     StaticFileSizeMismatchError,
     WorkerCPUTimeLimitExceededError,
