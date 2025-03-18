@@ -27,6 +27,7 @@ def path_with_empty_config_file(tmp_path: Path) -> Path:
         [cache_package]
         [cache_repo_index]
         [collector]
+        [auth]
     """)
     path = tmp_path / "config.ini"
     with path.open("w") as file:
