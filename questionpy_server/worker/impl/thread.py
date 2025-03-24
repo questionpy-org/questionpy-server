@@ -3,12 +3,12 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 import asyncio
-import itertools
 import logging
 import sys
 import threading
 from asyncio import Task
 from collections.abc import Sequence
+from pathlib import Path
 
 from questionpy_common.environment import WorkerResourceLimits
 from questionpy_server.worker.connection import ServerToWorkerConnection
@@ -23,12 +23,11 @@ log = logging.getLogger(__name__)
 
 
 class _WorkerThread(threading.Thread):
-    _counter = itertools.count()
-    """Counter serving only to give worker threads unique names."""
-
-    def __init__(self, pipe: DuplexPipe) -> None:
-        super().__init__(name=f"qpy-worker-{next(self._counter)}", daemon=True)
+    def __init__(self, name: str, pipe: DuplexPipe, *, profiling_dir: Path | None = None) -> None:
+        super().__init__(name=name, daemon=True)
         self._pipe = pipe
+        self._profiling_dir = profiling_dir
+
         self._end_event = asyncio.Event()
         self._loop = asyncio.get_running_loop()
 
@@ -41,7 +40,7 @@ class _WorkerThread(threading.Thread):
         original_module_names = set(sys.modules.keys())
 
         connection = WorkerToServerConnection(self._pipe.right, self._pipe.right)
-        manager = WorkerManager(connection)
+        manager = WorkerManager(connection, profiling_dir=self._profiling_dir)
         try:
             manager.bootstrap()
             manager.loop()
@@ -71,8 +70,15 @@ class ThreadWorker(BaseWorker):
 
     _worker_type = "thread"
 
-    def __init__(self, package: PackageLocation, limits: WorkerResourceLimits | None) -> None:
-        super().__init__(package=package, limits=limits)
+    def __init__(
+        self,
+        name: str,
+        package: PackageLocation,
+        limits: WorkerResourceLimits | None,
+        *,
+        enable_profiling: bool = False,
+    ) -> None:
+        super().__init__(name=name, package=package, limits=limits, enable_profiling=enable_profiling)
 
         self._pipe: DuplexPipe | None = None
 
@@ -93,7 +99,7 @@ class ThreadWorker(BaseWorker):
             self.limits = None
 
         self._pipe = DuplexPipe.open()
-        thread = _WorkerThread(self._pipe)
+        thread = _WorkerThread(name=f"qpy-worker-{self.name}", pipe=self._pipe, profiling_dir=self._profiling_dir)
 
         self._task = asyncio.create_task(self._run_and_wait(thread), name=thread.name)
 

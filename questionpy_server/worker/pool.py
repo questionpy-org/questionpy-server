@@ -5,11 +5,17 @@
 from asyncio import Condition, Semaphore
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import assert_never
 
 from questionpy_common.constants import MiB
 from questionpy_common.environment import WorkerResourceLimits
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
-from questionpy_server.worker.runtime.package_location import PackageLocation
+from questionpy_server.worker.runtime.package_location import (
+    DirPackageLocation,
+    FunctionPackageLocation,
+    PackageLocation,
+    ZipPackageLocation,
+)
 
 from . import Worker
 from .exception import WorkerStartError
@@ -36,6 +42,8 @@ class WorkerPool:
         self._requests: int = 0
 
         self._total_memory = 0
+
+        self._next_worker_index = 0
 
     def memory_available(self, size: int) -> bool:
         return self._total_memory + size <= self.max_memory
@@ -69,7 +77,7 @@ class WorkerPool:
             worker = None
             reserved_memory = False
             try:
-                limits = WorkerResourceLimits(max_memory=200 * MiB, max_cpu_time_seconds_per_call=10)
+                limits = WorkerResourceLimits(max_memory=200 * MiB, max_cpu_time_seconds_per_call=100)
                 if self.max_memory < limits.max_memory:
                     msg = "The worker needs more memory than available."
                     raise WorkerStartError(msg)
@@ -81,7 +89,16 @@ class WorkerPool:
                     self._total_memory += limits.max_memory
                     reserved_memory = True
 
-                worker = self._worker_type(package, limits)
+                if isinstance(package, ZipPackageLocation | DirPackageLocation):
+                    name = f"{self._next_worker_index}-{package.path.stem}"
+                elif isinstance(package, FunctionPackageLocation):
+                    name = f"{self._next_worker_index}-{package.module_name}-{package.function_name}"
+                else:
+                    assert_never(package)
+
+                self._next_worker_index += 1
+
+                worker = self._worker_type(name=name, package=package, limits=limits, enable_profiling=True)
                 await worker.start()
 
                 yield worker

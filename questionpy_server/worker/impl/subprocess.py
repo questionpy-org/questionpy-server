@@ -72,7 +72,7 @@ class _StderrBuffer:
         self._skipped_bytes = 0
 
 
-class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
+class SubprocessWorker(LimitTimeUsageMixin, BaseWorker):
     """Worker implementation running in a non-sandboxed subprocess."""
 
     _worker_type = "process"
@@ -80,8 +80,15 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
     # Allows to use a patched runtime in tests.
     _runtime_main = ["-m", "questionpy_server.worker.runtime"]
 
-    def __init__(self, package: PackageLocation, limits: WorkerResourceLimits | None):
-        super().__init__(package=package, limits=limits)
+    def __init__(
+        self,
+        name: str,
+        package: PackageLocation,
+        limits: WorkerResourceLimits | None,
+        *,
+        enable_profiling: bool = False,
+    ):
+        super().__init__(name=name, package=package, limits=limits, enable_profiling=enable_profiling)
 
         self._proc: Process | None = None
         self._stderr_buffer: _StderrBuffer | None = None
@@ -91,6 +98,10 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
         # Turn off the worker's __debug__ flag unless ours is set as well.
         python_flags = [] if __debug__ else ["-O"]
 
+        env = {}
+        if self._profiling_dir:
+            env["QPY_PROFILING_DIR"] = self._profiling_dir
+
         self._proc = await asyncio.create_subprocess_exec(
             sys.executable,
             *python_flags,
@@ -98,6 +109,7 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env=env,
         )
 
         if self._proc.stdout is None or self._proc.stderr is None or self._proc.stdin is None:

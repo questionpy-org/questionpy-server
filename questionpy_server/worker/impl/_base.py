@@ -5,17 +5,20 @@
 import asyncio
 import contextlib
 import logging
+import shutil
+import tempfile
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from os.path import commonpath, normpath
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
 from zipfile import ZipFile
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.constants import DIST_DIR
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import RequestUser
+from questionpy_common.environment import RequestUser, WorkerResourceLimits
 from questionpy_common.manifest import Manifest, PackageFile
 from questionpy_server.models import LoadedPackage, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
@@ -46,12 +49,11 @@ from questionpy_server.worker.runtime.messages import (
 from questionpy_server.worker.runtime.package_location import (
     DirPackageLocation,
     FunctionPackageLocation,
+    PackageLocation,
     ZipPackageLocation,
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from questionpy_server.worker.connection import ServerToWorkerConnection
 
 log = logging.getLogger(__name__)
@@ -72,17 +74,33 @@ class BaseWorker(Worker, ABC):
     """Base class implementing some common functionality of workers."""
 
     _worker_type = "unknown"
-    _init_worker_timeout = 2
-    _load_qpy_package_timeout = 4
+    _init_worker_timeout = 20
+    _load_qpy_package_timeout = 99999
 
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        name: str,
+        package: PackageLocation,
+        limits: WorkerResourceLimits | None,
+        *,
+        enable_profiling: bool = False,
+    ) -> None:
+        super().__init__(name=name, package=package, limits=limits)
 
         self._observe_task: asyncio.Task | None = None
 
         self._connection: ServerToWorkerConnection | None = None
         self._expected_incoming_messages: list[tuple[MessageIds, asyncio.Future]] = []
         self._receive_messages_exception: BaseException | None = None
+
+        if enable_profiling:
+            self._profiling_dir = Path(tempfile.gettempdir()) / "qpy-prof" / self.name
+            if self._profiling_dir.exists():
+                shutil.rmtree(self._profiling_dir)
+
+            self._profiling_dir.mkdir(parents=True)
+
+            log.info("The worker will write profiling stats to '%s'", self._profiling_dir)
 
     async def _initialize(self) -> None:
         """Initializes an already running worker and starts the observe task.
@@ -336,7 +354,7 @@ class BaseWorker(Worker, ABC):
         return [p for p in self.loaded_packages if p.hash is not None or not only_with_hash]
 
 
-class LimitTimeUsageMixin(Worker, ABC):
+class LimitTimeUsageMixin(BaseWorker, ABC):
     """Implements a CPU and real time usage limit for a worker.
 
     _limit_cpu_time_usage needs to be added to the return value of :meth:`BaseWorker._get_observation_tasks`.

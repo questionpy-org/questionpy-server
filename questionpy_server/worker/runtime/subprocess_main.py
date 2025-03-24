@@ -1,7 +1,7 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-
+import os
 import sys
 from io import BufferedReader, FileIO, StringIO
 
@@ -26,7 +26,10 @@ def _setup_server_communication() -> WorkerToServerConnection:
 
 def subprocess_runtime_main() -> None:
     sys.dont_write_bytecode = True
+
+    profiling_dir = os.getenv("QPY_PROFILING_DIR", None)
+
     con = _setup_server_communication()
-    manager = WorkerManager(con)
+    manager = WorkerManager(con, profiling_dir=profiling_dir)
     manager.bootstrap()
     manager.loop()

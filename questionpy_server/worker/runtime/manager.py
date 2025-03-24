@@ -1,10 +1,12 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
+import cProfile
 import resource
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from pathlib import Path
 from typing import NoReturn, TypeAlias, TypeVar, cast
 
 from questionpy_common.api.qtype import QuestionTypeInterface
@@ -56,7 +58,7 @@ OnMessageCallback: TypeAlias = Callable[[M], MessageToServer]
 
 
 class WorkerManager:
-    def __init__(self, server_connection: WorkerToServerConnection):
+    def __init__(self, server_connection: WorkerToServerConnection, *, profiling_dir: Path | str | None = None):
         self._connection: WorkerToServerConnection = server_connection
 
         self._worker_type: str | None = None
@@ -79,18 +81,39 @@ class WorkerManager:
 
         self._on_request_callbacks: list[OnRequestCallback] = []
 
+        self._profiling_dir = Path(profiling_dir)
+        self._next_profile_index = 0
+
+    @contextmanager
+    def _maybe_profile(self, context: str) -> Iterator[None]:
+        if not self._profiling_dir:
+            yield
+            return
+
+        output_path = self._profiling_dir / f"{self._next_profile_index}-{context}.pyprof"
+        self._next_profile_index += 1
+
+        profile = cProfile.Profile()
+        profile.enable()
+
+        try:
+            yield
+        finally:
+            profile.dump_stats(output_path)
+
     def bootstrap(self) -> None:
-        init_msg = self._connection.receive_message()
-        if not isinstance(init_msg, InitWorker):
-            raise self._raise_not_initialized(init_msg)
+        with self._maybe_profile("bootstrap"):
+            init_msg = self._connection.receive_message()
+            if not isinstance(init_msg, InitWorker):
+                raise self._raise_not_initialized(init_msg)
 
-        self._worker_type = init_msg.worker_type
-        self._limits = init_msg.limits
-        if self._limits:
-            # Limit memory usage.
-            resource.setrlimit(resource.RLIMIT_AS, (self._limits.max_memory, self._limits.max_memory))
+            self._worker_type = init_msg.worker_type
+            self._limits = init_msg.limits
+            if self._limits:
+                # Limit memory usage.
+                resource.setrlimit(resource.RLIMIT_AS, (self._limits.max_memory, self._limits.max_memory))
 
-        self._connection.send_message(InitWorker.Response())
+            self._connection.send_message(InitWorker.Response())
 
     def loop(self) -> None:
         """Dispatch incoming messages."""
@@ -100,7 +123,8 @@ class WorkerManager:
                 return
 
             try:
-                response = self._message_dispatch[msg.message_id](msg)
+                with self._maybe_profile(type(msg).__name__):
+                    response = self._message_dispatch[msg.message_id](msg)
             except Exception as error:  # noqa: BLE001
                 response = WorkerError.from_exception(error, cause=msg)
             self._connection.send_message(response)
