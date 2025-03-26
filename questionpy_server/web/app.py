@@ -48,6 +48,7 @@ class QPyServer:
 
         self.web_app.on_startup.append(self._start_package_collection)
         self.web_app.on_shutdown.append(self._stop_package_collection)
+        self.web_app.on_shutdown.append(self._stop_idle_workers)
 
     async def _start_package_collection(self, _app: web.Application) -> None:
         # The server will not wait until all package collectors are started. This is done in the background.
@@ -57,6 +58,9 @@ class QPyServer:
     async def _stop_package_collection(self, _app: web.Application) -> None:
         # Wait until all package collectors are stopped appropriately.
         await self.package_collection.stop()
+
+    async def _stop_idle_workers(self, _app: web.Application) -> None:
+        await self.worker_pool.stop_idle_workers()
 
     def start_server(self) -> None:
         port = self.settings.webservice.listen_port

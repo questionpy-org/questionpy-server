@@ -4,7 +4,7 @@
 
 import mimetypes
 import tempfile
-from collections.abc import Iterable
+from collections.abc import AsyncGenerator, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from zipfile import ZipFile
@@ -34,7 +34,7 @@ from questionpy_server.worker.pool import WorkerPool
 from questionpy_server.worker.runtime.package_location import DirPackageLocation, ZipPackageLocation
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class TestZipPackage(ZipPackageLocation):
     __test__ = False
 
@@ -45,7 +45,7 @@ class TestZipPackage(ZipPackageLocation):
             self.manifest = ComparableManifest.model_validate_json(package.read(f"{DIST_DIR}/{MANIFEST_FILENAME}"))
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class TestDirPackage(DirPackageLocation):
     __test__ = False
 
@@ -146,5 +146,9 @@ def package_factory(tmp_path_factory: pytest.TempPathFactory) -> TestPackageFact
 
 
 @pytest.fixture(params=(SubprocessWorker, ThreadWorker))
-def worker_pool(request: pytest.FixtureRequest) -> WorkerPool:
-    return WorkerPool(1, 512 * MiB, worker_type=request.param)
+async def worker_pool(request: pytest.FixtureRequest) -> AsyncGenerator[WorkerPool]:
+    pool = WorkerPool(1, 512 * MiB, worker_type=request.param)
+    try:
+        yield pool
+    finally:
+        await pool.stop_idle_workers()

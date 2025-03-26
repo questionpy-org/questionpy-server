@@ -111,6 +111,7 @@ class BaseWorker(Worker, ABC):
                 LoadedPackage(namespace=loaded.nssn.namespace, short_name=loaded.nssn.short_name, hash=packagehash)
             )
         except BaseWorkerError as e:
+            await self.stop(3)
             msg = "Worker has exited before or during initialization."
             raise WorkerStartError(msg, temporary=e.temporary) from e
 
@@ -128,9 +129,12 @@ class BaseWorker(Worker, ABC):
         self.state = WorkerState.SERVER_AWAITS_RESPONSE
         try:
             result = await fut
+        except WorkerNotRunningError:
+            self.state = WorkerState.NOT_RUNNING
+            raise
         finally:
-            # We also want to reset the state upon error.
-            self.state = WorkerState.IDLE
+            if self.state != WorkerState.NOT_RUNNING:
+                self.state = WorkerState.IDLE
         return result
 
     async def _receive_messages(self) -> None:
@@ -174,7 +178,7 @@ class BaseWorker(Worker, ABC):
 
     async def _observe(self) -> None:
         """Observes the tasks returned by _get_observation_tasks."""
-        pending: set[asyncio.Task]
+        pending: set[asyncio.Task] = set()
         try:
             tasks = self._get_observation_tasks()
             done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)

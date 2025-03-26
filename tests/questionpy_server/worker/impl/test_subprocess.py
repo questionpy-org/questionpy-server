@@ -24,13 +24,9 @@ from tests.conftest import PACKAGE
 from tests.questionpy_server.worker.impl.conftest import patch_worker_pool
 
 
-@pytest.fixture
-def pool() -> WorkerPool:
-    return WorkerPool(1, 512 * MiB, worker_type=SubprocessWorker)
-
-
-async def test_should_apply_limits(pool: WorkerPool) -> None:
-    async with pool.get_worker(PACKAGE, 1, 1) as worker:
+@pytest.mark.parametrize("worker_pool", [SubprocessWorker], indirect=True)
+async def test_should_apply_limits(worker_pool: WorkerPool) -> None:
+    async with worker_pool.get_worker(PACKAGE, 1, 1) as worker:
         assert isinstance(worker, SubprocessWorker)
         assert worker._proc
         # Python's resource package can only get the rlimit of other processes on Linux, so we use psutil.
@@ -51,12 +47,13 @@ def _make_get_manifest_busy_wait() -> Iterator[None]:
         yield
 
 
-async def test_should_raise_cpu_timout_error(pool: WorkerPool) -> None:
-    with patch_worker_pool(pool, _make_get_manifest_busy_wait):
+@pytest.mark.parametrize("worker_pool", [SubprocessWorker], indirect=True)
+async def test_should_raise_cpu_timout_error(worker_pool: WorkerPool) -> None:
+    with patch_worker_pool(worker_pool, _make_get_manifest_busy_wait):
         start_time = time()
         # Change the timeout for faster testing.
         with pytest.raises(WorkerStartError) as exc_info, patch.object(BaseWorker, "_init_worker_timeout", 0.05):
-            async with pool.get_worker(PACKAGE, 1, 1):
+            async with worker_pool.get_worker(PACKAGE, 1, 1):
                 pass
         assert isinstance(exc_info.value.__cause__, WorkerCPUTimeLimitExceededError)
         assert 0.05 < (time() - start_time) < 0.5
@@ -71,8 +68,9 @@ def _make_get_manifest_sleep() -> Iterator[None]:
         yield
 
 
-async def test_should_raise_real_timout_error(pool: WorkerPool) -> None:
-    with patch_worker_pool(pool, _make_get_manifest_sleep):
+@pytest.mark.parametrize("worker_pool", [SubprocessWorker], indirect=True)
+async def test_should_raise_real_timout_error(worker_pool: WorkerPool) -> None:
+    with patch_worker_pool(worker_pool, _make_get_manifest_sleep):
         # The timeout should not be too short, because the Python interpreter also needs some time to start up, which
         # is accounted for the init worker step. Otherwise, a WorkerCPUTimeLimitExceededError is raised.
         start_time = time()
@@ -82,7 +80,7 @@ async def test_should_raise_real_timout_error(pool: WorkerPool) -> None:
             patch.object(BaseWorker, "_init_worker_timeout", 0.6),
             patch.object(LimitTimeUsageMixin, "_real_time_limit_factor", 1.0),
         ):
-            async with pool.get_worker(PACKAGE, 1, 1) as worker:
+            async with worker_pool.get_worker(PACKAGE, 1, 1) as worker:
                 await worker.get_manifest()
         assert isinstance(exc_info.value.__cause__, WorkerRealTimeLimitExceededError)
         assert 0.6 < (time() - start_time) < 2.0

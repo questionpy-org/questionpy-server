@@ -1,18 +1,38 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-
-from asyncio import Condition, Semaphore
+from asyncio import Condition, Lock, Semaphore
+from collections import defaultdict, deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import NamedTuple
 
 from questionpy_common.constants import MiB
 from questionpy_common.environment import WorkerResourceLimits
+from questionpy_common.error import QPyBaseError
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
-from . import Worker
+from . import Worker, WorkerState
 from .exception import WorkerStartError
+from .impl.thread import ThreadWorker
+
+
+class _WorkerPoolMemoryError(QPyBaseError):
+    """Raised when the worker pool cannot free enough memory."""
+
+    def __init__(self) -> None:
+        super().__init__("Cannot free the required amount of memory. This is likely a bug.")
+
+
+def _memory_limit_or_zero(limits: WorkerResourceLimits | None) -> int:
+    return limits.max_memory if limits else 0
+
+
+class _IdleWorkersIdentifier(NamedTuple):
+    package: PackageLocation
+    lms: int
+    context: int | None
 
 
 class WorkerPool:
@@ -29,45 +49,49 @@ class WorkerPool:
 
         self._worker_type = worker_type
 
-        self._semaphore: Semaphore | None = None
-        self._condition: Condition | None = None
+        self._lock: Lock = Lock()
+        self._semaphore: Semaphore = Semaphore(self.max_workers)
+        self._condition: Condition = Condition()
 
-        self._running_workers: int = 0
-        self._requests: int = 0
+        self._idle_workers: dict[_IdleWorkersIdentifier, deque[Worker]] = defaultdict(deque)
+        """Maps a package to a deque of workers that are currently idle and have that package loaded. The first worker
+        in the deque is the most recently used one."""
+        self._oldest_idle_workers: deque[tuple[Worker, _IdleWorkersIdentifier]] = deque()
+        """A deque of workers that are currently idle and have a package loaded. The first worker in the deque is the
+        most recently used one."""
 
-        self._total_memory = 0
+        self._workers_requested: int = 0
+        self._workers_in_use: int = 0
 
-    def memory_available(self, size: int) -> bool:
-        return self._total_memory + size <= self.max_memory
+        self._memory_in_use = 0
+        self._memory_idle = 0
+
+    def _memory_available(self, required_memory: int) -> bool:
+        """Checks whether the required memory to start or reuse a worker is available.
+
+        The total memory of idle workers is not considered.
+        """
+        return self.max_memory - self._memory_in_use >= required_memory
 
     @asynccontextmanager
-    async def get_worker(self, package: PackageLocation, _lms: int, _context: int | None) -> AsyncIterator[Worker]:
+    async def get_worker(self, package: PackageLocation, lms: int, context: int | None) -> AsyncIterator[Worker]:
         """Get a (new) worker executing a QuestionPy package.
 
         A context manager is used to ensure that a worker is always given back to the pool.
 
         Args:
             package: path to QuestionPy package
-            _lms: id of the LMS
-            _context: context id within the lms
+            lms: id of the LMS
+            context: context id within the lms
 
         Returns:
             A worker
         """
-        if not self._semaphore:
-            self._semaphore = Semaphore(self.max_workers)
-
-        if not self._condition:
-            self._condition = Condition()
-
-        self._requests += 1
+        self._workers_requested += 1
 
         # Limit the amount of running workers.
         async with self._semaphore:
-            self._running_workers += 1
-
             worker = None
-            reserved_memory = False
             try:
                 limits = WorkerResourceLimits(max_memory=200 * MiB, max_cpu_time_seconds_per_call=10)
                 if self.max_memory < limits.max_memory:
@@ -75,41 +99,122 @@ class WorkerPool:
                     raise WorkerStartError(msg)
 
                 # Wait until there is enough memory available.
-                async with self._condition:
-                    await self._condition.wait_for(lambda: self.memory_available(limits.max_memory))
-                    # Reserve memory for the new worker.
-                    self._total_memory += limits.max_memory
-                    reserved_memory = True
-
-                worker = self._worker_type(package, limits)
-                await worker.start()
+                # We need the additional lock, since `Condition.wait_for`/`Condition.notify` in comparison to
+                # `Lock.acquire` is not explicitly documented as fair. This ensures that no starvation occurs.
+                async with self._lock, self._condition:
+                    await self._condition.wait_for(lambda: self._memory_available(limits.max_memory))
+                    worker = await self._create_or_reuse_worker(package, lms, context, limits)
+                    self._workers_in_use += 1
 
                 yield worker
             finally:
                 if worker:
-                    await worker.stop(10)
-
-                if reserved_memory:
-                    # Free reserved memory and notify waiters.
-                    self._total_memory -= limits.max_memory
                     async with self._condition:
-                        self._condition.notify_all()
+                        await self._handle_idle_worker(package, lms, context, worker)
+                        self._condition.notify()
+                        self._workers_in_use -= 1
 
-                self._running_workers -= 1
-                self._requests -= 1
+                self._workers_requested -= 1
 
-    async def get_requests_in_process(self) -> int:
-        """Get the number of workers currently running.
-
-        Returns:
-            int: The count of workers currently running.
-        """
-        return self._running_workers
-
-    async def get_requests_in_queue(self) -> int:
-        """Get the number of pending requests.
+    async def _stop_oldest_idle_worker(self) -> int | None:
+        """Stops the oldest idle worker.
 
         Returns:
-            int: The count of pending requests.
+            The freed memory or None if there are no more idle workers to stop.
         """
-        return self._requests - self._running_workers
+        if not self._oldest_idle_workers:
+            return None
+
+        # Get the oldest worker and remove it.
+        worker, identifier = self._oldest_idle_workers.pop()
+        self._idle_workers[identifier].remove(worker)
+        if not self._idle_workers[identifier]:
+            # There are no more available workers with this package.
+            del self._idle_workers[identifier]
+
+        # Stop the worker and free the memory.
+        await worker.stop(10)
+
+        max_memory = _memory_limit_or_zero(worker.limits)
+        self._memory_idle -= max_memory
+        return max_memory
+
+    async def _free_memory(self, required_memory: int) -> None:
+        """Stops idle workers until the required amount of memory is available."""
+        available_memory = self.max_memory - self._memory_in_use - self._memory_idle
+        if available_memory >= required_memory:
+            # As there is more memory available than required, we do not need to stop any idle workers.
+            return
+
+        # Stop only as many workers as needed.
+        required_memory -= available_memory
+        while required_memory > 0:
+            freed_memory = await self._stop_oldest_idle_worker()
+            if freed_memory is None:
+                break
+            required_memory -= freed_memory
+
+        if required_memory > 0:
+            raise _WorkerPoolMemoryError
+
+    async def _create_or_reuse_worker(
+        self, package: PackageLocation, lms: int, context: int | None, limits: WorkerResourceLimits
+    ) -> Worker:
+        """If possible, get an idle worker or create a new one."""
+        identifier = _IdleWorkersIdentifier(package, lms, context)
+        if identifier in self._idle_workers:
+            # There is an idle worker with this package loaded - reuse the most recent one.
+            worker = self._idle_workers[identifier].popleft()
+            if not self._idle_workers[identifier]:
+                # There are no more available workers with this package.
+                del self._idle_workers[identifier]
+            self._oldest_idle_workers.remove((worker, identifier))
+
+            self._memory_idle -= _memory_limit_or_zero(worker.limits)
+        else:
+            # We need to create a new worker - free as much memory as needed to start the worker.
+            await self._free_memory(limits.max_memory)
+            worker = self._worker_type(package, limits)
+            await worker.start()
+
+        # Reserve the memory.
+        self._memory_in_use += limits.max_memory if self._worker_type is not ThreadWorker else 0
+
+        return worker
+
+    async def _handle_idle_worker(
+        self, package: PackageLocation, lms: int, context: int | None, worker: Worker
+    ) -> None:
+        """Adds a worker to the pool of reusable workers."""
+        # Free reserved memory.
+        self._memory_in_use -= _memory_limit_or_zero(worker.limits)
+
+        # Check if the worker is idling.
+        if worker.state == WorkerState.IDLE:
+            # Free as much memory as need to store the idle worker.
+            required_memory = _memory_limit_or_zero(worker.limits)
+            await self._free_memory(required_memory)
+
+            # Add the worker.
+            identifier = _IdleWorkersIdentifier(package, lms, context)
+            self._idle_workers[identifier].appendleft(worker)
+            self._oldest_idle_workers.appendleft((worker, identifier))
+
+            self._memory_idle += _memory_limit_or_zero(worker.limits)
+        else:
+            # We cannot reuse this worker as it is not idling.
+            await worker.stop(10)
+
+    async def stop_idle_workers(self) -> None:
+        """Stops all idle workers gracefully."""
+        async with self._condition:
+            while await self._stop_oldest_idle_worker() is not None:
+                continue
+
+    def get_workers_in_use_count(self) -> int:
+        """Get the number of workers currently running but not idle."""
+        return self._workers_in_use
+
+    def get_pending_worker_request_count(self) -> int:
+        """Get the number of pending worker requests."""
+        return self._workers_requested - self._workers_in_use

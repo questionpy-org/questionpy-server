@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 from _pytest.tmpdir import TempPathFactory
 
-from questionpy_common.constants import KiB, MiB
+from questionpy_common.constants import KiB
 from questionpy_server import WorkerPool
 from questionpy_server.cache import FileLimitLRU
 from questionpy_server.collector.indexer import Indexer
@@ -18,18 +18,13 @@ from questionpy_server.worker.runtime.messages import BaseWorkerError
 from tests.conftest import PACKAGE
 
 
-def create_lms_collector(tmp_path_factory: TempPathFactory) -> tuple[LMSCollector, FileLimitLRU]:
-    """Create a local collector and return it and the cache it is using.
-
-    Args:
-        tmp_path_factory (TempPathFactory): Factory for temporary directories.
-
-    Returns:
-        Local collector and cache.
-    """
+def create_lms_collector(
+    tmp_path_factory: TempPathFactory, worker_pool: WorkerPool
+) -> tuple[LMSCollector, FileLimitLRU]:
+    """Creates and returns a local collector along with the cache it is using."""
     path = tmp_path_factory.mktemp("qpy")
     cache = FileLimitLRU(path, 100 * KiB, extension=".qpy")
-    indexer = Indexer(WorkerPool(1, 200 * MiB))
+    indexer = Indexer(worker_pool)
     return LMSCollector(cache, indexer), cache
 
 
@@ -54,8 +49,8 @@ async def test_package_in_cache_before_init(tmp_path_factory: TempPathFactory) -
     assert path is not None
 
 
-async def test_put(tmp_path_factory: TempPathFactory) -> None:
-    lms_collector, cache = create_lms_collector(tmp_path_factory)
+async def test_put(tmp_path_factory: TempPathFactory, worker_pool: WorkerPool) -> None:
+    lms_collector, cache = create_lms_collector(tmp_path_factory, worker_pool)
 
     package_bytes = PACKAGE.path.read_bytes()
     hash_container = HashContainer(package_bytes, PACKAGE.hash)
@@ -73,8 +68,8 @@ async def test_put(tmp_path_factory: TempPathFactory) -> None:
     assert package_2 is package
 
 
-async def test_get_non_existing_file(tmp_path_factory: TempPathFactory) -> None:
-    lms_collector, cache = create_lms_collector(tmp_path_factory)
+async def test_get_non_existing_file(tmp_path_factory: TempPathFactory, worker_pool: WorkerPool) -> None:
+    lms_collector, cache = create_lms_collector(tmp_path_factory, worker_pool)
 
     package_bytes = PACKAGE.path.read_bytes()
     hash_container = HashContainer(package_bytes, PACKAGE.hash)
@@ -89,8 +84,10 @@ async def test_get_non_existing_file(tmp_path_factory: TempPathFactory) -> None:
         await lms_collector.get_path(package)
 
 
-async def test_lms_collector_is_resilient_to_faulty_packages_on_start(tmp_path_factory: TempPathFactory) -> None:
-    lms_collector, cache = create_lms_collector(tmp_path_factory)
+async def test_lms_collector_is_resilient_to_faulty_packages_on_start(
+    tmp_path_factory: TempPathFactory, worker_pool: WorkerPool
+) -> None:
+    lms_collector, cache = create_lms_collector(tmp_path_factory, worker_pool)
 
     invalid_package = b"this is a invalid package"
     file = cache.directory / f"{calculate_hash(invalid_package)}.qpy"
@@ -108,8 +105,10 @@ async def test_lms_collector_is_resilient_to_faulty_packages_on_start(tmp_path_f
         assert cache.get(hash_container.hash) == await lms_collector.get_path(package)
 
 
-async def test_lms_collector_raises_error_on_faulty_package_on_put(tmp_path_factory: TempPathFactory) -> None:
-    lms_collector, cache = create_lms_collector(tmp_path_factory)
+async def test_lms_collector_raises_error_on_faulty_package_on_put(
+    tmp_path_factory: TempPathFactory, worker_pool: WorkerPool
+) -> None:
+    lms_collector, cache = create_lms_collector(tmp_path_factory, worker_pool)
 
     invalid_package = b"this is a invalid package"
     hash_container = HashContainer(invalid_package, calculate_hash(invalid_package))
