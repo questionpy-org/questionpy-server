@@ -107,7 +107,7 @@ class WorkerSettings(BaseModel):
 
 
 class PackageCacheSettings(BaseModel):
-    size: ByteSize = ByteSize(5 * MiB)
+    size: ByteSize = ByteSize(100 * MiB)
     directory: DirectoryPath = Path("cache/packages").resolve()
 
     @field_validator("directory")
