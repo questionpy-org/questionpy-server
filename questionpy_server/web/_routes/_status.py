@@ -21,8 +21,8 @@ async def get_server_status(request: web.Request) -> web.Response:
         allow_lms_packages=qpyserver.settings.webservice.allow_lms_packages,
         max_package_size=qpyserver.settings.webservice.max_package_size,
         usage=Usage(
-            requests_in_process=await qpyserver.worker_pool.get_requests_in_process(),
-            requests_in_queue=await qpyserver.worker_pool.get_requests_in_queue(),
+            requests_in_process=qpyserver.worker_pool.get_workers_in_use_count(),
+            requests_in_queue=qpyserver.worker_pool.get_pending_worker_request_count(),
         ),
     )
     return pydantic_json_response(data=status, status=200)

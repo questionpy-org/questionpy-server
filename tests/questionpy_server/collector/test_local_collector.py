@@ -14,7 +14,6 @@ from unittest.mock import patch
 import pytest
 from _pytest.tmpdir import TempPathFactory
 
-from questionpy_common.constants import MiB
 from questionpy_server import WorkerPool
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.local_collector import LocalCollector
@@ -23,17 +22,10 @@ from questionpy_server.package import Package
 from tests.conftest import PACKAGE, PACKAGE_2
 
 
-def create_local_collector(tmp_path_factory: TempPathFactory) -> tuple[LocalCollector, Path]:
-    """Create a local collector and return it and the directory it is using.
-
-    Args:
-        tmp_path_factory (TempPathFactory): Factory for temporary directories.
-
-    Returns:
-        Local collector and directory.
-    """
+def create_local_collector(tmp_path_factory: TempPathFactory, worker_pool: WorkerPool) -> tuple[LocalCollector, Path]:
+    """Create and return a local collector along with the directory it is using."""
     path = tmp_path_factory.mktemp("qpy")
-    indexer = Indexer(WorkerPool(1, 200 * MiB))
+    indexer = Indexer(worker_pool)
     return LocalCollector(path, indexer), path
 
 
@@ -69,8 +61,8 @@ class WaitForAsyncFunctionCall:
             pytest.fail(f"Function {self.func} has not been called within {timeout} seconds.", False)
 
 
-async def test_run_update_on_signal(tmp_path_factory: TempPathFactory) -> None:
-    local_collector, _ = create_local_collector(tmp_path_factory)
+async def test_run_update_on_signal(tmp_path_factory: TempPathFactory, worker_pool: WorkerPool) -> None:
+    local_collector, _ = create_local_collector(tmp_path_factory, worker_pool)
 
     async with local_collector:
         # Check that the update function is called on SIGUSR1.
@@ -83,29 +75,29 @@ async def test_run_update_on_signal(tmp_path_factory: TempPathFactory) -> None:
             mock_update.assert_awaited_once()
 
 
-async def test_ignore_files_with_wrong_extension(tmp_path_factory: TempPathFactory) -> None:
+async def test_ignore_files_with_wrong_extension(tmp_path_factory: TempPathFactory, worker_pool: WorkerPool) -> None:
     # File exists before initializing.
     directory = tmp_path_factory.mktemp("qpy")
     ignore_file = directory / "wrong.extension"
     ignore_file.touch()
 
-    indexer = Indexer(WorkerPool(1, 200 * MiB))
+    indexer = Indexer(worker_pool)
     local_collector = LocalCollector(directory, indexer)
 
     async with local_collector:
         assert len(local_collector.map.paths) == 0
 
     # File gets created after initialization.
-    local_collector, directory = create_local_collector(tmp_path_factory)
+    local_collector, directory = create_local_collector(tmp_path_factory, worker_pool)
     async with local_collector:
         ignore_file = directory / "wrong.extension"
         ignore_file.touch()
         assert len(local_collector.map.paths) == 0
 
 
-async def test_package_exists_before_init(tmp_path_factory: TempPathFactory) -> None:
+async def test_package_exists_before_init(tmp_path_factory: TempPathFactory, worker_pool: WorkerPool) -> None:
     path = tmp_path_factory.mktemp("qpy")
-    indexer = Indexer(WorkerPool(1, 200 * MiB))
+    indexer = Indexer(worker_pool)
     local_collector = LocalCollector(path, indexer)
 
     package_path = copy(PACKAGE.path, path)
@@ -119,8 +111,8 @@ async def test_package_exists_before_init(tmp_path_factory: TempPathFactory) -> 
         assert calculate_hash(actual_package_path) == package.hash
 
 
-async def test_package_gets_created(tmp_path_factory: TempPathFactory) -> None:
-    local_collector, directory = create_local_collector(tmp_path_factory)
+async def test_package_gets_created(tmp_path_factory: TempPathFactory, worker_pool: WorkerPool) -> None:
+    local_collector, directory = create_local_collector(tmp_path_factory, worker_pool)
 
     package = Package(PACKAGE.hash, PACKAGE.manifest)
 
@@ -135,8 +127,8 @@ async def test_package_gets_created(tmp_path_factory: TempPathFactory) -> None:
             assert package_path == await local_collector.get_path(package)
 
 
-async def test_package_gets_modified(tmp_path_factory: TempPathFactory) -> None:
-    local_collector, directory = create_local_collector(tmp_path_factory)
+async def test_package_gets_modified(tmp_path_factory: TempPathFactory, worker_pool: WorkerPool) -> None:
+    local_collector, directory = create_local_collector(tmp_path_factory, worker_pool)
 
     package_path = Path(copy(PACKAGE.path, directory))
     package_1 = Package(PACKAGE.hash, PACKAGE.manifest)
@@ -160,8 +152,8 @@ async def test_package_gets_modified(tmp_path_factory: TempPathFactory) -> None:
             assert Path(package_path) == await local_collector.get_path(package_2)
 
 
-async def test_package_gets_deleted(tmp_path_factory: TempPathFactory) -> None:
-    local_collector, directory = create_local_collector(tmp_path_factory)
+async def test_package_gets_deleted(tmp_path_factory: TempPathFactory, worker_pool: WorkerPool) -> None:
+    local_collector, directory = create_local_collector(tmp_path_factory, worker_pool)
 
     # Create a package in the directory.
     package_path = Path(copy(PACKAGE.path, directory))
@@ -179,8 +171,10 @@ async def test_package_gets_deleted(tmp_path_factory: TempPathFactory) -> None:
                 await local_collector.get_path(package)
 
 
-async def test_package_gets_moved_from_package_to_package(tmp_path_factory: TempPathFactory) -> None:
-    local_collector, directory = create_local_collector(tmp_path_factory)
+async def test_package_gets_moved_from_package_to_package(
+    tmp_path_factory: TempPathFactory, worker_pool: WorkerPool
+) -> None:
+    local_collector, directory = create_local_collector(tmp_path_factory, worker_pool)
 
     # Create a package in the directory.
     src_path = Path(copy(PACKAGE.path, directory))
@@ -204,8 +198,10 @@ async def test_package_gets_moved_from_package_to_package(tmp_path_factory: Temp
             assert dest_path == await local_collector.get_path(package)
 
 
-async def test_package_gets_moved_from_non_package_to_package(tmp_path_factory: TempPathFactory) -> None:
-    local_collector, directory = create_local_collector(tmp_path_factory)
+async def test_package_gets_moved_from_non_package_to_package(
+    tmp_path_factory: TempPathFactory, worker_pool: WorkerPool
+) -> None:
+    local_collector, directory = create_local_collector(tmp_path_factory, worker_pool)
 
     # Create a package in the directory.
     src_path = Path(copy(PACKAGE.path, directory / "non.package"))
@@ -223,8 +219,10 @@ async def test_package_gets_moved_from_non_package_to_package(tmp_path_factory: 
             assert dest_path == await local_collector.get_path(package)
 
 
-async def test_package_gets_moved_from_package_to_non_package(tmp_path_factory: TempPathFactory) -> None:
-    local_collector, directory = create_local_collector(tmp_path_factory)
+async def test_package_gets_moved_from_package_to_non_package(
+    tmp_path_factory: TempPathFactory, worker_pool: WorkerPool
+) -> None:
+    local_collector, directory = create_local_collector(tmp_path_factory, worker_pool)
 
     # Create a package in the directory.
     src_path = Path(copy(PACKAGE.path, directory))
@@ -244,7 +242,9 @@ async def test_package_gets_moved_from_package_to_non_package(tmp_path_factory: 
 
 
 @pytest.mark.parametrize("inside", [True, False])
-async def test_package_gets_moved_to_different_folder(tmp_path_factory: TempPathFactory, inside: bool) -> None:
+async def test_package_gets_moved_to_different_folder(
+    tmp_path_factory: TempPathFactory, inside: bool, worker_pool: WorkerPool
+) -> None:
     # Create directories.
     directory = tmp_path_factory.mktemp("qpy")
     new_directory = directory / "new"
@@ -254,7 +254,7 @@ async def test_package_gets_moved_to_different_folder(tmp_path_factory: TempPath
         # Use new_directory as the directory to be watched and directory to be the new directory of the package.
         directory, new_directory = new_directory, directory
 
-    indexer = Indexer(WorkerPool(1, 200 * MiB))
+    indexer = Indexer(worker_pool)
     local_collector = LocalCollector(directory, indexer)
 
     # Create a package in the directory.
@@ -273,8 +273,8 @@ async def test_package_gets_moved_to_different_folder(tmp_path_factory: TempPath
                 await local_collector.get_path(package)
 
 
-async def test_package_filenames_get_swapped(tmp_path_factory: TempPathFactory) -> None:
-    local_collector, directory = create_local_collector(tmp_path_factory)
+async def test_package_filenames_get_swapped(tmp_path_factory: TempPathFactory, worker_pool: WorkerPool) -> None:
+    local_collector, directory = create_local_collector(tmp_path_factory, worker_pool)
 
     package_1_path = Path(copy(PACKAGE.path, directory))
     package_1 = Package(PACKAGE.hash, PACKAGE.manifest)
@@ -304,8 +304,10 @@ async def test_package_filenames_get_swapped(tmp_path_factory: TempPathFactory) 
             mock_unregister.assert_not_awaited()
 
 
-async def test_local_collector_is_resilient_to_faulty_packages(tmp_path_factory: TempPathFactory) -> None:
-    local_collector, directory = create_local_collector(tmp_path_factory)
+async def test_local_collector_is_resilient_to_faulty_packages(
+    tmp_path_factory: TempPathFactory, worker_pool: WorkerPool
+) -> None:
+    local_collector, directory = create_local_collector(tmp_path_factory, worker_pool)
 
     invalid_package_content = b"this is a invalid package"
     invalid_package_path = directory / "invalid.qpy"

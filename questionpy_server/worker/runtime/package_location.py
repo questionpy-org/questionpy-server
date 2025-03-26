@@ -17,11 +17,14 @@ class ZipPackageLocation:
     hash: str
     kind: Literal["zip"] = field(default="zip", init=False)
 
+    def __hash__(self) -> int:
+        return hash(self.hash)
+
     def __str__(self) -> str:
         return f"{self.path} (sha256:{self.hash})"
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class DirPackageLocation:
     """A package's dist directory to be loaded directly."""
 
@@ -33,7 +36,7 @@ class DirPackageLocation:
         return str(self.path)
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class FunctionPackageLocation:
     """A package consisting only of its init function. Intended mostly for unit tests.
 

@@ -45,6 +45,12 @@ class _WorkerThread(threading.Thread):
         try:
             manager.bootstrap()
             manager.loop()
+        except EOFError:
+            # TODO: Because of the asyncio.CancelledError caused by aiohttp when exiting the program, the DuplexPipe
+            #  gets closed in the finally-block of ThreadWorker._run_and_wait. Therefore,
+            #  WorkerToServerConnection.receive_message throws an EOFError. It would be nice to be able to stop an idle
+            #  worker with the Exit-message.
+            pass
         finally:
             # Since asyncio.Event is not threadsafe, we schedule setting it in the main thread instead.
             self._loop.call_soon_threadsafe(self._end_event.set)
@@ -67,7 +73,7 @@ class _WorkerThread(threading.Thread):
 
 
 class ThreadWorker(BaseWorker):
-    """Worker implementation using a thread withing the server process for simpler debugging of package code."""
+    """Worker implementation using a thread within the server process for simpler debugging of package code."""
 
     _worker_type = "thread"
 
