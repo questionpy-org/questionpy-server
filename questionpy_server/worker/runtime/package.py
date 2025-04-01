@@ -2,15 +2,16 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import inspect
+import logging
+import shutil
 import sys
-import zipfile
+import tempfile
 from abc import ABC, abstractmethod
 from functools import cached_property
 from importlib import import_module, resources
 from importlib.resources.abc import Traversable
 from pathlib import Path
 from types import ModuleType
-from typing import cast
 from zipfile import ZipFile
 
 from questionpy_common.api.package import QPyPackageInterface
@@ -23,6 +24,8 @@ from questionpy_server.worker.runtime.package_location import (
     PackageLocation,
     ZipPackageLocation,
 )
+
+_log = logging.getLogger(__name__)
 
 
 class NoInitFunctionError(Exception):
@@ -68,38 +71,42 @@ class ImportablePackage(ABC, Package):
         return self._state
 
 
-class ZipBasedPackage(ImportablePackage):
-    """A 'regular', zip-formatted QuestionPy package."""
+class UnpackingZipBasedPackage(ImportablePackage):
+    """A zip-formatted QuestionPy package which will be unpacked into a temporary directory before use."""
 
-    def __init__(self, path: Path):
+    def __init__(self, location: ZipPackageLocation) -> None:
         super().__init__()
-        self._path = path
-        self._zip_file = ZipFile(path)
+        self.path = location.path
+        self.hash = location.hash
 
-    @cached_property
-    def manifest(self) -> Manifest:
-        """Load QuestionPy manifest from package."""
-        data = self._zip_file.read(f"{DIST_DIR}/{MANIFEST_FILENAME}")
-        return Manifest.model_validate_json(data)
+        self._dir_package: DirBasedPackage | None = None
 
-    @property
-    def path(self) -> Path:
-        return self._path
+    def _ensure_unpacked(self) -> "DirBasedPackage":
+        if not self._dir_package:
+            temp_dir = Path(tempfile.mkdtemp(prefix=f"qpy-package-{self.hash}-"))
+            with ZipFile(self.path) as zip_file:
+                zip_file.extractall(temp_dir)
 
-    def get_path(self, path: str) -> Traversable:
-        # Intuitively, a path beginning with '/' should be absolute within the package, but ZipFile behaves differently.
-        path = path.lstrip("/")
+            self._dir_package = DirBasedPackage(temp_dir / DIST_DIR)
 
-        # According to the docs, zipfile.Path implements Traversable.
-        return cast(Traversable, zipfile.Path(self._zip_file, path))
+            _log.debug("Unpacked package '%s' to '%s'.", self.path, temp_dir)
+
+        return self._dir_package
 
     def setup_imports(self) -> None:
-        for new_path in (
-            str(self.path / DIST_DIR / "dependencies" / "site-packages"),
-            str(self.path / DIST_DIR / "python"),
-        ):
-            if new_path not in sys.path:
-                sys.path.insert(0, new_path)
+        self._ensure_unpacked().setup_imports()
+
+    @property
+    def manifest(self) -> Manifest:
+        return self._ensure_unpacked().manifest
+
+    def get_path(self, path: str) -> Traversable:
+        return self._ensure_unpacked().get_path(path)
+
+    def __del__(self) -> None:
+        if self._dir_package:
+            shutil.rmtree(self._dir_package.path)
+            self._dir_package = None
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.path})"
@@ -183,7 +190,7 @@ class FunctionBasedPackage(ImportablePackage):
 def load_package(location: PackageLocation) -> ImportablePackage:
     """Turn a pure :class:`PackageLocation` into an :class:`ImportablePackage` which can be imported and executed."""
     if isinstance(location, ZipPackageLocation):
-        return ZipBasedPackage(location.path)
+        return UnpackingZipBasedPackage(location)
     if isinstance(location, DirPackageLocation):
         return DirBasedPackage(location.path)
     if isinstance(location, FunctionPackageLocation):
