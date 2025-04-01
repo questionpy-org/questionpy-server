@@ -91,6 +91,13 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
         # Turn off the worker's __debug__ flag unless ours is set as well.
         python_flags = [] if __debug__ else ["-O"]
 
+        env = {
+            # OpenBLAS is used by NumPy and creates a number of threads on import.
+            # Each thread allocates a bunch of virtual memory, so more than 2 threads breaks the default memory limit.
+            # By default, the number of threads is proportional to the available CPUs.
+            "OPENBLAS_NUM_THREADS": "2"
+        }
+
         self._proc = await asyncio.create_subprocess_exec(
             sys.executable,
             *python_flags,
@@ -98,6 +105,7 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env=env,
         )
 
         if self._proc.stdout is None or self._proc.stderr is None or self._proc.stdin is None:
