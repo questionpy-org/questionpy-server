@@ -62,7 +62,8 @@ class QPyServer:
     async def _stop_idle_workers(self, _app: web.Application) -> None:
         await self.worker_pool.stop_idle_workers()
 
-    def start_server(self) -> None:
+    def run_forever(self) -> None:
+        """Runs the server. Blocks until shut down by a signal."""
         port = self.settings.webservice.listen_port
 
         def print_start(_ignore: Any) -> None:
