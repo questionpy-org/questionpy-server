@@ -40,7 +40,7 @@ def main() -> None:
     update_logging(settings.general.log_level)
 
     qpy_server = QPyServer(settings)
-    qpy_server.start_server()
+    qpy_server.run_forever()
 
 
 if __name__ == "__main__":
