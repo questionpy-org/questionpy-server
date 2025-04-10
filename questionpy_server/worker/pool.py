@@ -5,7 +5,7 @@ from asyncio import Condition, Lock, Semaphore
 from collections import defaultdict, deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import NamedTuple
+from typing import NamedTuple, Self
 
 from questionpy_common.constants import MiB
 from questionpy_common.environment import WorkerResourceLimits
@@ -65,6 +65,12 @@ class WorkerPool:
 
         self._memory_in_use = 0
         self._memory_idle = 0
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        await self.stop_idle_workers()
 
     def _memory_available(self, required_memory: int) -> bool:
         """Checks whether the required memory to start or reuse a worker is available.
