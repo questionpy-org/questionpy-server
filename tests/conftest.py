@@ -147,8 +147,5 @@ def package_factory(tmp_path_factory: pytest.TempPathFactory) -> TestPackageFact
 
 @pytest.fixture(params=(SubprocessWorker, ThreadWorker))
 async def worker_pool(request: pytest.FixtureRequest) -> AsyncGenerator[WorkerPool]:
-    pool = WorkerPool(1, 512 * MiB, worker_type=request.param)
-    try:
+    async with WorkerPool(1, 512 * MiB, worker_type=request.param) as pool:
         yield pool
-    finally:
-        await pool.stop_idle_workers()
