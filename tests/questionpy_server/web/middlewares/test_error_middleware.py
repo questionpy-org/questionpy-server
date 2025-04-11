@@ -30,7 +30,11 @@ from questionpy_server.worker.exception import (
     WorkerRealTimeLimitExceededError,
     WorkerStartError,
 )
-from questionpy_server.worker.runtime.messages import WorkerMemoryLimitExceededError, WorkerUnknownError
+from questionpy_server.worker.runtime.messages import (
+    BaseWorkerError,
+    WorkerMemoryLimitExceededError,
+    WorkerUnknownError,
+)
 from tests.conftest import PACKAGE
 
 
@@ -98,7 +102,12 @@ async def test_request_error_should_be_returned_as_is(
 async def test_qpy_base_error_should_be_transformed_to_web_error(
     aiohttp_client: AiohttpClient, error_type: type[QPyBaseError]
 ) -> None:
-    error = error_type(reason="reason", temporary=False)
+    error: QPyBaseError
+    if issubclass(error_type, BaseWorkerError):
+        error = error_type(reason="reason", temporary=False, worker_name="aae11272c5-0-N-nrrgqz3tm")
+    else:
+        error = error_type(reason="reason", temporary=False)
+
     server = error_server(error)
     client = await aiohttp_client(server)
     response = await client.get("")
@@ -117,7 +126,7 @@ async def test_qpy_base_error_should_be_transformed_to_web_error(
 async def test_time_limit_exception_should_be_transformed_to_web_error(
     aiohttp_client: AiohttpClient, error_type: type[WorkerCPUTimeLimitExceededError | WorkerRealTimeLimitExceededError]
 ) -> None:
-    error = error_type(3)
+    error = error_type(3, worker_name="aae11272c5-2-1-n5stk6tu")
     server = error_server(error)
     client = await aiohttp_client(server)
     response = await client.get("")

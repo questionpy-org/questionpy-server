@@ -250,17 +250,17 @@ class WorkerError(MessageToServer):
             error_data=error_data,
         )
 
-    def to_exception(self) -> Exception:
+    def to_exception(self, worker_name: str) -> Exception:
         """Get an exception from a WorkerError message."""
         error: Exception
         if self.type == WorkerError.ErrorType.MEMORY_EXCEEDED:
-            error = WorkerMemoryLimitExceededError(self.message)
+            error = WorkerMemoryLimitExceededError(self.message, worker_name=worker_name)
         elif self.type == WorkerError.ErrorType.QUESTION_STATE_INVALID:
             error = InvalidQuestionStateError(self.message)
         elif self.type == WorkerError.ErrorType.FORM_OPTIONS_INVALID:
             error = OptionsFormValidationError(self.error_data or {})
         else:
-            error = WorkerUnknownError(self.message)
+            error = WorkerUnknownError(self.message, worker_name=worker_name)
 
         if __debug__ and self.original_stacktrace:
             error.add_note(f"The original worker-side stacktrace follows:\n{self.original_stacktrace}")
@@ -288,7 +288,11 @@ class InvalidMessageIdError(QPyBaseError):
 
 
 class BaseWorkerError(QPyBaseError):
-    pass
+    def __init__(self, *args: Any, worker_name: str, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.worker_name = worker_name
+        self.add_note(f"(Caused by worker '{worker_name}')")
 
 
 class WorkerMemoryLimitExceededError(BaseWorkerError):

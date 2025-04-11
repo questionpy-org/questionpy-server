@@ -14,15 +14,19 @@ class WorkerStartError(BaseWorkerError):
 
 
 class WorkerCPUTimeLimitExceededError(BaseWorkerError):
-    def __init__(self, limit: float):
+    def __init__(self, limit: float, worker_name: str):
         self.limit = limit
-        super().__init__(f"Worker has exceeded its CPU time limit of {limit} seconds and was killed.")
+        super().__init__(
+            f"Worker has exceeded its CPU time limit of {limit} seconds and was killed.", worker_name=worker_name
+        )
 
 
 class WorkerRealTimeLimitExceededError(BaseWorkerError):
-    def __init__(self, limit: float):
+    def __init__(self, limit: float, worker_name: str):
         self.limit = limit
-        super().__init__(f"Worker has exceeded its real time limit of {limit} seconds and was killed.")
+        super().__init__(
+            f"Worker has exceeded its real time limit of {limit} seconds and was killed.", worker_name=worker_name
+        )
 
 
 class StaticFileSizeMismatchError(QPyBaseError):

@@ -111,11 +111,11 @@ class BaseWorker(Worker, ABC):
         except BaseWorkerError as e:
             await self.stop(3)
             msg = "Worker has exited before or during initialization."
-            raise WorkerStartError(msg, temporary=e.temporary) from e
+            raise WorkerStartError(msg, temporary=e.temporary, worker_name=self.name) from e
 
     def send(self, message: MessageToWorker) -> None:
         if self._connection is None or self._observe_task is None or self._observe_task.done():
-            raise WorkerNotRunningError(temporary=True)
+            raise WorkerNotRunningError(temporary=True, worker_name=self.name)
         self._connection.send_message(message)
 
     async def send_and_wait_for_response(
@@ -138,13 +138,13 @@ class BaseWorker(Worker, ABC):
     async def _receive_messages(self) -> None:
         """Executed as a task, receives and dispatches incoming messages."""
         if self._connection is None:
-            raise WorkerNotRunningError
+            raise WorkerNotRunningError(worker_name=self.name)
 
         try:
             async for message in self._connection:
                 if isinstance(message, WorkerError):
                     cause_id = message.expected_response_id
-                    exception = message.to_exception()
+                    exception = message.to_exception(worker_name=self.name)
                     for future in [
                         fut for expected_id, fut in self._expected_incoming_messages if expected_id == cause_id
                     ]:
@@ -160,7 +160,7 @@ class BaseWorker(Worker, ABC):
         finally:
             for _, future in self._expected_incoming_messages:
                 if not future.done():
-                    exc = self._receive_messages_exception or WorkerNotRunningError()
+                    exc = self._receive_messages_exception or WorkerNotRunningError(worker_name=self.name)
                     future.set_exception(exc)
             self._expected_incoming_messages = []
 
@@ -406,12 +406,14 @@ class LimitTimeUsageMixin(Worker, ABC):
             while self._request_started_cpu_time is not None and self._request_started_time is not None:
                 remaining_cpu_time = self._request_started_cpu_time + self._cur_cpu_time_limit - self._get_cpu_time()
                 if remaining_cpu_time <= 0:
-                    raise WorkerCPUTimeLimitExceededError(self._cur_cpu_time_limit)
+                    raise WorkerCPUTimeLimitExceededError(self._cur_cpu_time_limit, worker_name=self.name)
 
                 remaining_time = (
                     self._request_started_time + (self._cur_cpu_time_limit * self._real_time_limit_factor) - time.time()
                 )
                 if remaining_time <= 0:
-                    raise WorkerRealTimeLimitExceededError(self._cur_cpu_time_limit * self._real_time_limit_factor)
+                    raise WorkerRealTimeLimitExceededError(
+                        self._cur_cpu_time_limit * self._real_time_limit_factor, worker_name=self.name
+                    )
 
                 await asyncio.sleep(max(min(remaining_cpu_time, remaining_time), 0.05))

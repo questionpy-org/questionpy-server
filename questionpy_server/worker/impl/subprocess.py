@@ -109,7 +109,7 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
 
         if self._proc.stdout is None or self._proc.stderr is None or self._proc.stdin is None:
             msg = "Could not start the worker process."
-            raise WorkerStartError(msg)
+            raise WorkerStartError(msg, worker_name=self.name)
 
         self._stderr_buffer = _StderrBuffer(self._proc.stderr)
         self._connection = ServerToWorkerConnection(self._proc.stdout, self._proc.stdin)
@@ -136,7 +136,7 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
 
     async def get_resource_usage(self) -> WorkerResources:
         if not self._proc or self._proc.returncode is not None:
-            raise WorkerNotRunningError
+            raise WorkerNotRunningError(worker_name=self.name)
 
         psutil_proc = psutil.Process(self._proc.pid)
         return WorkerResources(
@@ -147,7 +147,7 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
 
     def _get_observation_tasks(self) -> Sequence[asyncio.Task]:
         if not self._proc or not self._stderr_buffer:
-            raise WorkerNotRunningError
+            raise WorkerNotRunningError(worker_name=self.name)
 
         prefix = f"worker-{self.name}/"
         return (
@@ -166,7 +166,7 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
 
     def _get_cpu_time(self) -> float:
         if not self._proc or self._proc.returncode is not None:
-            raise WorkerNotRunningError
+            raise WorkerNotRunningError(worker_name=self.name)
 
         psutil_proc = psutil.Process(self._proc.pid)
         cpu_times = psutil_proc.cpu_times()
