@@ -4,7 +4,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import TypeVar
+from pathlib import Path
+from typing import NotRequired, TypedDict, TypeVar, Unpack
 
 from pydantic import BaseModel
 
@@ -50,13 +51,27 @@ class PackageFileData:
 _M = TypeVar("_M", bound=MessageToServer)
 
 
+class WorkerArgs(TypedDict):
+    name: str
+    """A unique name given to the worker by its pool."""
+    package: PackageLocation
+    """The main package that the worker should load when [start][questionpy_server.worker.Worker.start] is called."""
+    worker_home: Path
+    """An existing directory owned by the worker, with the same lifetime as the worker."""
+    limits: NotRequired[WorkerResourceLimits | None]
+    """Resource limits to enforce on the worker."""
+
+
 class Worker(ABC):
     """Interface for worker implementations."""
 
-    def __init__(self, package: PackageLocation, limits: WorkerResourceLimits | None) -> None:
+    def __init__(self, **kwargs: Unpack[WorkerArgs]) -> None:
         super().__init__()
-        self.package = package
-        self.limits = limits
+        self.name = kwargs["name"]
+        self.package = kwargs["package"]
+        self.worker_home = kwargs["worker_home"]
+        self.limits = kwargs["limits"]
+
         self.state = WorkerState.NOT_RUNNING
         self.loaded_packages: list[LoadedPackage] = []
         """All loaded packages in the worker."""

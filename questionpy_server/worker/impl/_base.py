@@ -5,11 +5,12 @@
 import asyncio
 import contextlib
 import logging
+import shutil
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from os.path import commonpath, normpath
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, Unpack
 from zipfile import ZipFile
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
@@ -19,7 +20,7 @@ from questionpy_common.environment import RequestUser
 from questionpy_common.manifest import Manifest, PackageFile
 from questionpy_server.models import LoadedPackage, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
-from questionpy_server.worker import PackageFileData, Worker, WorkerState
+from questionpy_server.worker import PackageFileData, Worker, WorkerArgs, WorkerState
 from questionpy_server.worker.exception import (
     StaticFileSizeMismatchError,
     WorkerCPUTimeLimitExceededError,
@@ -75,7 +76,7 @@ class BaseWorker(Worker, ABC):
     _init_worker_timeout = 2
     _load_qpy_package_timeout = 4
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs: Unpack[WorkerArgs]) -> None:
         super().__init__(**kwargs)
 
         self._observe_task: asyncio.Task | None = None
@@ -94,10 +95,7 @@ class BaseWorker(Worker, ABC):
 
         try:
             await self.send_and_wait_for_response(
-                InitWorker(
-                    limits=self.limits,
-                    worker_type=self._worker_type,
-                ),
+                InitWorker(limits=self.limits, worker_type=self._worker_type, worker_home=self.worker_home),
                 InitWorker.Response,
                 self._init_worker_timeout,
             )
@@ -106,9 +104,9 @@ class BaseWorker(Worker, ABC):
                 LoadQPyPackage.Response,
                 self._load_qpy_package_timeout,
             )
-            packagehash = self.package.hash if isinstance(self.package, ZipPackageLocation) else None
+            package_hash = self.package.hash if isinstance(self.package, ZipPackageLocation) else None
             self.loaded_packages.append(
-                LoadedPackage(namespace=loaded.nssn.namespace, short_name=loaded.nssn.short_name, hash=packagehash)
+                LoadedPackage(namespace=loaded.nssn.namespace, short_name=loaded.nssn.short_name, hash=package_hash)
             )
         except BaseWorkerError as e:
             await self.stop(3)
@@ -187,14 +185,19 @@ class BaseWorker(Worker, ABC):
                     if exc := task.exception():
                         self._receive_messages_exception = exc
         finally:
-            self.state = WorkerState.NOT_RUNNING
-
             await self.kill()
 
             for task in pending:
                 task.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
+
+            self.state = WorkerState.NOT_RUNNING
+
+            if self.worker_home.exists():
+                # Security: rmtree deletes symlinks to dirs without recursing into them, so there should be no danger
+                # of a malicious package causing us to delete anything outside the worker home.
+                shutil.rmtree(self.worker_home)
 
     async def stop(self, timeout: float) -> None:
         try:
@@ -338,6 +341,12 @@ class BaseWorker(Worker, ABC):
 
     def get_loaded_packages(self, *, only_with_hash: bool = True) -> list[LoadedPackage]:
         return [p for p in self.loaded_packages if p.hash is not None or not only_with_hash]
+
+    def __del__(self) -> None:
+        if self.state != WorkerState.NOT_RUNNING:
+            log.warning("Worker '%s' was not stopped correctly.", self.name)
+        elif self.worker_home.exists():
+            log.warning("Worker home '%s' was not cleaned up.", self.worker_home)
 
 
 class LimitTimeUsageMixin(Worker, ABC):

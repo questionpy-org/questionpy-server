@@ -1,21 +1,37 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
+import asyncio
+import logging
+import shutil
+import tempfile
 from asyncio import Condition, Lock, Semaphore
+from base64 import b32hexencode
 from collections import defaultdict, deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import NamedTuple, Self
+from pathlib import Path
+from random import Random
+from typing import NamedTuple, Self, assert_never
+
+from pydantic import ByteSize
 
 from questionpy_common.constants import MiB
 from questionpy_common.environment import WorkerResourceLimits
 from questionpy_common.error import QPyBaseError
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
-from questionpy_server.worker.runtime.package_location import PackageLocation
+from questionpy_server.worker.runtime.package_location import (
+    DirPackageLocation,
+    FunctionPackageLocation,
+    PackageLocation,
+    ZipPackageLocation,
+)
 
 from . import Worker, WorkerState
 from .exception import WorkerStartError
 from .impl.thread import ThreadWorker
+
+_log = logging.getLogger(__name__)
 
 
 class _WorkerPoolMemoryError(QPyBaseError):
@@ -66,11 +82,23 @@ class WorkerPool:
         self._memory_in_use = 0
         self._memory_idle = 0
 
+        self._working_dir = Path(tempfile.mkdtemp(prefix="qpy-pool-"))
+        self._random = Random()
+
+        _log.debug(
+            "Started worker pool of at most '%s' workers with '%s' memory in '%s'",
+            max_workers,
+            ByteSize(max_memory).human_readable(),
+            self._working_dir,
+        )
+
     async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, *_: object) -> None:
         await self.stop_idle_workers()
+
+        await asyncio.to_thread(lambda: shutil.rmtree(self._working_dir))
 
     def _memory_available(self, required_memory: int) -> bool:
         """Checks whether the required memory to start or reuse a worker is available.
@@ -163,6 +191,21 @@ class WorkerPool:
         if required_memory > 0:
             raise _WorkerPoolMemoryError
 
+    def _generate_worker_name(self, package: PackageLocation, lms: int, context: int | None) -> str:
+        if isinstance(package, ZipPackageLocation):
+            package_part = package.hash[:10]
+        elif isinstance(package, DirPackageLocation):
+            package_part = "dir"
+        elif isinstance(package, FunctionPackageLocation):
+            package_part = "fun"
+        else:
+            assert_never(package)
+
+        random_part = b32hexencode(self._random.randbytes(5)).lower().decode("ascii")
+        # TODO: Collisions should be pretty unlikely, but we should still ensure no worker with the same name is
+        #  currently running. That would require us to store all running workers though.
+        return f"{package_part}-{lms}-{'N' if context is None else context}-{random_part}"
+
     async def _create_or_reuse_worker(
         self, package: PackageLocation, lms: int, context: int | None, limits: WorkerResourceLimits
     ) -> Worker:
@@ -180,7 +223,11 @@ class WorkerPool:
         else:
             # We need to create a new worker - free as much memory as needed to start the worker.
             await self._free_memory(limits.max_memory)
-            worker = self._worker_type(package, limits)
+
+            name = self._generate_worker_name(package, lms, context)
+            worker_home = self._working_dir / f"worker-{name}"
+            worker_home.mkdir()
+            worker = self._worker_type(name=name, package=package, limits=limits, worker_home=worker_home)
             await worker.start()
 
         # Reserve the memory.
@@ -224,3 +271,7 @@ class WorkerPool:
     def get_pending_worker_request_count(self) -> int:
         """Get the number of pending worker requests."""
         return self._workers_requested - self._workers_in_use
+
+    def __del__(self) -> None:
+        if self._working_dir.exists() or self._idle_workers:
+            _log.warning("Worker pool was not closed correctly.")

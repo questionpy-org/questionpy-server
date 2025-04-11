@@ -3,6 +3,7 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import traceback
 from enum import IntEnum, StrEnum, auto, unique
+from pathlib import Path
 from struct import Struct
 from typing import Any, ClassVar
 
@@ -88,6 +89,12 @@ class InitWorker(MessageToWorker):
     message_id: ClassVar[MessageIds] = MessageIds.INIT_WORKER
     limits: WorkerResourceLimits | None = None
     worker_type: str
+    worker_home: Path
+    """The base directory for worker files.
+
+    This is where the worker unpacks packages, and will contain a place for packages to store arbitrary temporary files
+    in the future.
+    """
 
     class Response(MessageToServer):
         """Success message in return to InitWorker."""
