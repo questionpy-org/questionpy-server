@@ -3,9 +3,7 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import inspect
 import logging
-import shutil
 import sys
-import tempfile
 from abc import ABC, abstractmethod
 from functools import cached_property
 from importlib import import_module, resources
@@ -74,39 +72,31 @@ class ImportablePackage(ABC, Package):
 class UnpackingZipBasedPackage(ImportablePackage):
     """A zip-formatted QuestionPy package which will be unpacked into a temporary directory before use."""
 
-    def __init__(self, location: ZipPackageLocation) -> None:
+    def __init__(self, location: ZipPackageLocation, worker_home: Path) -> None:
         super().__init__()
         self.path = location.path
         self.hash = location.hash
 
-        self._dir_package: DirBasedPackage | None = None
+        self._dir_package = self._unpack(worker_home / "packages" / self.hash)
 
-    def _ensure_unpacked(self) -> "DirBasedPackage":
-        if not self._dir_package:
-            temp_dir = Path(tempfile.mkdtemp(prefix=f"qpy-package-{self.hash}-"))
-            with ZipFile(self.path) as zip_file:
-                zip_file.extractall(temp_dir)
+    def _unpack(self, to_dir: Path) -> "DirBasedPackage":
+        to_dir.mkdir(parents=True)
+        with ZipFile(self.path) as zip_file:
+            zip_file.extractall(to_dir)
 
-            self._dir_package = DirBasedPackage(temp_dir / DIST_DIR)
+        _log.debug("Unpacked package '%s' to '%s'.", self.path, to_dir)
 
-            _log.debug("Unpacked package '%s' to '%s'.", self.path, temp_dir)
-
-        return self._dir_package
+        return DirBasedPackage(to_dir / DIST_DIR)
 
     def setup_imports(self) -> None:
-        self._ensure_unpacked().setup_imports()
+        self._dir_package.setup_imports()
 
     @property
     def manifest(self) -> Manifest:
-        return self._ensure_unpacked().manifest
+        return self._dir_package.manifest
 
     def get_path(self, path: str) -> Traversable:
-        return self._ensure_unpacked().get_path(path)
-
-    def __del__(self) -> None:
-        if self._dir_package:
-            shutil.rmtree(self._dir_package.path)
-            self._dir_package = None
+        return self._dir_package.get_path(path)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.path})"
@@ -187,10 +177,10 @@ class FunctionBasedPackage(ImportablePackage):
     __str__ = __repr__
 
 
-def load_package(location: PackageLocation) -> ImportablePackage:
+def load_package(location: PackageLocation, worker_home: Path) -> ImportablePackage:
     """Turn a pure :class:`PackageLocation` into an :class:`ImportablePackage` which can be imported and executed."""
     if isinstance(location, ZipPackageLocation):
-        return UnpackingZipBasedPackage(location)
+        return UnpackingZipBasedPackage(location, worker_home)
     if isinstance(location, DirPackageLocation):
         return DirBasedPackage(location.path)
     if isinstance(location, FunctionPackageLocation):

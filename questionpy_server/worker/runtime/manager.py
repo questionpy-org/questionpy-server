@@ -5,7 +5,7 @@ import resource
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import NoReturn, TypeAlias, TypeVar, cast
+from typing import TYPE_CHECKING, NoReturn, TypeAlias, TypeVar, cast
 
 from questionpy_common.api.qtype import QuestionTypeInterface
 from questionpy_common.environment import (
@@ -35,6 +35,9 @@ from questionpy_server.worker.runtime.messages import (
 )
 from questionpy_server.worker.runtime.package import ImportablePackage, load_package
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 __all__ = ["WorkerManager"]
 
 
@@ -57,12 +60,13 @@ OnMessageCallback: TypeAlias = Callable[[M], MessageToServer]
 
 class WorkerManager:
     def __init__(self, server_connection: WorkerToServerConnection):
-        self._connection: WorkerToServerConnection = server_connection
+        self._connection = server_connection
 
         self._worker_type: str | None = None
         self._packages: dict[PackageNamespaceAndShortName, ImportablePackage] = {}
 
         self._limits: WorkerResourceLimits | None = None
+        self._worker_home: Path | None = None
 
         self._env: EnvironmentImpl | None = None
         self._question_type: QuestionTypeInterface | None = None
@@ -85,6 +89,7 @@ class WorkerManager:
             raise self._raise_not_initialized(init_msg)
 
         self._worker_type = init_msg.worker_type
+        self._worker_home = init_msg.worker_home
         self._limits = init_msg.limits
         if self._limits:
             # Limit memory usage.
@@ -106,10 +111,10 @@ class WorkerManager:
             self._connection.send_message(response)
 
     def on_msg_load_qpy_package(self, msg: LoadQPyPackage) -> MessageToServer:
-        if not self._worker_type:
+        if not self._worker_type or not self._worker_home:
             self._raise_not_initialized(msg)
 
-        package = load_package(msg.location)
+        package = load_package(msg.location, self._worker_home)
 
         nssn = PackageNamespaceAndShortName(package.manifest.namespace, package.manifest.short_name)
         self._packages[nssn] = package

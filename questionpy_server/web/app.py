@@ -3,8 +3,8 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import asyncio
 import logging
-import traceback
-from typing import Any, ClassVar, Generator, AsyncGenerator, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any, ClassVar
 
 from aiohttp import web
 

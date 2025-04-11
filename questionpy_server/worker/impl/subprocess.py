@@ -8,19 +8,17 @@ import math
 import sys
 from asyncio import StreamReader
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, TypeVar, Unpack
 
 import psutil
 from pydantic import ByteSize
 
 from questionpy_common.constants import KiB
-from questionpy_common.environment import WorkerResourceLimits
-from questionpy_server.worker import WorkerResources
+from questionpy_server.worker import WorkerArgs, WorkerResources
 from questionpy_server.worker.connection import ServerToWorkerConnection
 from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
 from questionpy_server.worker.impl._base import BaseWorker, LimitTimeUsageMixin
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
-from questionpy_server.worker.runtime.package_location import PackageLocation
 
 if TYPE_CHECKING:
     from asyncio.subprocess import Process
@@ -80,8 +78,8 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
     # Allows to use a patched runtime in tests.
     _runtime_main = ["-m", "questionpy_server.worker.runtime"]
 
-    def __init__(self, package: PackageLocation, limits: WorkerResourceLimits | None):
-        super().__init__(package=package, limits=limits)
+    def __init__(self, **kwargs: Unpack[WorkerArgs]):
+        super().__init__(**kwargs)
 
         self._proc: Process | None = None
         self._stderr_buffer: _StderrBuffer | None = None
@@ -106,6 +104,7 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             env=env,
+            cwd=self.worker_home,
         )
 
         if self._proc.stdout is None or self._proc.stderr is None or self._proc.stdin is None:
