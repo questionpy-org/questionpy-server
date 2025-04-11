@@ -171,7 +171,7 @@ class BaseWorker(Worker, ABC):
         exists.
         """
         return [
-            asyncio.create_task(self._receive_messages(), name="receive messages from worker"),
+            asyncio.create_task(self._receive_messages(), name=f"worker-{self.name}/receive messages from worker"),
         ]
 
     async def _observe(self) -> None:

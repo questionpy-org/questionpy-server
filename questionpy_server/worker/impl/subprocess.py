@@ -149,11 +149,12 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
         if not self._proc or not self._stderr_buffer:
             raise WorkerNotRunningError
 
+        prefix = f"worker-{self.name}/"
         return (
             *super()._get_observation_tasks(),
-            asyncio.create_task(self._proc.wait(), name="wait for worker process"),
-            asyncio.create_task(self._stderr_buffer.read_stderr(), name="receive stderr from worker"),
-            asyncio.create_task(self._limit_cpu_time_usage(), name="limit cpu time usage"),
+            asyncio.create_task(self._proc.wait(), name=f"{prefix}wait for worker process"),
+            asyncio.create_task(self._stderr_buffer.read_stderr(), name=f"{prefix}receive stderr from worker"),
+            asyncio.create_task(self._limit_cpu_time_usage(), name=f"{prefix}limit cpu time usage"),
         )
 
     async def kill(self) -> None:

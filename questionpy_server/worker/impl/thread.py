@@ -3,7 +3,6 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 import asyncio
-import itertools
 import logging
 import sys
 import threading
@@ -23,11 +22,8 @@ log = logging.getLogger(__name__)
 
 
 class _WorkerThread(threading.Thread):
-    _counter = itertools.count()
-    """Counter serving only to give worker threads unique names."""
-
-    def __init__(self, pipe: DuplexPipe) -> None:
-        super().__init__(name=f"qpy-worker-{next(self._counter)}", daemon=True)
+    def __init__(self, name: str, pipe: DuplexPipe) -> None:
+        super().__init__(name=name, daemon=True)
         self._pipe = pipe
         self._end_event = asyncio.Event()
         self._loop = asyncio.get_running_loop()
@@ -98,9 +94,9 @@ class ThreadWorker(BaseWorker):
             self.limits = None
 
         self._pipe = DuplexPipe.open()
-        thread = _WorkerThread(self._pipe)
+        thread = _WorkerThread(f"worker-{self.name}", self._pipe)
 
-        self._task = asyncio.create_task(self._run_and_wait(thread), name=thread.name)
+        self._task = asyncio.create_task(self._run_and_wait(thread), name=f"worker-{self.name}/wait for thread")
 
         self._connection = ServerToWorkerConnection(AsyncReadAdapter(self._pipe.left), self._pipe.left)
 
