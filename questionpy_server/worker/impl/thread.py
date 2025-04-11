@@ -104,7 +104,7 @@ class ThreadWorker(BaseWorker):
 
     def _get_observation_tasks(self) -> Sequence[asyncio.Task]:
         if not self._task:
-            raise WorkerNotRunningError
+            raise WorkerNotRunningError(worker_name=self.name)
 
         return [
             *super()._get_observation_tasks(),
