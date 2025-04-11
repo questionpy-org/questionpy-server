@@ -160,7 +160,7 @@ def _make_get_manifest_raise() -> Iterator[None]:
         yield
 
 
-@pytest.mark.filterwarnings("ignore:Exception in thread qpy-worker-")
+@pytest.mark.filterwarnings("ignore:Exception in thread worker-")
 async def test_should_gracefully_handle_error_in_bootstrap(worker_pool: WorkerPool) -> None:
     with patch_worker_pool(worker_pool, _make_bootstrap_raise), pytest.raises(WorkerStartError):
         async with worker_pool.get_worker(PACKAGE, 1, 1):
