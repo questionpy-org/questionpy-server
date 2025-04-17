@@ -48,27 +48,33 @@ class DuplexPipe:
             """Reads exactly size bytes.
 
             Raises:
-                EOFError: if EOF is reached before `size` bytes are read
+                EOFError: If EOF is reached before `size` bytes are read.
             """
-            try:
-                read = self._receive.read(size)
-            except ValueError as e:
-                if e.args[0] == "read of closed file":
-                    # Sometimes, depending on the timing of close and read, this error gets raised instead of EOF
-                    # returned. So we we treat it the same.
-                    raise EOFError from e
-                raise
+            if self._receive.closed:
+                # Whether read returns an empty bytes object (signalling EOF) or raises a ValueError depends on the
+                # timing of read and close. So we check beforehand whether it's closed.
+                raise EOFError
+
+            read = self._receive.read(size)
 
             if len(read) < size:
                 raise EOFError
             return read
 
         def write(self, data: bytes) -> int:
-            """Writes data to the pipe completely."""
+            """Writes data to the pipe completely.
+
+            Raises:
+                BrokenPipeError: If the pipe is closed.
+            """
             view = memoryview(data)
             size = len(data)
             written = 0
             while written < size:
+                if self._transmit.closed:
+                    # write would raise an unhelpfully unspecific ValueError.
+                    raise BrokenPipeError
+
                 written += self._transmit.write(view[written:])
 
             return written
