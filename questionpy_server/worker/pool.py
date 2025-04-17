@@ -30,6 +30,8 @@ from questionpy_server.worker.runtime.package_location import (
 from . import Worker, WorkerState
 from .impl.thread import ThreadWorker
 
+_DEFAULT_LIMITS = WorkerResourceLimits(max_memory=200 * MiB, max_cpu_time_seconds_per_call=10)
+
 _log = logging.getLogger(__name__)
 
 
@@ -61,14 +63,6 @@ class WorkerPool:
         """
         self.max_workers = max_workers
         self.max_memory = max_memory
-
-        # TODO: Make this configurable (#137)
-        self._limits_per_worker = WorkerResourceLimits(max_memory=200 * MiB, max_cpu_time_seconds_per_call=10)
-        if self.max_memory < self._limits_per_worker.max_memory:
-            pool_max = ByteSize(self.max_memory).human_readable()
-            worker_max = ByteSize(self._limits_per_worker.max_memory).human_readable()
-            msg = f"Memory limit of {worker_max} for a single worker exceeds max pool memory of {pool_max}."
-            raise ValueError(msg)
 
         self._worker_type = worker_type
 
@@ -134,12 +128,21 @@ class WorkerPool:
         async with self._semaphore:
             worker = None
             try:
+                # TODO: Allow packages to request different limits. While right now, this check could be in __init__,
+                #  package's custom limits will probably need to be checked in _create_or_reuse_worker once those are
+                #  implemented. (#137)
+                if self.max_memory < _DEFAULT_LIMITS.max_memory:
+                    pool_max = ByteSize(self.max_memory).human_readable()
+                    worker_max = ByteSize(_DEFAULT_LIMITS.max_memory).human_readable()
+                    msg = f"Memory limit of {worker_max} for a single worker exceeds max pool memory of {pool_max}."
+                    raise ValueError(msg)
+
                 # Wait until there is enough memory available.
                 # We need the additional lock, since `Condition.wait_for`/`Condition.notify` in comparison to
                 # `Lock.acquire` is not explicitly documented as fair. This ensures that no starvation occurs.
                 async with self._lock, self._condition:
-                    await self._condition.wait_for(lambda: self._memory_available(self._limits_per_worker.max_memory))
-                    worker = await self._create_or_reuse_worker(package, lms, context, self._limits_per_worker)
+                    await self._condition.wait_for(lambda: self._memory_available(_DEFAULT_LIMITS.max_memory))
+                    worker = await self._create_or_reuse_worker(package, lms, context, _DEFAULT_LIMITS)
                     self._workers_in_use += 1
 
                 yield worker
