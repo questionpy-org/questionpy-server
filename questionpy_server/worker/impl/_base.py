@@ -203,11 +203,10 @@ class BaseWorker(Worker, ABC):
             await asyncio.to_thread(lambda: _rmtree_if_exists_sync(self.worker_home))
 
     async def stop(self, timeout: float) -> None:
-        try:
+        # If these are exceptions raised, either the worker is already dead, in which case we're happy, or it's somehow
+        # broken, in which case we'll kill it below.
+        with contextlib.suppress(BaseWorkerError, ConnectionError):
             self.send(Exit())
-        except BaseWorkerError:
-            # No need to stop it then.
-            return
 
         if self._observe_task and not self._observe_task.done():
             try:
