@@ -228,7 +228,8 @@ class WorkerPool:
 
             name = self._generate_worker_name(package, lms, context)
             worker_home = self._working_dir / f"worker-{name}"
-            worker_home.mkdir()
+            await asyncio.to_thread(worker_home.mkdir)
+
             worker = self._worker_type(name=name, package=package, limits=limits, worker_home=worker_home)
             await worker.start()
 
@@ -273,7 +274,3 @@ class WorkerPool:
     def get_pending_worker_request_count(self) -> int:
         """Get the number of pending worker requests."""
         return self._workers_requested - self._workers_in_use
-
-    def __del__(self) -> None:
-        if self._working_dir.exists() or self._idle_workers:
-            _log.warning("Worker pool was not closed correctly.")

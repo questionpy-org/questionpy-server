@@ -10,6 +10,7 @@ import time
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from os.path import commonpath, normpath
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar, Unpack
 from zipfile import ZipFile
 
@@ -51,8 +52,6 @@ from questionpy_server.worker.runtime.package_location import (
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from questionpy_server.worker.connection import ServerToWorkerConnection
 
 log = logging.getLogger(__name__)
@@ -67,6 +66,11 @@ def _check_static_file_size(path: str, expected_size: int, real_size: int) -> No
         )
         log.info(msg)
         raise StaticFileSizeMismatchError(msg)
+
+
+def _rmtree_if_exists_sync(path: Path) -> None:
+    if path.exists():
+        shutil.rmtree(path)
 
 
 class BaseWorker(Worker, ABC):
@@ -194,10 +198,9 @@ class BaseWorker(Worker, ABC):
 
             self.state = WorkerState.NOT_RUNNING
 
-            if self.worker_home.exists():
-                # Security: rmtree deletes symlinks to dirs without recursing into them, so there should be no danger
-                # of a malicious package causing us to delete anything outside the worker home.
-                shutil.rmtree(self.worker_home)
+            # Security: rmtree deletes symlinks to dirs without recursing into them, so there should be no danger
+            # of a malicious package causing us to delete anything outside the worker home.
+            await asyncio.to_thread(lambda: _rmtree_if_exists_sync(self.worker_home))
 
     async def stop(self, timeout: float) -> None:
         try:
@@ -345,8 +348,6 @@ class BaseWorker(Worker, ABC):
     def __del__(self) -> None:
         if self.state != WorkerState.NOT_RUNNING:
             log.warning("Worker '%s' was not stopped correctly.", self.name)
-        elif self.worker_home.exists():
-            log.warning("Worker home '%s' was not cleaned up.", self.worker_home)
 
 
 class LimitTimeUsageMixin(Worker, ABC):
