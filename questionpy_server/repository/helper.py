@@ -2,7 +2,7 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-
+import aiohttp
 from aiohttp import ClientError, ClientSession
 
 from questionpy_server.hash import calculate_hash
@@ -25,7 +25,12 @@ async def download(url: str, size: int = -1, expected_hash: str | None = None) -
     Returns:
         bytes: data
     """
-    async with ClientSession(auto_decompress=False, raise_for_status=True) as session:
+    async with ClientSession(
+        auto_decompress=False,
+        raise_for_status=True,
+        # Workaround for https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
+        connector=aiohttp.TCPConnector(force_close=True),
+    ) as session:
         try:
             async with session.get(url) as response:
                 data = await response.content.read(size)
