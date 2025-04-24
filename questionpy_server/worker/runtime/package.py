@@ -82,8 +82,9 @@ class UnpackingZipBasedPackage(ImportablePackage):
     def _unpack(self, to_dir: Path) -> "DirBasedPackage":
         to_dir.mkdir(parents=True)
         with ZipFile(self.path) as zip_file:
+            dist_prefix = f"{DIST_DIR}/"
             for info in zip_file.infolist():
-                if info.filename.startswith(f"{DIST_DIR}/"):
+                if info.filename.startswith(dist_prefix):
                     zip_file.extract(info, to_dir)
 
         _log.debug("Unpacked package '%s' to '%s'.", self.path, to_dir)
