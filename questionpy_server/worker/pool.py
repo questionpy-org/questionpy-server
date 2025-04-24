@@ -6,12 +6,10 @@ import logging
 import shutil
 import tempfile
 from asyncio import Condition, Lock, Semaphore
-from base64 import b32hexencode
 from collections import defaultdict, deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from random import Random
 from typing import NamedTuple, Self, assert_never
 
 from pydantic import ByteSize
@@ -84,7 +82,7 @@ class WorkerPool:
         self._memory_idle = 0
 
         self._working_dir = Path(tempfile.mkdtemp(prefix="qpy-pool-"))
-        self._random = Random()
+        self._next_worker_index = 0
 
         _log.debug(
             "Started worker pool of at most '%s' workers with '%s' memory in '%s'",
@@ -196,7 +194,7 @@ class WorkerPool:
         if required_memory > 0:
             raise _WorkerPoolMemoryError
 
-    def _generate_worker_name(self, package: PackageLocation, lms: int, context: int | None) -> str:
+    def _generate_worker_name(self, package: PackageLocation) -> str:
         if isinstance(package, ZipPackageLocation):
             package_part = package.hash[:10]
         elif isinstance(package, DirPackageLocation):
@@ -206,10 +204,9 @@ class WorkerPool:
         else:
             assert_never(package)
 
-        random_part = b32hexencode(self._random.randbytes(5)).lower().decode("ascii")
-        # TODO: Collisions should be pretty unlikely, but we should still ensure no worker with the same name is
-        #  currently running. That would require us to store all running workers though.
-        return f"{package_part}-{lms}-{'N' if context is None else context}-{random_part}"
+        index = self._next_worker_index
+        self._next_worker_index += 1
+        return f"{package_part}-{index}"
 
     async def _create_or_reuse_worker(
         self, package: PackageLocation, lms: int, context: int | None, limits: WorkerResourceLimits
@@ -229,7 +226,7 @@ class WorkerPool:
             # We need to create a new worker - free as much memory as needed to start the worker.
             await self._free_memory(limits.max_memory)
 
-            name = self._generate_worker_name(package, lms, context)
+            name = self._generate_worker_name(package)
             worker_home = self._working_dir / f"worker-{name}"
             await asyncio.to_thread(worker_home.mkdir)
 
