@@ -51,7 +51,7 @@ class HiddenElementFactory(_BaseFactory):
     __model__ = _elements.HiddenElement
 
 
-def _one_of_each_element() -> list[_elements.FormElement]:
+def _one_of_each_leaf_element() -> list[_elements.FormElement]:
     # This used to work without a custom factory method, but doesn't anymore.
     # Maybe the same bug as https://github.com/litestar-org/polyfactory/issues/317?
     one_of_each = [
@@ -60,7 +60,6 @@ def _one_of_each_element() -> list[_elements.FormElement]:
             StaticTextElementFactory,
             TextInputElementFactory,
             CheckboxElementFactory,
-            RadioGroupElementFactory,
             SelectElementFactory,
             HiddenElementFactory,
         )
@@ -72,17 +71,17 @@ def _one_of_each_element() -> list[_elements.FormElement]:
 class GroupElementFactory(_BaseFactory):
     __model__ = _elements.GroupElement
 
-    elements = Use(_one_of_each_element)
+    elements = Use(_one_of_each_leaf_element)
 
 
 class FormSectionFactory(_BaseFactory):
     __model__ = _elements.FormSection
 
-    elements = Use(_one_of_each_element)
+    elements = Use(_one_of_each_leaf_element)
 
 
 class OptionsFormDefinitionFactory(_BaseFactory):
     __model__ = _elements.OptionsFormDefinition
 
-    general = Use(_one_of_each_element)
+    general = Use(_one_of_each_leaf_element)
     sections = Use(lambda: [FormSectionFactory.build()])
