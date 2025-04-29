@@ -1,7 +1,7 @@
 #  This file is part of QuestionPy. (https://questionpy.org)
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-from typing import Annotated, Literal, TypeAlias, TypeGuard, get_args
+from typing import Annotated, Literal, TypeGuard, get_args
 
 from pydantic import BaseModel, Field, PositiveInt
 
@@ -139,7 +139,7 @@ class GroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     """Groups multiple elements horizontally with a common label."""
 
     kind: Literal["group"] = "group"
-    elements: list["FormElement"]
+    elements: list["LeafFormElement"]
 
 
 class RepetitionElement(_BaseElement):
@@ -156,7 +156,7 @@ class RepetitionElement(_BaseElement):
     button_label: str | TranslatableString | None = None
     """Label for the button that adds more repetitions, or None to use default provided by LMS."""
 
-    elements: list["FormElement"]
+    elements: list["LeafFormElement | RadioGroupElement | GroupElement"]
     """Elements that will be repeated."""
 
 
@@ -169,12 +169,23 @@ class GeneratedIdElement(_BaseElement):
     kind: Literal["id"] = "id"
 
 
-FormElement: TypeAlias = Annotated[
+type FormElement = Annotated[
     CheckboxElement
     | GroupElement
     | HiddenElement
     | RadioGroupElement
     | RepetitionElement
+    | GeneratedIdElement
+    | SelectElement
+    | StaticTextElement
+    | TextInputElement
+    | TextAreaElement,
+    Field(discriminator="kind"),
+]
+
+type LeafFormElement = Annotated[
+    CheckboxElement
+    | HiddenElement
     | GeneratedIdElement
     | SelectElement
     | StaticTextElement
@@ -218,4 +229,4 @@ def is_form_element(value: object) -> TypeGuard[FormElement]:
         >>> is_form_element(None)
         False
     """
-    return isinstance(value, get_args(get_args(FormElement)[0]))
+    return isinstance(value, get_args(get_args(FormElement.__value__)[0]))
