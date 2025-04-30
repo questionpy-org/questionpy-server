@@ -36,7 +36,7 @@ class DirPackageLocation:
         return str(self.path)
 
 
-@dataclass(unsafe_hash=True)
+@dataclass
 class FunctionPackageLocation:
     """A package consisting only of its init function. Intended mostly for unit tests.
 
@@ -95,6 +95,9 @@ class FunctionPackageLocation:
             raise ValueError(msg)
 
         return cls(function.__module__, function.__name__, manifest)
+
+    def __hash__(self) -> int:
+        return hash((self.module_name, self.function_name, self.kind))
 
 
 PackageLocation: TypeAlias = Annotated[
