@@ -12,7 +12,6 @@ from polyfactory.factories.pydantic_factory import ModelFactory
 from pydantic import BaseModel
 
 from questionpy_common.elements import (
-    CanHaveConditions,
     CheckboxElement,
     FormSection,
     GroupElement,
@@ -23,7 +22,6 @@ from questionpy_common.elements import (
     SelectElement,
     StaticTextElement,
     TextInputElement,
-    is_form_element,
 )
 from questionpy_server.collector import PackageCollection
 from questionpy_server.hash import calculate_hash
@@ -141,33 +139,3 @@ def test_ignore_additional_properties(factory: ModelFactory, model: type[BaseMod
     data = factory.build().model_dump()
     created_model = model(**data, additional_property="test")
     assert not hasattr(created_model, "additional_property")
-
-
-@pytest.mark.parametrize(
-    "factory",
-    [
-        StaticTextElementFactory,
-        TextInputElementFactory,
-        CheckboxElementFactory,
-        RadioGroupElementFactory,
-        SelectElementFactory,
-        HiddenElementFactory,
-        GroupElementFactory,
-    ],
-)
-def test_is_form_element_should_return_true(factory: ModelFactory) -> None:
-    assert is_form_element(factory.build())
-
-
-@pytest.mark.parametrize(
-    "instance",
-    [
-        object(),
-        CanHaveConditions(),
-        Option(label="", value=""),
-        FormSection(name="", header="", elements=[]),
-        OptionsFormDefinition(),
-    ],
-)
-def test_is_form_element_should_return_false(instance: object) -> None:
-    assert not is_form_element(instance)
