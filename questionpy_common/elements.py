@@ -1,7 +1,7 @@
 #  This file is part of QuestionPy. (https://questionpy.org)
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-from typing import Annotated, Literal, TypeGuard, get_args
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, PositiveInt
 
@@ -24,7 +24,6 @@ __all__ = [
     "StaticTextElement",
     "TextAreaElement",
     "TextInputElement",
-    "is_form_element",
 ]
 
 
@@ -156,7 +155,7 @@ class RepetitionElement(_BaseElement):
     button_label: str | TranslatableString | None = None
     """Label for the button that adds more repetitions, or None to use default provided by LMS."""
 
-    elements: list["LeafFormElement | RadioGroupElement | GroupElement"]
+    elements: list[Annotated["LeafFormElement | RadioGroupElement | GroupElement", Field(discriminator="kind")]]
     """Elements that will be repeated."""
 
 
@@ -169,20 +168,6 @@ class GeneratedIdElement(_BaseElement):
     kind: Literal["id"] = "id"
 
 
-type FormElement = Annotated[
-    CheckboxElement
-    | GroupElement
-    | HiddenElement
-    | RadioGroupElement
-    | RepetitionElement
-    | GeneratedIdElement
-    | SelectElement
-    | StaticTextElement
-    | TextInputElement
-    | TextAreaElement,
-    Field(discriminator="kind"),
-]
-
 type LeafFormElement = Annotated[
     CheckboxElement
     | HiddenElement
@@ -193,6 +178,13 @@ type LeafFormElement = Annotated[
     | TextAreaElement,
     Field(discriminator="kind"),
 ]
+
+type ContainerFormElement = Annotated[
+    GroupElement | RadioGroupElement | RepetitionElement,
+    Field(discriminator="kind"),
+]
+
+type FormElement = Annotated[LeafFormElement | ContainerFormElement, Field(discriminator="kind")]
 
 
 class FormSection(BaseModel):
@@ -211,22 +203,3 @@ class OptionsFormDefinition(BaseModel):
     """Elements to add to the main section, after the LMS' own elements."""
     sections: list[FormSection] = []
     """Sections to add after the main section."""
-
-
-def is_form_element(value: object) -> TypeGuard[FormElement]:
-    """Checks if `value` is a form element instance.
-
-    Unions don't support runtime type checking through isinstance, so this function checks if `value` is an instance
-    of any of the union members.
-
-    Examples:
-        >>> is_form_element(TextInputElement(name="my_input", label="My Input"))
-        True
-        >>> is_form_element(FormSection(name="my_section", header="My Section"))
-        False
-        >>> is_form_element("abcdefg")
-        False
-        >>> is_form_element(None)
-        False
-    """
-    return isinstance(value, get_args(get_args(FormElement.__value__)[0]))
