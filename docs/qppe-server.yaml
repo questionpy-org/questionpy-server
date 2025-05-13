@@ -851,12 +851,12 @@ components:
               format: text/html
               description: Answer input area
               example: '<label>Enter your answer: <input type="text"/></label>'
-            include_inline_css:
-              type: string
-              nullable: true
-            include_css_file:
-              type: string
-              nullable: true
+            css_files:
+              type: array
+              description: List of `qpy://` or `https://` URIs leading CSS files needed by the attempt.
+              items:
+                type: string
+                format: uri
             javascript_calls:
               type: array
               default: [ ]
