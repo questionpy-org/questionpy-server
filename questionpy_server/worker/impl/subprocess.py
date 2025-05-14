@@ -5,6 +5,7 @@
 import asyncio
 import logging
 import math
+import re
 import sys
 from asyncio import StreamReader
 from collections.abc import Sequence
@@ -30,17 +31,36 @@ _T = TypeVar("_T", bound=MessageToServer)
 class _StderrBuffer:
     """Size-limited buffer for untrusted worker output."""
 
-    def __init__(self, stderr: StreamReader):
+    _control_char_pattern = re.compile(r"[\x00-\x09\x0b-\x1f\x7f]")
+    """A regex pattern to match all control characters except newline."""
+
+    def __init__(self, worker_name: str, stderr: StreamReader):
+        self._worker_name = worker_name
         self._stderr = stderr
         self._buffer = bytearray()
         self._max_size = 5 * KiB
         self._skipped_bytes = 0
 
+    @classmethod
+    def _remove_ascii_control_characters(cls, data: str) -> str:
+        """Replace ASCII control characters with their hex representation and remove newline/whitespaces at the end."""
+        return cls._control_char_pattern.sub(lambda m: f"\\x{ord(m.group()):02x}", data).rstrip()
+
     async def read_stderr(self) -> None:
         """Read and save data written by the worker to stderr (worker is set up to redirect stdout to stderr).
 
-        Only read up to a certain amount due to security reasons and stderr should not be used besides debugging.
+        Normally, data is only read up to a certain amount for security reasons and stderr should not be used
+        besides debugging. If debug log level is enabled, read stderr line by line and log all data immediately.
+
+        ASCII control characters are replaced, especially the escape character and ANSI escape codes should have
+        no effect.
         """
+        if log.isEnabledFor(logging.DEBUG):
+            while line := await self._stderr.readline():
+                cleaned = self._remove_ascii_control_characters(line.decode(errors="replace"))
+                log.debug("Worker %s output: %s", self._worker_name, cleaned)
+            return
+
         while True:
             space_left = self._max_size - len(self._buffer)
             if space_left == 0:
@@ -59,12 +79,20 @@ class _StderrBuffer:
 
     def flush(self) -> None:
         """Reset the stderr buffer and log the current data."""
-        if self._buffer and log.isEnabledFor(logging.DEBUG):
-            msg = "Worker wrote following data to stdout/stderr."
+        if self._buffer and log.isEnabledFor(logging.INFO):
+            skipped_bytes_msg = ""
             if self._skipped_bytes:
-                msg += f" (Additional {ByteSize(self._skipped_bytes).human_readable()} were skipped.)"
-            indented_data = "\n".join("\t" + line for line in self._buffer.decode(errors="replace").split("\n"))
-            log.debug("%s\n%s", msg, indented_data)
+                skipped_bytes_msg = f"\n\t  (additional {ByteSize(self._skipped_bytes).human_readable()} were skipped)"
+            indented_data = "\n".join(
+                "\t" + self._remove_ascii_control_characters(line)
+                for line in self._buffer.decode(errors="replace").split("\n")
+            )
+            log.info(
+                "Worker %s wrote following data to stdout/stderr:\n%s%s",
+                self._worker_name,
+                indented_data,
+                skipped_bytes_msg,
+            )
 
         self._buffer = bytearray()
         self._skipped_bytes = 0
@@ -111,7 +139,7 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
             msg = "Could not start the worker process."
             raise WorkerStartError(msg, worker_name=self.name)
 
-        self._stderr_buffer = _StderrBuffer(self._proc.stderr)
+        self._stderr_buffer = _StderrBuffer(self.name, self._proc.stderr)
         self._connection = ServerToWorkerConnection(self._proc.stdout, self._proc.stdin)
 
         try:
