@@ -87,7 +87,7 @@ class BaseWorker(Worker, ABC):
 
         self._connection: ServerToWorkerConnection | None = None
         self._expected_incoming_messages: list[tuple[MessageIds, asyncio.Future]] = []
-        self._receive_messages_exception: BaseException | None = None
+        self._exception: BaseException | None = None
 
     async def _initialize(self) -> None:
         """Initializes an already running worker and starts the observe task.
@@ -164,7 +164,7 @@ class BaseWorker(Worker, ABC):
         finally:
             for _, future in self._expected_incoming_messages:
                 if not future.done():
-                    exc = self._receive_messages_exception or WorkerNotRunningError(worker_name=self.name)
+                    exc = self._exception or WorkerNotRunningError(worker_name=self.name)
                     future.set_exception(exc)
             self._expected_incoming_messages = []
 
@@ -187,7 +187,7 @@ class BaseWorker(Worker, ABC):
             for task in done:
                 with contextlib.suppress(asyncio.CancelledError):
                     if exc := task.exception():
-                        self._receive_messages_exception = exc
+                        self._exception = exc
         finally:
             await self.kill()
 

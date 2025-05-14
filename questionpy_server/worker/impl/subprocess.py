@@ -6,6 +6,7 @@ import asyncio
 import logging
 import math
 import re
+import signal
 import sys
 from asyncio import StreamReader
 from collections.abc import Sequence
@@ -17,7 +18,12 @@ from pydantic import ByteSize
 from questionpy_common.constants import KiB
 from questionpy_server.worker import WorkerArgs, WorkerResources
 from questionpy_server.worker.connection import ServerToWorkerConnection
-from questionpy_server.worker.exception import WorkerNotRunningError, WorkerStartError
+from questionpy_server.worker.exception import (
+    WorkerCPUTimeLimitExceededError,
+    WorkerNotRunningError,
+    WorkerRealTimeLimitExceededError,
+    WorkerStartError,
+)
 from questionpy_server.worker.impl._base import BaseWorker, LimitTimeUsageMixin
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
 
@@ -187,6 +193,22 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
 
     async def kill(self) -> None:
         if self._proc and self._proc.returncode is None:
+            if self._exception and (
+                isinstance(self._exception, WorkerRealTimeLimitExceededError | WorkerCPUTimeLimitExceededError)
+            ):
+                # If the worker has to be killed because of a real-time or CPU-time limit, send an abort signal to the
+                # worker that will make it to dump a Python traceback (thanks to the fault handler).
+                self._proc.send_signal(signal.SIGABRT)
+
+                # We give it a short time to dump the traceback. Usually, SIGABRT should terminate the process
+                # right after Python's signal handler returns.
+                try:
+                    await asyncio.wait_for(self._proc.wait(), 0.2)
+                except TimeoutError:
+                    log.warning("Worker %s did not terminate after SIGABRT", self.name)
+                else:
+                    return
+
             self._proc.kill()
 
             # Make sure that all resources of the subprocesses are getting cleaned.
