@@ -139,6 +139,7 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
             stderr=asyncio.subprocess.PIPE,
             env=env,
             cwd=self.worker_home,
+            start_new_session=True,
         )
 
         if self._proc.stdout is None or self._proc.stderr is None or self._proc.stdin is None:
