@@ -105,16 +105,6 @@ class Option(BaseModel):
     """Default state of the option."""
 
 
-class RadioGroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
-    """Group of radio buttons, of which at most one can be selected at a time."""
-
-    kind: Literal["radio_group"] = "radio_group"
-    options: list[Option]
-    """Selectable options."""
-    required: bool = False
-    """Require one of the options to be selected before the form can be submitted."""
-
-
 class SelectElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
     """A drop-down list."""
 
@@ -132,31 +122,6 @@ class HiddenElement(_BaseElement, CanHaveConditions):
 
     kind: Literal["hidden"] = "hidden"
     value: str
-
-
-class GroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
-    """Groups multiple elements horizontally with a common label."""
-
-    kind: Literal["group"] = "group"
-    elements: list["LeafFormElement"]
-
-
-class RepetitionElement(_BaseElement):
-    """Repeats a number of elements, allowing the user to add new repetitions with the click of a button."""
-
-    kind: Literal["repetition"] = "repetition"
-
-    initial_repetitions: PositiveInt
-    """Number of repetitions to show when the form is first loaded."""
-    minimum_repetitions: PositiveInt = 1
-    """Minimum number of repetitions, at or below which removal is not possible."""
-    increment: PositiveInt
-    """Number of repetitions to add with each click of the button."""
-    button_label: str | TranslatableString | None = None
-    """Label for the button that adds more repetitions, or None to use default provided by LMS."""
-
-    elements: list[Annotated["LeafFormElement | RadioGroupElement | GroupElement", Field(discriminator="kind")]]
-    """Elements that will be repeated."""
 
 
 class GeneratedIdElement(_BaseElement):
@@ -178,6 +143,42 @@ type LeafFormElement = Annotated[
     | TextAreaElement,
     Field(discriminator="kind"),
 ]
+
+
+class GroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
+    """Groups multiple elements horizontally with a common label."""
+
+    kind: Literal["group"] = "group"
+    elements: list["LeafFormElement"]
+
+
+class RadioGroupElement(_BaseElement, _Labelled, CanHaveConditions, CanHaveHelp):
+    """Group of radio buttons, of which at most one can be selected at a time."""
+
+    kind: Literal["radio_group"] = "radio_group"
+    options: list[Option]
+    """Selectable options."""
+    required: bool = False
+    """Require one of the options to be selected before the form can be submitted."""
+
+
+class RepetitionElement(_BaseElement):
+    """Repeats a number of elements, allowing the user to add new repetitions with the click of a button."""
+
+    kind: Literal["repetition"] = "repetition"
+
+    initial_repetitions: PositiveInt
+    """Number of repetitions to show when the form is first loaded."""
+    minimum_repetitions: PositiveInt = 1
+    """Minimum number of repetitions, at or below which removal is not possible."""
+    increment: PositiveInt
+    """Number of repetitions to add with each click of the button."""
+    button_label: str | TranslatableString | None = None
+    """Label for the button that adds more repetitions, or None to use default provided by LMS."""
+
+    elements: list[Annotated["LeafFormElement | RadioGroupElement | GroupElement", Field(discriminator="kind")]]
+    """Elements that will be repeated."""
+
 
 type ContainerFormElement = Annotated[
     GroupElement | RadioGroupElement | RepetitionElement,
