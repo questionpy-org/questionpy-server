@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import total_ordering
 from importlib.resources.abc import Traversable
-from typing import NamedTuple, Protocol, TypeAlias
+from typing import NamedTuple, Protocol
 
 from questionpy_common.api.package import QPyPackageInterface
 from questionpy_common.api.qtype import QuestionTypeInterface
@@ -76,7 +76,7 @@ class Package(Protocol):
     def state(self) -> PackageState: ...
 
 
-OnRequestCallback: TypeAlias = Callable[[RequestUser], None]
+type OnRequestCallback = Callable[[RequestUser], None]
 
 
 class PackageNamespaceAndShortName(NamedTuple):
@@ -125,7 +125,7 @@ class Environment(Protocol):
         """
 
 
-PackageInitFunction: TypeAlias = (
+type PackageInitFunction = (
     Callable[[Package, Environment], QPyPackageInterface]
     | Callable[[Package], QPyPackageInterface]
     | Callable[[], QuestionTypeInterface]

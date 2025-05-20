@@ -5,7 +5,7 @@ import resource
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, NoReturn, TypeAlias, TypeVar, cast
+from typing import TYPE_CHECKING, NoReturn, TypeVar, cast
 
 from questionpy_common.environment import (
     Environment,
@@ -56,7 +56,7 @@ class EnvironmentImpl(Environment):
 
 
 M = TypeVar("M", bound=MessageToWorker)
-OnMessageCallback: TypeAlias = Callable[[M], MessageToServer]
+type OnMessageCallback[M: MessageToWorker] = Callable[[M], MessageToServer]
 
 
 class WorkerManager:
