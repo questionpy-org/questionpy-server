@@ -81,7 +81,7 @@ async def post_question_migrate(_request: web.Request) -> web.Response:
     raise HTTPMethodNotAllowed(method, [])
 
 
-@package_routes.post(r"/package-extract-info")
+@package_routes.post(r"/package-extract-info")  # type: ignore[arg-type] # (No support for concatenating kwargs)
 @ensure_package
 async def package_extract_info(_request: web.Request, package: Package) -> web.Response:
     """Get package information."""
