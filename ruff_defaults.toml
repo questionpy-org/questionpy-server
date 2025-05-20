@@ -3,7 +3,6 @@
 # Common Ruff configurations are included here; project-specific configurations should be placed in `pyproject.toml`
 # under `[tool.ruff]`.
 
-target-version = "py312"
 line-length = 120
 output-format = "concise"
 preview = true
