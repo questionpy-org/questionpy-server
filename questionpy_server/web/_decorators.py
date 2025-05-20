@@ -52,7 +52,7 @@ def ensure_required_parts(handler: _HandlerFunc) -> _HandlerFunc:
     return handler
 
 
-def ensure_package(handler: _HandlerFunc, *, param: inspect.Parameter | None = None) -> _HandlerFunc:
+def ensure_package(handler: _HandlerFunc[_P], *, param: inspect.Parameter | None = None) -> _HandlerFunc[_P]:
     """Decorator that ensures that the package needed by the handler is present and passes it in.
 
     The handler function must declare exactly one parameter of type [Package][].
@@ -73,7 +73,7 @@ def ensure_package(handler: _HandlerFunc, *, param: inspect.Parameter | None = N
     return wrapper
 
 
-def ensure_question_state(handler: _HandlerFunc, *, param: inspect.Parameter | None = None) -> _HandlerFunc:
+def ensure_question_state(handler: _HandlerFunc[_P], *, param: inspect.Parameter | None = None) -> _HandlerFunc[_P]:
     """Decorator that ensures that the question state, if needed by the handler, is present and passes it in.
 
     The handler function must declare exactly one parameter named `question_state`. The question state is considered
@@ -99,15 +99,15 @@ def ensure_question_state(handler: _HandlerFunc, *, param: inspect.Parameter | N
         if parts.question_state is not None:
             kwargs[param.name] = parts.question_state
         elif param.default is Parameter.empty:
-            _msg = "A question state part is required but was not provided."
-            raise InvalidRequestError(reason=_msg)
+            msg = "A question state part is required but was not provided."
+            raise InvalidRequestError(reason=msg)
 
         return await handler(request, *args, **kwargs)
 
     return wrapper
 
 
-def ensure_main_body(handler: _HandlerFunc, *, param: inspect.Parameter | None = None) -> _HandlerFunc:
+def ensure_main_body(handler: _HandlerFunc[_P], *, param: inspect.Parameter | None = None) -> _HandlerFunc[_P]:
     """Decorator that ensures that the main body is present, parses it, and passes it in.
 
     The handler function must declare exactly one parameter with a subtype of [MainBaseModel][]. The request may:
@@ -121,8 +121,7 @@ def ensure_main_body(handler: _HandlerFunc, *, param: inspect.Parameter | None =
 
     if not param:
         msg = (
-            f"Handler '{handler.__name__}' does not have a MainBaseModel param but is decorated with "
-            f"ensure_main_body."
+            f"Handler '{handler.__name__}' does not have a MainBaseModel param but is decorated with ensure_main_body."
         )
         raise TypeError(msg)
 
@@ -131,8 +130,8 @@ def ensure_main_body(handler: _HandlerFunc, *, param: inspect.Parameter | None =
         parts = await _read_body_parts(request)
 
         if parts.main is None:
-            _msg = "The main body is required but was not provided."
-            raise InvalidRequestError(reason=_msg)
+            msg = "The main body is required but was not provided."
+            raise InvalidRequestError(reason=msg)
 
         kwargs[param.name] = _validate_from_http(parts.main, param.annotation)
         return await handler(request, *args, **kwargs)

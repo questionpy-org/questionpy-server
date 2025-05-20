@@ -67,9 +67,9 @@ async def test_packages(qpy_server: QPyServer, aiohttp_client: AiohttpClient, pa
         # Assert that the actual package info is a subset of the manifest of the latest package version.
         actual_package_info_items = actual_package_info.model_dump().items()
         latest_manifest_items = manifests[actual_package_info.namespace][actual_versions[0]].model_dump().items()
-        assert (
-            actual_package_info_items <= latest_manifest_items
-        ), "Actual package info was not derived from the latest package version."
+        assert actual_package_info_items <= latest_manifest_items, (
+            "Actual package info was not derived from the latest package version."
+        )
 
         actual_namespaces.append(actual_package_info.namespace)
 

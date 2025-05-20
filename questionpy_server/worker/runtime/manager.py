@@ -7,7 +7,6 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, NoReturn, TypeAlias, TypeVar, cast
 
-from questionpy_common.api.qtype import QuestionTypeInterface
 from questionpy_common.environment import (
     Environment,
     OnRequestCallback,
@@ -37,6 +36,8 @@ from questionpy_server.worker.runtime.package import ImportablePackage, load_pac
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from questionpy_common.api.qtype import QuestionTypeInterface
 
 __all__ = ["WorkerManager"]
 
@@ -135,7 +136,7 @@ class WorkerManager:
 
         package_interface = package.init(self._env)
         if msg.main:
-            self._question_type = cast(QuestionTypeInterface, package_interface)
+            self._question_type = cast("QuestionTypeInterface", package_interface)
 
         return LoadQPyPackage.Response(nssn=nssn)
 

@@ -61,8 +61,7 @@ _M = TypeVar("_M", bound=MessageToServer)
 def _check_static_file_size(path: str, expected_size: int, real_size: int) -> None:
     if expected_size != real_size:
         msg = (
-            f"Static file '{path}' has different file size on disk ('{real_size}') than in manifest "
-            f"('{expected_size}')"
+            f"Static file '{path}' has different file size on disk ('{real_size}') than in manifest ('{expected_size}')"
         )
         log.info(msg)
         raise StaticFileSizeMismatchError(msg)

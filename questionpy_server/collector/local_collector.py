@@ -56,7 +56,7 @@ class PathToHash:
     @overload
     def get(self, key: str) -> set[Path] | None: ...
 
-    def get(self, key: str | Path) -> set[Path] | None | str:
+    def get(self, key: str | Path) -> set[Path] | str | None:
         if isinstance(key, Path):
             return self.paths.get(key)
 
