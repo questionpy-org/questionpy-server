@@ -1,7 +1,7 @@
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated, Literal, TypeAlias
+from typing import Annotated, Literal
 
 from pydantic import Field, SerializeAsAny
 
@@ -100,7 +100,7 @@ class FunctionPackageLocation:
         return hash((self.module_name, self.function_name, self.kind))
 
 
-PackageLocation: TypeAlias = Annotated[
+type PackageLocation = Annotated[
     ZipPackageLocation | DirPackageLocation | FunctionPackageLocation, Field(discriminator="kind"), SerializeAsAny()
 ]
 """Identifies how to load a package.

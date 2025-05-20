@@ -61,7 +61,7 @@ async def post_options(
 @package_routes.post(r"/packages/{package_hash:\w+}/question")
 @ensure_required_parts
 async def post_question(
-    request: web.Request, data: QuestionCreateArguments, package: Package, question_state: bytes | None = None
+    request: web.Request, package: Package, data: QuestionCreateArguments, question_state: bytes | None = None
 ) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
@@ -81,7 +81,7 @@ async def post_question_migrate(_request: web.Request) -> web.Response:
     raise HTTPMethodNotAllowed(method, [])
 
 
-@package_routes.post(r"/package-extract-info")  # type: ignore[arg-type] # (No support for concatenating kwargs)
+@package_routes.post(r"/package-extract-info")
 @ensure_package
 async def package_extract_info(_request: web.Request, package: Package) -> web.Response:
     """Get package information."""

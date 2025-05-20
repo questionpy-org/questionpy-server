@@ -5,7 +5,7 @@ import inspect
 from collections.abc import Awaitable, Callable
 from functools import wraps
 from inspect import Parameter
-from typing import Concatenate, NamedTuple, ParamSpec, TypeAlias, TypeVar
+from typing import Concatenate, NamedTuple
 
 from aiohttp import BodyPartReader, web
 from aiohttp.log import web_logger
@@ -24,8 +24,7 @@ from questionpy_server.web.errors import (
     PackageNotFoundError,
 )
 
-_P = ParamSpec("_P")
-_HandlerFunc: TypeAlias = Callable[Concatenate[web.Request, _P], Awaitable[web.StreamResponse]]
+type _HandlerFunc[**P] = Callable[Concatenate[web.Request, P], Awaitable[web.StreamResponse]]
 
 
 def ensure_required_parts(handler: _HandlerFunc) -> _HandlerFunc:
@@ -52,7 +51,7 @@ def ensure_required_parts(handler: _HandlerFunc) -> _HandlerFunc:
     return handler
 
 
-def ensure_package(handler: _HandlerFunc[_P], *, param: inspect.Parameter | None = None) -> _HandlerFunc[_P]:
+def ensure_package[**P](handler: _HandlerFunc[P], *, param: inspect.Parameter | None = None) -> _HandlerFunc[[]]:
     """Decorator that ensures that the package needed by the handler is present and passes it in.
 
     The handler function must declare exactly one parameter of type [Package][].
@@ -66,14 +65,14 @@ def ensure_package(handler: _HandlerFunc[_P], *, param: inspect.Parameter | None
         raise TypeError(msg)
 
     @wraps(handler)
-    async def wrapper(request: web.Request, *args: _P.args, **kwargs: _P.kwargs) -> web.StreamResponse:
+    async def wrapper(request: web.Request, *args: P.args, **kwargs: P.kwargs) -> web.StreamResponse:
         kwargs[param.name] = await _get_package_from_request(request)
         return await handler(request, *args, **kwargs)
 
     return wrapper
 
 
-def ensure_question_state(handler: _HandlerFunc[_P], *, param: inspect.Parameter | None = None) -> _HandlerFunc[_P]:
+def ensure_question_state[**P](handler: _HandlerFunc[P], *, param: inspect.Parameter | None = None) -> _HandlerFunc[P]:
     """Decorator that ensures that the question state, if needed by the handler, is present and passes it in.
 
     The handler function must declare exactly one parameter named `question_state`. The question state is considered
@@ -93,7 +92,7 @@ def ensure_question_state(handler: _HandlerFunc[_P], *, param: inspect.Parameter
         raise TypeError(msg)
 
     @wraps(handler)
-    async def wrapper(request: web.Request, *args: _P.args, **kwargs: _P.kwargs) -> web.StreamResponse:
+    async def wrapper(request: web.Request, *args: P.args, **kwargs: P.kwargs) -> web.StreamResponse:
         parts = await _read_body_parts(request)
 
         if parts.question_state is not None:
@@ -107,7 +106,7 @@ def ensure_question_state(handler: _HandlerFunc[_P], *, param: inspect.Parameter
     return wrapper
 
 
-def ensure_main_body(handler: _HandlerFunc[_P], *, param: inspect.Parameter | None = None) -> _HandlerFunc[_P]:
+def ensure_main_body[**P](handler: _HandlerFunc[P], *, param: inspect.Parameter | None = None) -> _HandlerFunc[P]:
     """Decorator that ensures that the main body is present, parses it, and passes it in.
 
     The handler function must declare exactly one parameter with a subtype of [MainBaseModel][]. The request may:
@@ -126,7 +125,7 @@ def ensure_main_body(handler: _HandlerFunc[_P], *, param: inspect.Parameter | No
         raise TypeError(msg)
 
     @wraps(handler)
-    async def wrapper(request: web.Request, *args: _P.args, **kwargs: _P.kwargs) -> web.StreamResponse:
+    async def wrapper(request: web.Request, *args: P.args, **kwargs: P.kwargs) -> web.StreamResponse:
         parts = await _read_body_parts(request)
 
         if parts.main is None:
@@ -193,7 +192,7 @@ def _get_main_body_param(handler: _HandlerFunc, signature: inspect.Signature) ->
     return candidates[0]
 
 
-def _get_package_param(handler: _HandlerFunc, signature: inspect.Signature) -> inspect.Parameter | None:
+def _get_package_param(handler: Callable, signature: inspect.Signature) -> inspect.Parameter | None:
     candidates = [param for param in signature.parameters.values() if param.annotation is Package]
 
     if not candidates:
@@ -271,10 +270,7 @@ async def _parse_form_data(request: web.Request) -> _RequestBodyParts:
     return _RequestBodyParts(main, package, question_state)
 
 
-_M = TypeVar("_M", bound=BaseModel)
-
-
-def _validate_from_http(raw_body: str | bytes, param_class: type[_M]) -> _M:
+def _validate_from_http[M: BaseModel](raw_body: str | bytes, param_class: type[M]) -> M:
     """Validates the given json which was presumably an HTTP body to the given Pydantic model.
 
     Args:

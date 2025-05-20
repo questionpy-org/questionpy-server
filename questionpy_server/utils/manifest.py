@@ -2,14 +2,14 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from typing import Annotated, TypeAlias
+from typing import Annotated
 
 from pydantic import PlainSerializer, PlainValidator
 from semver import VersionInfo as _Version
 
 from questionpy_common.manifest import Manifest
 
-SemVer: TypeAlias = Annotated[_Version, PlainValidator(_Version.parse), PlainSerializer(_Version.__str__)]
+type SemVer = Annotated[_Version, PlainValidator(_Version.parse), PlainSerializer(_Version.__str__)]
 
 
 class ComparableManifest(Manifest):

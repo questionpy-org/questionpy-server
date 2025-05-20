@@ -3,7 +3,7 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 from abc import abstractmethod
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Protocol, TypeAlias
+from typing import TYPE_CHECKING, Protocol
 
 from questionpy_common.manifest import PackageFile
 
@@ -21,4 +21,4 @@ class LibraryPackageInterface(BasePackageInterface, Protocol):
     pass
 
 
-QPyPackageInterface: TypeAlias = "LibraryPackageInterface | QuestionTypeInterface"
+type QPyPackageInterface = LibraryPackageInterface | QuestionTypeInterface
