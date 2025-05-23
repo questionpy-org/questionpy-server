@@ -151,7 +151,7 @@ class CollectorSettings(BaseModel):
     def transform_to_set_of_repositories(cls, value: str, info: ValidationInfo) -> dict[str, str | timedelta]:
         repositories: dict[str, str | timedelta] = {}
 
-        for line in value.splitlines():
+        for line in map(str.strip, value.splitlines()):
             if not line:
                 continue
 
