@@ -89,9 +89,13 @@ def test_env_var_get_validated(path_with_empty_config_file: Path) -> None:
 
 
 def test_multiline_env_var_gets_parsed_correctly(path_with_empty_config_file: Path) -> None:
+    env_value = """
+    http://www.example.com/1\t03:30:30
+    http://www.example.com/2 2d, 07:00:00
+    """
     with patch.dict(
         environ,
-        {"QPY_COLLECTOR__REPOSITORIES": "http://www.example.com/1\t03:30:30\nhttp://www.example.com/2 2d, 07:00:00"},
+        {"QPY_COLLECTOR__REPOSITORIES": env_value},
     ):
         settings = Settings(config_files=(path_with_empty_config_file,))
         assert settings.collector.repositories == {
