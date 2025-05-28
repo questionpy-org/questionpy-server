@@ -5,13 +5,14 @@
 from typing import TYPE_CHECKING
 
 from aiohttp import web
-from aiohttp.web_exceptions import HTTPMethodNotAllowed, HTTPNotFound
+from aiohttp.web_exceptions import HTTPMethodNotAllowed
 
 from questionpy_server.models import QuestionCreateArguments, QuestionEditFormResponse, RequestBaseData
 from questionpy_server.package import Package
 from questionpy_server.web._decorators import ensure_package, ensure_required_parts
 from questionpy_server.web._utils import DEFAULT_REQUEST_USER, pydantic_json_response
 from questionpy_server.web.app import QPyServer
+from questionpy_server.web.errors import PackageNotFoundError
 
 if TYPE_CHECKING:
     from questionpy_server.worker import Worker
@@ -30,9 +31,11 @@ async def get_packages(request: web.Request) -> web.Response:
 async def get_package(request: web.Request) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
-    package = qpyserver.package_collection.get(request.match_info["package_hash"])
+    package_hash = request.match_info["package_hash"]
+    package = qpyserver.package_collection.get(package_hash)
     if not package:
-        raise HTTPNotFound
+        msg = f"A package with the given hash was not found. ('{package_hash}')"
+        raise PackageNotFoundError(reason=msg, temporary=False)
 
     return pydantic_json_response(data=package.get_info())
 
