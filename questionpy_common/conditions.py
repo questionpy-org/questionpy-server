@@ -36,4 +36,4 @@ class In(_BaseCondition):
     value: list[str | int | bool]
 
 
-Condition = Annotated[IsChecked | IsNotChecked | Equals | DoesNotEqual | In, Field(discriminator="kind")]
+type Condition = Annotated[IsChecked | IsNotChecked | Equals | DoesNotEqual | In, Field(discriminator="kind")]
