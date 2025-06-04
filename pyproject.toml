@@ -24,25 +24,25 @@ dependencies = [
 ]
 
 [tool.poetry.group.dev.dependencies]
-types-psutil = "^7.0.0.20250516"
+types-psutil = ">=7.0.0.20250516, <8.0.0"
 
 [tool.poetry.group.test]
 optional = true
 
 [tool.poetry.group.test.dependencies]
-pytest = "^8.3.5"
-pytest-aiohttp = "^1.1.0"
-pytest-md = "^0.2.0"
-coverage = { extras = ["toml"], version = "^7.8.0" }
-pytest-archon = "^0.0.6"
-polyfactory = "^2.21.0"
+pytest = ">=8.3.5, <9.0.0"
+pytest-aiohttp = ">=1.1.0, <2.0.0"
+pytest-md = ">=0.2.0, <0.3.0"
+coverage = { extras = ["toml"], version = ">=7.8.0, <8.0.0" }
+pytest-archon = ">=0.0.6, <0.1.0"
+polyfactory = ">=2.21.0, <3.0.0"
 
 [tool.poetry.group.linter]
-dependencies = { ruff = "^0.11.10" }
+dependencies = { ruff = ">=0.11.10, <0.12.0" }
 optional = true
 
 [tool.poetry.group.type-checker]
-dependencies = { mypy = "^1.15.0" }
+dependencies = { mypy = ">=1.15.0, <2.0.0" }
 optional = true
 
 [tool.poetry]
