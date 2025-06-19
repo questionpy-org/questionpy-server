@@ -78,10 +78,6 @@ class QuestionCreateArguments(RequestBaseData):
     form_data: dict[str, object]
 
 
-class QuestionViewArguments(RequestBaseData):
-    question_state: str
-
-
 class QuestionCreated(QuestionModel):
     question_state: str
 
