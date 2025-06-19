@@ -983,6 +983,7 @@ components:
             scoring_state:
               type: string
               nullable: true
+              default: null
               description: Arbitrary values set by the question package code (LMS must store this data unmodified).
             scoring_code:
               type: string
@@ -993,16 +994,61 @@ components:
                 - INVALID_RESPONSE
             score:
               type: number
-              nullable: true
               format: double
+              nullable: true
               description: The score for this question attempt, must lie between the `score_min` and `score_max` set by
                 the question.
-            specific_feedback:
-              type: string
+            score_final:
+              type: number
+              format: double
               nullable: true
-              default: null
-              description: Might be null when there is no specific feedback or the specific feedback is shown inline
-                within the question text.
+            scored_inputs:
+              type: object
+              default: { }
+              properties:
+                state:
+                  type: string
+                  enum:
+                    - CORRECT
+                    - CONSEQUENTIAL_SCORE
+                    - PARTIALLY_CORRECT
+                    - WRONG
+                score:
+                  type: number
+                  format: double
+                  nullable: true
+                  default: null
+              required: [ state ]
+              description: Maps input names to their individual scores.
+            scored_subquestions:
+              type: object
+              default: { }
+              properties:
+                score:
+                  type: number
+                  format: double
+                  nullable: true
+                  default: null
+                score_final:
+                  type: number
+                  format: double
+                  nullable: true
+                  default: null
+                scoring_code:
+                  type: string
+                  enum:
+                    - AUTOMATICALLY_SCORED
+                    - NEEDS_MANUAL_SCORING
+                    - RESPONSE_NOT_SCORABLE
+                    - INVALID_RESPONSE
+                  nullable: true
+                  default: null
+                response_summary:
+                  type: string
+                response_class:
+                  type: string
+              description: Maps subquestion IDs to their individual score.
+              required: [ response_summary, response_class ]
             hint:
               type: string
               nullable: true
@@ -1042,31 +1088,7 @@ components:
                     type: number
                     format: double
                 required: [ subquestion_id, response_class, response, score ]
-            scored_fields:
-              type: array
-              nullable: true
-              items:
-                type: object
-                properties:
-                  name:
-                    type: string
-                  correct:
-                    type: boolean
-                    nullable: true
-                  score:
-                    type: number
-                    format: double
-                    nullable: true
-                  max_score:
-                    type: number
-                    format: double
-                    nullable: true
-                  feedback:
-                    type: string
-                    nullable: true
-                required: [ name, correct, score, max_score, feedback ]
-              description: Give specific feedback
-          required: [ scoring_state, scoring_code, score ]
+          required: [ scoring_code, score ]
         - $ref: "#/components/schemas/Attempt"
 
     PackageDependencies:
