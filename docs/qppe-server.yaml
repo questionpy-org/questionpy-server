@@ -1425,6 +1425,9 @@ components:
           $ref: "#/components/schemas/FormLabel"
         name:
           $ref: "#/components/schemas/FormName"
+        multiple:
+          type: boolean
+          default: false
         options:
           type: array
           items:
@@ -1440,9 +1443,6 @@ components:
                 default: false
             required: [ label, value ]
           minItems: 1
-        multiple:
-          type: boolean
-          default: false
         required:
           type: boolean
           default: false
@@ -1495,7 +1495,7 @@ components:
         elements:
           type: array
           items:
-            $ref: "#/components/schemas/FormElement"
+            $ref: "#/components/schemas/LeafFormElement"
           minItems: 1
         disable_if:
           type: array
@@ -1520,10 +1520,10 @@ components:
           enum: [ repetition ]
         name:
           $ref: "#/components/schemas/FormName"
-        initial_elements:
+        initial_repetitions:
           type: integer
           description: Number of repetitions to show when the form is first loaded
-          minimum: 0
+          minimum: 1
         increment:
           type: integer
           description: Number of repetitions to add with each click of the button
@@ -1537,7 +1537,12 @@ components:
           type: array
           description: Elements to repeat
           items:
-            $ref: "#/components/schemas/FormElement"
+            oneOf:
+              - $ref: "#/components/schemas/LeafFormElement"
+              - $ref: "#/components/schemas/RadioGroupElement"
+              - $ref: "#/components/schemas/GroupElement"
+            discriminator:
+              propertyName: kind
           minItems: 1
       required: [ kind, name, initial_elements, increment, elements ]
 
@@ -1552,17 +1557,32 @@ components:
           $ref: "#/components/schemas/FormName"
       required: [ kind, name ]
 
-    FormElement:
+    LeafFormElement:
       oneOf:
+        - $ref: "#/components/schemas/CheckboxElement"
+        - $ref: "#/components/schemas/HiddenElement"
+        - $ref: "#/components/schemas/GeneratedIdElement"
+        - $ref: "#/components/schemas/SelectElement"
         - $ref: "#/components/schemas/StaticTextElement"
         - $ref: "#/components/schemas/TextInputElement"
-        - $ref: "#/components/schemas/CheckboxElement"
-        - $ref: "#/components/schemas/RadioGroupElement"
-        - $ref: "#/components/schemas/SelectElement"
-        - $ref: "#/components/schemas/HiddenElement"
+        - $ref: "#/components/schemas/TextAreaElement"
+      discriminator:
+        propertyName: kind
+
+    ContainerFormElement:
+      oneOf:
         - $ref: "#/components/schemas/GroupElement"
+        - $ref: "#/components/schemas/RadioGroupElement"
         - $ref: "#/components/schemas/RepetitionElement"
-        - $ref: "#/components/schemas/GeneratedIdElement"
+      discriminator:
+        propertyName: kind
+
+    FormElement:
+      oneOf:
+        - $ref: "#/components/schemas/LeafFormElement"
+        - $ref: "#/components/schemas/ContainerFormElement"
+      discriminator:
+        propertyName: kind
 
     FormSection:
       type: object
