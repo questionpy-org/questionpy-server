@@ -67,7 +67,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Options"
+                $ref: "#/components/schemas/QuestionEditForm"
         401:
           $ref: '#/components/responses/UnauthorizedError'
         404:
@@ -626,7 +626,7 @@ components:
             - OPT_1
             - OPT_2
 
-    Options:
+    QuestionEditForm:
       type: object
       properties:
         definition:
