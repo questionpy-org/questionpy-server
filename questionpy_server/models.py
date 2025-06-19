@@ -20,13 +20,13 @@ class PackageInfo(BaseModel):
     namespace: str
     name: dict[Bcp47LanguageTag, str]
     type: PackageType
-    author: str | None
+    author: str
     url: str | None
-    languages: list[Bcp47LanguageTag] | None
+    languages: list[Bcp47LanguageTag] = Field(min_length=1)
     description: dict[Bcp47LanguageTag, str] | None
     icon: str | None
     license: str | None
-    tags: set[str] | None
+    tags: set[str] = set()
 
 
 class PackageVersionSpecificInfo(BaseModel):
@@ -78,10 +78,6 @@ class QuestionCreateArguments(RequestBaseData):
     form_data: dict[str, object]
 
 
-class QuestionViewArguments(RequestBaseData):
-    question_state: str
-
-
 class QuestionCreated(QuestionModel):
     question_state: str
 
@@ -98,7 +94,6 @@ class AttemptViewArguments(RequestBaseData):
 
 class AttemptScoreArguments(AttemptViewArguments):
     response: dict[str, Any]
-    responses: list[dict[str, object]] | None = None
     generate_hint: bool
 
 
