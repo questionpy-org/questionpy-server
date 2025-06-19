@@ -521,12 +521,13 @@ components:
           example: multiple_choice
         namespace:
           type: string
-          example: default
+          example: local
         name:
           type: object
           example:
             en: Multiple Choice
             de: Mehrfachauswahl
+          minProperties: 1
         type:
           type: string
           enum:
@@ -538,33 +539,33 @@ components:
         url:
           type: string
           nullable: true
-          default: null
         languages:
           type: array
           items:
             type: string
           example: [ en, de ]
-          default: [ ]
+          minItems: 1
         description:
           type: object
-          default: { }
+          additionalProperties:
+            type: string
           example:
             en: Multiple Choice
             de: Mehrfachauswahl
+          nullable: true
         icon:
           type: string
           format: uri
           nullable: true
-          default: null
           example: "https://example.org/favicon.ico"
         license:
           type: string
           nullable: true
-          default: null
         tags:
           type: array
           default: [ ]
-      required: [ short_name, namespace, name, type, author ]
+          uniqueItems: true
+      required: [ short_name, namespace, name, type, author, url, languages, description, icon, license ]
 
     PackageVersionSpecificInfo:
       type: object
@@ -594,6 +595,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PackageVersionSpecificInfo'
+      required: [ manifest, versions ]
 
     OptionsFormDefinition:
       type: object
@@ -660,7 +662,7 @@ components:
         local_package:
           type: boolean
           description: True if the LMS is able to return the .qpy file through the LMS Callback API.
-      required: [ question_ref, context, callback_url, lms_auth_token, local_package ]
+      required: [ question_ref, callback_url, lms_auth_token, local_package ]
 
     QuestionCreateArguments:
       description: Information that is needed to create a new question.
@@ -936,13 +938,15 @@ components:
             scoring_state:
               type: string
               nullable: true
+              default: null
               description: Arbitrary values set by the question package code (has to be passed
                 when the attempt was already scored).
             response:
               type: object
               nullable: true
+              default: null
               description: Data from the question's input fields.
-          required: [ attempt_ref, attempt_state, response_ref, scoring_state, response ]
+          required: [ attempt_ref, attempt_state, response_ref ]
 
     AttemptScoreArguments:
       allOf:
