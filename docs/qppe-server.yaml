@@ -1126,6 +1126,7 @@ components:
             - INVALID_QUESTION_STATE
             - INVALID_PACKAGE
             - INVALID_REQUEST
+            - INVALID_OPTIONS_FORM
             - PACKAGE_ERROR
             - PACKAGE_NOT_FOUND
             - CALLBACK_API_ERROR
@@ -1138,6 +1139,7 @@ components:
             * `INVALID_QUESTION_STATE` - Invalid question state.
             * `INVALID_PACKAGE` - The package file is corrupt, the manifest is invalid or there is a checksum mismatch.
             * `INVALID_REQUEST` - Invalid request body.
+            * `INVALID_OPTIONS_FORM` - Invalid form data was provided.
             * `PACKAGE_ERROR` - An error occurred within the package.
             * `PACKAGE_NOT_FOUND` - The package was not found.
             * `CALLBACK_API_ERROR` - An error occurred while contacting the LMS Callback API.
@@ -1149,7 +1151,7 @@ components:
           type: string
           nullable: true
           default: null
-          description: Optional human-readable reason for the error.
+          description: Human-readable reason why the error occurred.
       required: [ error_code, temporary ]
 
     OptionsFormValidationError:
@@ -1159,6 +1161,8 @@ components:
           properties:
             errors:
               type: object
+              additionalProperties:
+                type: string
 
     QuestionStateMigrationError:
       type: object
