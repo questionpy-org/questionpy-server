@@ -1618,7 +1618,7 @@ components:
       properties:
         name:
           type: string
-          example: questionpy-server
+          default: "questionpy-server"
         version:
           type: string
           format: semver
@@ -1633,10 +1633,11 @@ components:
           description: Maximum package size (in bytes)
         usage:
           $ref: "#/components/schemas/Usage"
-      required: [name, version, allow_lms_packages, max_package_size]
+      required: [ version, allow_lms_packages, max_package_size ]
 
     Usage:
       type: object
+      nullable: true
       description: Current usage of request handlers
       properties:
         requests_in_process:
@@ -1645,7 +1646,7 @@ components:
         requests_in_queue:
           type: integer
           description: Amount of requests waiting to be processed
-      required: [requests_in_process, requests_in_queue]
+      required: [ requests_in_process, requests_in_queue ]
 
     Localized:
       type: object
