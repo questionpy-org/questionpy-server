@@ -67,7 +67,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Options"
+                $ref: "#/components/schemas/QuestionEditForm"
         401:
           $ref: '#/components/responses/UnauthorizedError'
         404:
@@ -521,12 +521,13 @@ components:
           example: multiple_choice
         namespace:
           type: string
-          example: default
+          example: local
         name:
           type: object
           example:
             en: Multiple Choice
             de: Mehrfachauswahl
+          minProperties: 1
         type:
           type: string
           enum:
@@ -538,33 +539,33 @@ components:
         url:
           type: string
           nullable: true
-          default: null
         languages:
           type: array
           items:
             type: string
           example: [ en, de ]
-          default: [ ]
+          minItems: 1
         description:
           type: object
-          default: { }
+          additionalProperties:
+            type: string
           example:
             en: Multiple Choice
             de: Mehrfachauswahl
+          nullable: true
         icon:
           type: string
           format: uri
           nullable: true
-          default: null
           example: "https://example.org/favicon.ico"
         license:
           type: string
           nullable: true
-          default: null
         tags:
           type: array
           default: [ ]
-      required: [ short_name, namespace, name, type, author ]
+          uniqueItems: true
+      required: [ short_name, namespace, name, type, author, url, languages, description, icon, license ]
 
     PackageVersionSpecificInfo:
       type: object
@@ -594,6 +595,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PackageVersionSpecificInfo'
+      required: [ manifest, versions ]
 
     OptionsFormDefinition:
       type: object
@@ -626,7 +628,7 @@ components:
             - OPT_1
             - OPT_2
 
-    Options:
+    QuestionEditForm:
       type: object
       properties:
         definition:
@@ -660,7 +662,7 @@ components:
         local_package:
           type: boolean
           description: True if the LMS is able to return the .qpy file through the LMS Callback API.
-      required: [ question_ref, context, callback_url, lms_auth_token, local_package ]
+      required: [ question_ref, callback_url, lms_auth_token, local_package ]
 
     QuestionCreateArguments:
       description: Information that is needed to create a new question.
@@ -686,100 +688,82 @@ components:
               $ref: 'qppe-lms.yaml#/components/schemas/QuestionRef'
           required: [ old_question_ref ]
 
-    QuestionViewArguments:
-      description: Information that is needed to view a question.
+    Question:
       allOf:
-        - $ref: "#/components/schemas/RequestBaseData"
+        - $ref: "#/components/schemas/Localized"
         - type: object
           properties:
-            attempt_ref:
-              $ref: 'qppe-lms.yaml#/components/schemas/AttemptRef'
-            response_ref:
-              $ref: 'qppe-lms.yaml#/components/schemas/ResponseRef'
-          required: [ question_state ]
-
-    Question:
-      type: object
-      properties:
-        num_variants:
-          type: integer
-          minimum: 1
-          description: Number of available variants of this question.
-        num_subquestions:
-          type: integer
-          minimum: 1
-          description: Maximum number of subquestions that this question can have.
-        score_min:
-          type: number
-          format: double
-        score_max:
-          type: number
-          format: double
-        scoring_method:
-          type: string
-          enum:
-            - ALWAYS_MANUAL_SCORING_REQUIRED
-            - AUTOMATICALLY_SCORABLE
-            - AUTOMATICALLY_SCORABLE_WITH_COUNTBACK
-          description: AUTOMATICALLY_SCORABLE_WITH_COUNTBACK means the package is able to compute a final score,
-            taking into account previous submissions to this question.
-        penalty:
-          type: number
-          nullable: true
-          format: double
-          description: Penalty that is subtracted from the score after each failed attempt. Exact semantics TBD.
-        random_guess_score:
-          type: number
-          nullable: true
-          format: double
-          description: Average expected score when the response is just selected randomly.
-        subquestions:
-          type: array
-          nullable: true
-          description: Listing of subquestions if the question consists of subquestions.
-          items:
-            type: object
-            properties:
-              subquestion_id:
-                type: string
-                maxLength: 30
-              score_max:
-                type: number
-                format: double
-                nullable: true
-                description: Maximum score. May be null if no score can be assigned directly to this
-                  specific subquestion.
-              response_classes:
-                type: array
-                nullable: true
-                description: All the possible types of responses per subquestion. This is used for
-                  statistics in order to classify responses. Can be null if question does not
-                  support a response analysis.
-                items:
-                  type: object
-                  properties:
-                    response_class:
-                      type: string
-                      maxLength: 30
-                    score:
-                      type: number
-                      format: double
-                  required: [ response_class, score ]
-            required: [ subquestion_id, score_max, response_classes ]
-        response_analysis_by_variant:
-          type: boolean
-          description: If true, the LMS should break down the stats and response analysis by the question variant.
-        render_every_view:
-          type: boolean
-          description: The question UI should not be cached and every view should be rendered by the package.
-          default: false
-        general_feedback:
-          type: string
-          nullable: true
-          description: General feedback that is shown to everyone after scoring.
-      required: [ num_variants, num_subquestions, score_min,
-                  score_max, scoring_method, penalty, random_guess_score, subquestions,
-                  response_analysis_by_variant, render_every_view, general_feedback ]
+            num_variants:
+              type: integer
+              default: 1
+              minimum: 1
+              description: Number of available variants of this question.
+            score_min:
+              type: number
+              format: double
+              default: 0
+            score_max:
+              type: number
+              format: double
+              default: 1
+            scoring_method:
+              type: string
+              enum:
+                - ALWAYS_MANUAL_SCORING_REQUIRED
+                - AUTOMATICALLY_SCORABLE
+                - AUTOMATICALLY_SCORABLE_WITH_COUNTBACK
+              description: AUTOMATICALLY_SCORABLE_WITH_COUNTBACK means the package is able to compute a final score,
+                taking into account previous submissions to this question.
+            penalty:
+              type: number
+              format: double
+              nullable: true
+              default: null
+              description: Penalty that is subtracted from the score after each failed attempt. Exact semantics TBD.
+            random_guess_score:
+              type: number
+              format: double
+              nullable: true
+              default: null
+              description: Average expected score when the response is just selected randomly.
+            response_analysis_by_variant:
+              type: boolean
+              default: false
+              description: If true, the LMS should break down the stats and response analysis by the question variant.
+            subquestions:
+              type: array
+              default: [ ]
+              description: Listing of subquestions if the question consists of subquestions.
+              items:
+                type: object
+                properties:
+                  subquestion_id:
+                    type: string
+                    maxLength: 30
+                  score_max:
+                    type: number
+                    format: double
+                    nullable: true
+                    description: Maximum score. May be null if no score can be assigned directly to this
+                      specific subquestion.
+                  response_classes:
+                    type: array
+                    nullable: true
+                    description: All the possible types of responses per subquestion. This is used for
+                      statistics in order to classify responses. Can be null if question does not
+                      support a response analysis.
+                    items:
+                      type: object
+                      properties:
+                        response_class:
+                          type: string
+                          maxLength: 30
+                        score:
+                          type: number
+                          format: double
+                      required: [ response_class, score ]
+                required: [ subquestion_id, score_max, response_classes ]
+          required: [ scoring_method ]
 
     QuestionCreated:
       allOf:
@@ -803,119 +787,123 @@ components:
           required: [ variant ]
 
     Attempt:
-      type: object
-      properties:
-        variant:
-          type: integer
-          minimum: 1
-          description: Which variant of this question, between 1 and question.num_variants.
-        question_summary:
-          type: string
-          nullable: true
-          default: null
-          description: Plain-text summary of the question.
-        right_answer_summary:
-          type: string
-          nullable: true
-          default: null
-          description: Plain-text summary of the right answer.
-        ui:
-          type: object
+      allOf:
+        - $ref: "#/components/schemas/Localized"
+        - type: object
           properties:
-            fields:
-              type: array
-              items:
-                type: object
-                properties:
-                  name:
-                    type: string
-                  type:
-                    type: string
-                    description: Type of the input field.
-                  default:
-                    type: string
-                    nullable: true
-                  validation_regex:
-                    type: string
-                    nullable: true
-                    description: Validate response with this regex. If the response does not match, the response might not be scorable.
-                  required:
-                    type: boolean
-                    description: This field is required. Otherwise the response will not be scorable.
-                  correct_response:
-                    type: string
-                    nullable: true
-                required: [ name, type, default, validation_regex, required, correct_response ]
-            text:
+            variant:
+              type: integer
+              minimum: 1
+              description: Which variant of this question, between 1 and question.num_variants.
+            question_summary:
               type: string
-              format: text/html
-              description: Answer input area
-              example: '<label>Enter your answer: <input type="text"/></label>'
-            css_files:
-              type: array
-              description: List of `qpy://` or `https://` URIs leading CSS files needed by the attempt.
-              items:
-                type: string
-                format: uri
-            javascript_calls:
-              type: array
-              default: [ ]
-              items:
-                type: object
-                properties:
-                  module:
+              nullable: true
+              default: null
+              description: Plain-text summary of the question.
+            ui:
+              type: object
+              properties:
+                formulation:
+                  type: string
+                  format: xhtml
+                  description: XHTML markup of the formulation part of the question.
+                general_feedback:
+                  type: string
+                  format: xhtml
+                  nullable: true
+                  default: null
+                  description: XHTML markup of the general feedback part of the question.
+                specific_feedback:
+                  type: string
+                  format: xhtml
+                  nullable: true
+                  default: null
+                  description: XHTML markup of the response-specific feedback part of the question.
+                right_answer:
+                  type: string
+                  format: xhtml
+                  nullable: true
+                  default: null
+                  description: XHTML markup of the part of the question which explains the correct answer.
+                placeholders:
+                  type: object
+                  default: { }
+                  additionalProperties:
                     type: string
-                    pattern: '^[a-zA-Z0-9_$/@.]+$'
-                    description: JS module name like @[package namespace]/[package short name]/[module].js
-                  function:
+                  description: Names and values of the ``<?p`` placeholders that appear in content.
+                css_files:
+                  type: array
+                  description: List of `qpy://` or `https://` URIs leading CSS files needed by the attempt.
+                  items:
                     type: string
-                    pattern: '^[a-zA-Z0-9_$]+$'
-                    description: Name of a callable value within the JS module.
-                  data:
-                    type: string
-                    nullable: true
-                    description: JSON data given as argument to the function
-                  if_role:
-                    type: string
-                    nullable: true
-                    description: Function is called only if the user has this role.
-                    enum:
-                      - TEACHER
-                      - DEVELOPER
-                      - SCORER
-                      - PROCTOR
-                  if_feedback_type:
-                    type: string
-                    nullable: true
-                    description: Function is called only if the user is allowed to view this type of feedback.
-                    enum:
-                      - SPECIFIC_FEEDBACK
-                      - GENERAL_FEEDBACK
-                      - RIGHT_ANSWER
-                      - HINT
-                required: [ module, function, data, if_role, if_feedback_type ]
-            files:
-              type: array
-              default: [ ]
-              items:
-                type: object
-                properties:
-                  name:
-                    type: string
-                    description: file name
-                  data:
-                    type: string
-                    format: base64
-                    description: file data
-                  mime_type:
-                    type: string
-                    nullable: true
-                required: [ name, data, mime_type ]
-          required: [ fields, text ]
-          readOnly: true
-        package_dependencies:
-          $ref: "#/components/schemas/PackageDependencies"
-      required: [ variant, ui, package_dependencies ]
+                    format: uri
+                javascript_calls:
+                  type: array
+                  default: [ ]
+                  items:
+                    type: object
+                    properties:
+                      module:
+                        type: string
+                        pattern: '^[a-zA-Z0-9_$/@.]+$'
+                        description: JS module name like @[package namespace]/[package short name]/[module].js
+                      function:
+                        type: string
+                        pattern: '^[a-zA-Z0-9_$]+$'
+                        description: Name of a callable value within the JS module.
+                      data:
+                        type: string
+                        nullable: true
+                        description: JSON data given as argument to the function
+                      if_role:
+                        type: string
+                        nullable: true
+                        description: Function is called only if the user has this role.
+                        enum:
+                          - TEACHER
+                          - DEVELOPER
+                          - SCORER
+                          - PROCTOR
+                      if_feedback_type:
+                        type: string
+                        nullable: true
+                        description: Function is called only if the user is allowed to view this type of feedback.
+                        enum:
+                          - SPECIFIC_FEEDBACK
+                          - GENERAL_FEEDBACK
+                          - RIGHT_ANSWER
+                          - HINT
+                    required: [ module, function, data, if_role, if_feedback_type ]
+                files:
+                  type: array
+                  default: [ ]
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: file name
+                      mime_type:
+                        type: string
+                        nullable: true
+                        default: null
+                      data:
+                        type: string
+                        format: base64
+                        description: file data
+                    required: [ name, data ]
+                cache_control:
+                  type: string
+                  enum:
+                    - SHARED_CACHE
+                    - PRIVATE_CACHE
+                    - NO_CACHE
+                  default: PRIVATE_CACHE
+              required: [ formulation ]
+              readOnly: true
+            package_dependencies:
+              $ref: "#/components/schemas/PackageDependencies"
+          required: [ variant, ui, package_dependencies ]
 
     AttemptStarted:
       allOf:
@@ -942,20 +930,24 @@ components:
             scoring_state:
               type: string
               nullable: true
+              default: null
               description: Arbitrary values set by the question package code (has to be passed
                 when the attempt was already scored).
             response:
               type: object
               nullable: true
+              default: null
               description: Data from the question's input fields.
-          required: [ attempt_ref, attempt_state, response_ref, scoring_state, response ]
+          required: [ attempt_ref, attempt_state, response_ref ]
 
     AttemptScoreArguments:
       allOf:
-        - $ref: "#/components/schemas/RequestBaseData"
         - $ref: "#/components/schemas/AttemptViewArguments"
         - type: object
           properties:
+            response:
+              type: object
+              additionalProperties: true
             timeout:
               type: number
               minimum: 0
@@ -971,7 +963,7 @@ components:
             generate_hint:
               type: boolean
               description: Try to give a hint on how to improve the response.
-          required: [ timeout, try_scoring_with_countback, generate_hint ]
+          required: [ response, timeout, try_scoring_with_countback, generate_hint ]
 
     AttemptScored:
       allOf:
@@ -980,6 +972,7 @@ components:
             scoring_state:
               type: string
               nullable: true
+              default: null
               description: Arbitrary values set by the question package code (LMS must store this data unmodified).
             scoring_code:
               type: string
@@ -990,16 +983,61 @@ components:
                 - INVALID_RESPONSE
             score:
               type: number
-              nullable: true
               format: double
+              nullable: true
               description: The score for this question attempt, must lie between the `score_min` and `score_max` set by
                 the question.
-            specific_feedback:
-              type: string
+            score_final:
+              type: number
+              format: double
               nullable: true
-              default: null
-              description: Might be null when there is no specific feedback or the specific feedback is shown inline
-                within the question text.
+            scored_inputs:
+              type: object
+              default: { }
+              properties:
+                state:
+                  type: string
+                  enum:
+                    - CORRECT
+                    - CONSEQUENTIAL_SCORE
+                    - PARTIALLY_CORRECT
+                    - WRONG
+                score:
+                  type: number
+                  format: double
+                  nullable: true
+                  default: null
+              required: [ state ]
+              description: Maps input names to their individual scores.
+            scored_subquestions:
+              type: object
+              default: { }
+              properties:
+                score:
+                  type: number
+                  format: double
+                  nullable: true
+                  default: null
+                score_final:
+                  type: number
+                  format: double
+                  nullable: true
+                  default: null
+                scoring_code:
+                  type: string
+                  enum:
+                    - AUTOMATICALLY_SCORED
+                    - NEEDS_MANUAL_SCORING
+                    - RESPONSE_NOT_SCORABLE
+                    - INVALID_RESPONSE
+                  nullable: true
+                  default: null
+                response_summary:
+                  type: string
+                response_class:
+                  type: string
+              description: Maps subquestion IDs to their individual score.
+              required: [ response_summary, response_class ]
             hint:
               type: string
               nullable: true
@@ -1039,31 +1077,7 @@ components:
                     type: number
                     format: double
                 required: [ subquestion_id, response_class, response, score ]
-            scored_fields:
-              type: array
-              nullable: true
-              items:
-                type: object
-                properties:
-                  name:
-                    type: string
-                  correct:
-                    type: boolean
-                    nullable: true
-                  score:
-                    type: number
-                    format: double
-                    nullable: true
-                  max_score:
-                    type: number
-                    format: double
-                    nullable: true
-                  feedback:
-                    type: string
-                    nullable: true
-                required: [ name, correct, score, max_score, feedback ]
-              description: Give specific feedback
-          required: [ scoring_state, scoring_code, score ]
+          required: [ scoring_code, score ]
         - $ref: "#/components/schemas/Attempt"
 
     PackageDependencies:
@@ -1126,6 +1140,7 @@ components:
             - INVALID_QUESTION_STATE
             - INVALID_PACKAGE
             - INVALID_REQUEST
+            - INVALID_OPTIONS_FORM
             - PACKAGE_ERROR
             - PACKAGE_NOT_FOUND
             - CALLBACK_API_ERROR
@@ -1138,6 +1153,7 @@ components:
             * `INVALID_QUESTION_STATE` - Invalid question state.
             * `INVALID_PACKAGE` - The package file is corrupt, the manifest is invalid or there is a checksum mismatch.
             * `INVALID_REQUEST` - Invalid request body.
+            * `INVALID_OPTIONS_FORM` - Invalid form data was provided.
             * `PACKAGE_ERROR` - An error occurred within the package.
             * `PACKAGE_NOT_FOUND` - The package was not found.
             * `CALLBACK_API_ERROR` - An error occurred while contacting the LMS Callback API.
@@ -1149,7 +1165,7 @@ components:
           type: string
           nullable: true
           default: null
-          description: Optional human-readable reason for the error.
+          description: Human-readable reason why the error occurred.
       required: [ error_code, temporary ]
 
     OptionsFormValidationError:
@@ -1159,6 +1175,8 @@ components:
           properties:
             errors:
               type: object
+              additionalProperties:
+                type: string
 
     QuestionStateMigrationError:
       type: object
@@ -1300,6 +1318,27 @@ components:
           $ref: "#/components/schemas/FormHelp"
       required: [ kind, label, name ]
 
+    TextAreaElement:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [ textarea ]
+        required:
+          type: boolean
+          default: false
+        default:
+          type: string
+          description: The initial value in this element, if any
+          nullable: true
+          default: null
+        placeholder:
+          type: string
+          description: Text to show while no value is entered
+          nullable: true
+          default: null
+      required: [ kind ]
+
     CheckboxElement:
       type: object
       properties:
@@ -1391,6 +1430,9 @@ components:
           $ref: "#/components/schemas/FormLabel"
         name:
           $ref: "#/components/schemas/FormName"
+        multiple:
+          type: boolean
+          default: false
         options:
           type: array
           items:
@@ -1406,9 +1448,6 @@ components:
                 default: false
             required: [ label, value ]
           minItems: 1
-        multiple:
-          type: boolean
-          default: false
         required:
           type: boolean
           default: false
@@ -1461,7 +1500,7 @@ components:
         elements:
           type: array
           items:
-            $ref: "#/components/schemas/FormElement"
+            $ref: "#/components/schemas/LeafFormElement"
           minItems: 1
         disable_if:
           type: array
@@ -1486,10 +1525,10 @@ components:
           enum: [ repetition ]
         name:
           $ref: "#/components/schemas/FormName"
-        initial_elements:
+        initial_repetitions:
           type: integer
           description: Number of repetitions to show when the form is first loaded
-          minimum: 0
+          minimum: 1
         increment:
           type: integer
           description: Number of repetitions to add with each click of the button
@@ -1503,7 +1542,12 @@ components:
           type: array
           description: Elements to repeat
           items:
-            $ref: "#/components/schemas/FormElement"
+            oneOf:
+              - $ref: "#/components/schemas/LeafFormElement"
+              - $ref: "#/components/schemas/RadioGroupElement"
+              - $ref: "#/components/schemas/GroupElement"
+            discriminator:
+              propertyName: kind
           minItems: 1
       required: [ kind, name, initial_elements, increment, elements ]
 
@@ -1518,17 +1562,32 @@ components:
           $ref: "#/components/schemas/FormName"
       required: [ kind, name ]
 
-    FormElement:
+    LeafFormElement:
       oneOf:
+        - $ref: "#/components/schemas/CheckboxElement"
+        - $ref: "#/components/schemas/HiddenElement"
+        - $ref: "#/components/schemas/GeneratedIdElement"
+        - $ref: "#/components/schemas/SelectElement"
         - $ref: "#/components/schemas/StaticTextElement"
         - $ref: "#/components/schemas/TextInputElement"
-        - $ref: "#/components/schemas/CheckboxElement"
-        - $ref: "#/components/schemas/RadioGroupElement"
-        - $ref: "#/components/schemas/SelectElement"
-        - $ref: "#/components/schemas/HiddenElement"
+        - $ref: "#/components/schemas/TextAreaElement"
+      discriminator:
+        propertyName: kind
+
+    ContainerFormElement:
+      oneOf:
         - $ref: "#/components/schemas/GroupElement"
+        - $ref: "#/components/schemas/RadioGroupElement"
         - $ref: "#/components/schemas/RepetitionElement"
-        - $ref: "#/components/schemas/GeneratedIdElement"
+      discriminator:
+        propertyName: kind
+
+    FormElement:
+      oneOf:
+        - $ref: "#/components/schemas/LeafFormElement"
+        - $ref: "#/components/schemas/ContainerFormElement"
+      discriminator:
+        propertyName: kind
 
     FormSection:
       type: object
@@ -1548,7 +1607,7 @@ components:
       properties:
         name:
           type: string
-          example: questionpy-server
+          default: "questionpy-server"
         version:
           type: string
           format: semver
@@ -1563,10 +1622,11 @@ components:
           description: Maximum package size (in bytes)
         usage:
           $ref: "#/components/schemas/Usage"
-      required: [name, version, allow_lms_packages, max_package_size]
+      required: [ version, allow_lms_packages, max_package_size ]
 
     Usage:
       type: object
+      nullable: true
       description: Current usage of request handlers
       properties:
         requests_in_process:
@@ -1575,7 +1635,13 @@ components:
         requests_in_queue:
           type: integer
           description: Amount of requests waiting to be processed
-      required: [requests_in_process, requests_in_queue]
+      required: [ requests_in_process, requests_in_queue ]
+
+    Localized:
+      type: object
+      properties:
+        lang:
+          type: string
 
 security:
   - BasicAuth: []

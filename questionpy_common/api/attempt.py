@@ -68,13 +68,13 @@ class AttemptFile(BaseModel):
 
 class AttemptUi(BaseModel):
     formulation: str
-    """X(H)ML markup of the formulation part of the question."""
+    """XHTML markup of the formulation part of the question."""
     general_feedback: str | None = None
-    """X(H)ML markup of the general feedback part of the question."""
+    """XHTML markup of the general feedback part of the question."""
     specific_feedback: str | None = None
-    """X(H)ML markup of the response-specific feedback part of the question."""
+    """XHTML markup of the response-specific feedback part of the question."""
     right_answer: str | None = None
-    """X(H)ML markup of the part of the question which explains the correct answer."""
+    """XHTML markup of the part of the question which explains the correct answer."""
 
     placeholders: dict[str, str] = {}
     """Names and values of the ``<?p`` placeholders that appear in content."""
