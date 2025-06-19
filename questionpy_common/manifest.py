@@ -122,6 +122,18 @@ class PackageFile(BaseModel):
     size: int
 
 
+class DistStaticQPyDependency(BaseModel):
+    name: str
+    hash: str
+
+
+type DistQPyDependency = DistStaticQPyDependency
+
+
+class DistDependencies(BaseModel):
+    qpy: list[DistQPyDependency] = []
+
+
 class Manifest(SourceManifest):
     """Represents a package manifest.
 
@@ -129,3 +141,5 @@ class Manifest(SourceManifest):
     """
 
     static_files: dict[str, PackageFile] = {}
+
+    dependencies: DistDependencies = DistDependencies()
