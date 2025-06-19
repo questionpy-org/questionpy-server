@@ -952,10 +952,19 @@ components:
 
     AttemptScoreArguments:
       allOf:
-        - $ref: "#/components/schemas/RequestBaseData"
         - $ref: "#/components/schemas/AttemptViewArguments"
         - type: object
           properties:
+            response:
+              type: object
+              additionalProperties: true
+            responses:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+              nullable: true
+              default: null
             timeout:
               type: number
               minimum: 0
@@ -971,7 +980,7 @@ components:
             generate_hint:
               type: boolean
               description: Try to give a hint on how to improve the response.
-          required: [ timeout, try_scoring_with_countback, generate_hint ]
+          required: [ response, timeout, try_scoring_with_countback, generate_hint ]
 
     AttemptScored:
       allOf:
