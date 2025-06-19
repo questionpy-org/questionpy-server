@@ -1313,6 +1313,27 @@ components:
           $ref: "#/components/schemas/FormHelp"
       required: [ kind, label, name ]
 
+    TextAreaElement:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [ textarea ]
+        required:
+          type: boolean
+          default: false
+        default:
+          type: string
+          description: The initial value in this element, if any
+          nullable: true
+          default: null
+        placeholder:
+          type: string
+          description: Text to show while no value is entered
+          nullable: true
+          default: null
+      required: [ kind ]
+
     CheckboxElement:
       type: object
       properties:
