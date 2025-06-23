@@ -12,7 +12,7 @@ paths:
     get:
       summary: Get all available packages
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -20,7 +20,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/PackageVersionsInfo"
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
 
   /packages/{package_hash}:
@@ -31,15 +31,15 @@ paths:
     get:
       summary: Get a specific package info by its hash
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PackageVersionInfo"
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
-        404:
+        "404":
           description: Not Found
 
   /packages/{package_hash}/options:
@@ -59,7 +59,7 @@ paths:
             schema:
               $ref: "#/components/schemas/RequestBaseData"
       responses:
-        200:
+        "200":
           description: Definition that can be used in order to display a form.
           headers:
             Content-Language:
@@ -68,11 +68,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/QuestionEditForm"
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
-        404:
+        "404":
           description: Package not found.
-        500:
+        "500":
           description: Error occurred.
           content:
             application/json:
@@ -97,7 +97,7 @@ paths:
             schema:
               $ref: "#/components/schemas/QuestionCreateArguments"
       responses:
-        201:
+        "201":
           description: Successful
           headers:
             Content-Language:
@@ -106,11 +106,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/QuestionCreated"
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
-        404:
+        "404":
           description: Package not found.
-        422:
+        "422":
           description: Validation error
           headers:
             Content-Language:
@@ -119,7 +119,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OptionsFormValidationError"
-        500:
+        "500":
           description: Error occurred.
           content:
             application/json:
@@ -142,13 +142,13 @@ paths:
             schema:
               $ref: "#/components/schemas/QuestionMigrateArguments"
       responses:
-        200:
+        "200":
           description: Successfully updated data
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/QuestionCreated"
-        400:
+        "400":
           description: Question state migration error
           headers:
             Content-Language:
@@ -157,11 +157,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/QuestionStateMigrationError"
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
-        404:
+        "404":
           description: Package not found.
-        500:
+        "500":
           description: Error occurred.
           content:
             application/json:
@@ -184,7 +184,7 @@ paths:
             schema:
               $ref: "#/components/schemas/RequestBaseData"
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Language:
@@ -193,11 +193,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Question"
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
-        404:
+        "404":
           description: Package not found.
-        500:
+        "500":
           description: Error occurred.
           content:
             application/json:
@@ -219,7 +219,7 @@ paths:
             schema:
               $ref: "#/components/schemas/AttemptStartArguments"
       responses:
-        201:
+        "201":
           description: Attempt started data
           headers:
             Content-Language:
@@ -228,11 +228,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AttemptStarted"
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
-        404:
+        "404":
           description: Package not found.
-        500:
+        "500":
           description: Error occurred.
           content:
             application/json:
@@ -254,7 +254,7 @@ paths:
             schema:
               $ref: "#/components/schemas/AttemptViewArguments"
       responses:
-        200:
+        "200":
           description: Attempt view data
           headers:
             Content-Language:
@@ -263,11 +263,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Attempt"
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
-        404:
+        "404":
           description: Package not found.
-        500:
+        "500":
           description: Error occurred.
           content:
             application/json:
@@ -290,7 +290,7 @@ paths:
             schema:
               $ref: "#/components/schemas/AttemptScoreArguments"
       responses:
-        200:
+        "200":
           description: Scored attempt data
           headers:
             Content-Language:
@@ -299,7 +299,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AttemptScored"
-        202:
+        "202":
           description: Attempt will be scored asynchronously.
           content:
             application/json:
@@ -310,11 +310,11 @@ paths:
                     type: string
                     description: Async scoring job uuid.
                 required: [ scoring_job_uuid ]
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
-        404:
+        "404":
           description: Package not found.
-        500:
+        "500":
           description: Error occurred.
           content:
             application/json:
@@ -329,24 +329,24 @@ paths:
     get:
       summary: Get status of an asynchronous scoring job.
       responses:
-        200:
+        "200":
           description: status
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AttemptAsyncScoringStatus'
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
-        404:
+        "404":
           description: Job not found.
     delete:
       summary: Cancel an asynchronous scoring job.
       responses:
-        204:
+        "204":
           description: Job cancelled.
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
-        404:
+        "404":
           description: Job not found.
 
   /packages/{package_hash}/file/{namespace}/{short_name}/{path}:
@@ -384,15 +384,15 @@ paths:
             schema:
               $ref: "#/components/schemas/RequestBaseData"
       responses:
-        200:
+        "200":
           description: Static file data
           content:
             "*/*": {}
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
-        404:
+        "404":
           description: Package or its static file not found.
-        500:
+        "500":
           description: Error occurred.
           content:
             application/json:
@@ -418,15 +418,15 @@ paths:
                   description: QuestionPy Package
               required: [ package ]
       responses:
-        201:
+        "201":
           description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/PackageVersionInfo"
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
-        500:
+        "500":
           description: Error occurred.
           content:
             application/json:
@@ -439,13 +439,13 @@ paths:
     get:
       summary: Get information about the server status
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServerStatus"
-        401:
+        "401":
           $ref: '#/components/responses/UnauthorizedError'
 
 components:
@@ -563,6 +563,8 @@ components:
           nullable: true
         tags:
           type: array
+          items:
+            type: string
           default: [ ]
           uniqueItems: true
       required: [ short_name, namespace, name, type, author, url, languages, description, icon, license ]
@@ -994,50 +996,54 @@ components:
             scored_inputs:
               type: object
               default: { }
-              properties:
-                state:
-                  type: string
-                  enum:
-                    - CORRECT
-                    - CONSEQUENTIAL_SCORE
-                    - PARTIALLY_CORRECT
-                    - WRONG
-                score:
-                  type: number
-                  format: double
-                  nullable: true
-                  default: null
-              required: [ state ]
+              additionalProperties:
+                type: object
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - CORRECT
+                      - CONSEQUENTIAL_SCORE
+                      - PARTIALLY_CORRECT
+                      - WRONG
+                  score:
+                    type: number
+                    format: double
+                    nullable: true
+                    default: null
+                required: [ state ]
               description: Maps input names to their individual scores.
             scored_subquestions:
               type: object
               default: { }
-              properties:
-                score:
-                  type: number
-                  format: double
-                  nullable: true
-                  default: null
-                score_final:
-                  type: number
-                  format: double
-                  nullable: true
-                  default: null
-                scoring_code:
-                  type: string
-                  enum:
-                    - AUTOMATICALLY_SCORED
-                    - NEEDS_MANUAL_SCORING
-                    - RESPONSE_NOT_SCORABLE
-                    - INVALID_RESPONSE
-                  nullable: true
-                  default: null
-                response_summary:
-                  type: string
-                response_class:
-                  type: string
+              additionalProperties:
+                properties:
+                  score:
+                    type: number
+                    format: double
+                    nullable: true
+                    default: null
+                  score_final:
+                    type: number
+                    format: double
+                    nullable: true
+                    default: null
+                  scoring_code:
+                    type: string
+                    enum:
+                      - AUTOMATICALLY_SCORED
+                      - NEEDS_MANUAL_SCORING
+                      - RESPONSE_NOT_SCORABLE
+                      - INVALID_RESPONSE
+                      - null
+                    nullable: true
+                    default: null
+                  response_summary:
+                    type: string
+                  response_class:
+                    type: string
+                required: [ response_summary, response_class ]
               description: Maps subquestion IDs to their individual score.
-              required: [ response_summary, response_class ]
             hint:
               type: string
               nullable: true
@@ -1114,18 +1120,6 @@ components:
             * `FINISHED` - The job finished successfully.
             * `ERROR` - An error occurred.
       required: [ job_status ]
-
-    AttemptAsyncScoringStatusFinished:
-      type: object
-      allOf:
-        - $ref: "#/components/schemas/AttemptAsyncScoringStatus"
-        - $ref: "#/components/schemas/AttemptScored"
-
-    AttemptAsyncScoringStatusError:
-      type: object
-      allOf:
-        - $ref: "#/components/schemas/AttemptAsyncScoringStatus"
-        - $ref: "#/components/schemas/RequestError"
 
     RequestError:
       type: object
@@ -1398,7 +1392,7 @@ components:
               value:
                 type: string
               selected:
-                type: string
+                type: boolean
                 description: Whether this option is initially selected
                 default: false
             required: [ label, value ]

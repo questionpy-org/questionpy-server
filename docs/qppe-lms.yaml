@@ -14,16 +14,16 @@ paths:
       security:
         - AuthPackageAccess: [ ]
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/octet-stream:
               schema:
                 type: string
                 format: binary
-        401:
+        "401":
           description: Access token is missing or invalid.
-        404:
+        "404":
           description: Not Found
 
   /question/{question_ref}/attempt/{attempt_ref}/response/{response_ref}/fields/{field}/files/{file_ref}:
@@ -43,9 +43,9 @@ paths:
       security:
         - AuthQuestionAttemptAccess: [ ]
       responses:
-        200:
+        "200":
           description: OK
-        401:
+        "401":
           description: Access token is missing or invalid.
 
   /question/{question_ref}/attempt/{attempt_ref}/response/{response_ref}/previous-responses:
@@ -58,13 +58,13 @@ paths:
       security:
         - AuthQuestionAttemptAccess: [ ]
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ResponsesList"
-        401:
+        "401":
           description: Access token is missing or invalid.
 
   /question/{question_ref}/attempt/{attempt_ref}/response/{response_ref}/score/{scoring_job_uuid}:
@@ -83,16 +83,16 @@ paths:
           application/json:
             schema:
               oneOf:
-                - $ref: 'qppe-server.yaml#/components/schemas/AttemptAsyncScoringStatusFinished'
-                - $ref: 'qppe-server.yaml#/components/schemas/AttemptAsyncScoringStatusError'
+                - $ref: '#/components/schemas/AttemptAsyncScoringStatusFinished'
+                - $ref: '#/components/schemas/AttemptAsyncScoringStatusError'
               discriminator:
                 propertyName: job_status
       responses:
-        204:
+        "204":
           description: OK
-        401:
+        "401":
           description: Access token is missing or invalid.
-        404:
+        "404":
           description: Scoring job uuid is unknown.
 
   /question/{question_ref}/attempt/{attempt_ref}/response/{response_ref}/scoring/files:
@@ -105,7 +105,7 @@ paths:
       security:
         - AuthQuestionAttemptAccess: [ ]
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -121,11 +121,11 @@ paths:
     get:
       summary: Get a file that was created by a package during scoring.
       security:
-        - AuthQuestionAttemptToken: [ ]
+        - AuthQuestionAttemptAccess: [ ]
       responses:
-        200:
+        "200":
           description: OK
-        401:
+        "401":
           description: Access token is missing or invalid.
     put:
       summary: Create a scoring file.
@@ -138,11 +138,11 @@ paths:
           schema:
             type: string
       responses:
-        201:
+        "201":
           description: File created successfully.
-        401:
+        "401":
           description: Access token is missing or invalid.
-        413:
+        "413":
           description: File is too large or not enough space for this file.
 
 
@@ -154,13 +154,13 @@ paths:
       security:
         - AuthQuestionAccess: [ ]
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
               schema:
                  $ref: "#/components/schemas/QuestionFilesList"
-        401:
+        "401":
           description: Access token is missing or invalid.
 
   /question/{question_ref}/files/{file_name}:
@@ -172,9 +172,9 @@ paths:
       security:
         - AuthQuestionAccess: [ ]
       responses:
-        200:
+        "200":
           description: OK
-        401:
+        "401":
           description: Access token is missing or invalid.
     put:
       summary: Create or update a file.
@@ -189,11 +189,11 @@ paths:
           schema:
             type: string
       responses:
-        201:
+        "201":
           description: File created successfully.
-        401:
+        "401":
           description: Access token is missing or invalid.
-        413:
+        "413":
           description: File is too large or not enough space for this file.
 
   /question/{question_ref}/options/files/{file_ref}:
@@ -206,9 +206,9 @@ paths:
         - AuthQuestionAccess: [ ]
         - AuthNewQuestionCreate: [ ]
       responses:
-        200:
+        "200":
           description: OK
-        401:
+        "401":
           description: Access token is missing or invalid.
 
   /question/{question_ref}/state:
@@ -219,15 +219,15 @@ paths:
       security:
         - AuthQuestionAccess: [ ]
       responses:
-        200:
+        "200":
           description: OK
           content:
             text/plain:
               schema:
                 type: string
-        401:
+        "401":
           description: Access token is missing or invalid.
-        404:
+        "404":
           description: Not Found
 
 components:
@@ -291,6 +291,18 @@ components:
       pattern: '^[a-zA-Z0-9\-_=]{1,64}$'
       description: A question attempt reference that is determined by the LMS. It uniquely identifies an attempt
         of a question.
+
+    AttemptAsyncScoringStatusFinished:
+      type: object
+      allOf:
+        - $ref: "qppe-server.yaml#/components/schemas/AttemptAsyncScoringStatus"
+        - $ref: "qppe-server.yaml#/components/schemas/AttemptScored"
+
+    AttemptAsyncScoringStatusError:
+      type: object
+      allOf:
+        - $ref: "qppe-server.yaml#/components/schemas/AttemptAsyncScoringStatus"
+        - $ref: "qppe-server.yaml#/components/schemas/RequestError"
 
     ResponseRef:
       type: string
