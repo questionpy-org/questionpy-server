@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 from _pytest.tmpdir import TempPathFactory
 from semver import VersionInfo
 
-from questionpy_server.cache import FileLimitLRU
+from questionpy_server.cache import LRUCache, LRUCacheSupervisor
 from questionpy_server.collector import PackageCollection
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
@@ -90,10 +90,15 @@ def test_get_packages() -> None:
 
 
 async def test_notify_indexer_on_cache_deletion(tmp_path_factory: TempPathFactory) -> None:
-    cache = FileLimitLRU(tmp_path_factory.mktemp("qpy"), 100)
+    supervisor = LRUCacheSupervisor(tmp_path_factory.mktemp("qpy"), 100)
+    cache_path = supervisor.directory / "packages"
+    cache_path.mkdir()
+    cache = LRUCache(supervisor, cache_path, extension=".qpy")
+    await cache.put("hash", b"")
+
     PackageCollection(None, {}, Mock(), cache, Mock())
 
     # The callback should unregister the package from the indexer.
     with patch.object(Indexer, "unregister_package") as unregister_package:
-        await cache.on_remove("hash")
+        await cache.remove("hash")
         unregister_package.assert_called_once()

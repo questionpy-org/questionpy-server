@@ -19,7 +19,7 @@ from pydantic_settings import (
     SettingsConfigDict,
 )
 
-from questionpy_common.constants import MAX_PACKAGE_SIZE, MiB
+from questionpy_common.constants import MAX_PACKAGE_SIZE, GiB, MiB
 from questionpy_server.worker import Worker
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
 
@@ -106,19 +106,9 @@ class WorkerSettings(BaseModel):
         return value
 
 
-class PackageCacheSettings(BaseModel):
-    size: ByteSize = ByteSize(100 * MiB)
-    directory: DirectoryPath = Path("cache/packages").resolve()
-
-    @field_validator("directory")
-    @classmethod
-    def resolve_path(cls, value: Path) -> Path:
-        return value.resolve()
-
-
-class RepoIndexCacheSettings(BaseModel):
-    size: ByteSize = ByteSize(200 * MiB)
-    directory: DirectoryPath = Path("cache/repo_index").resolve()
+class CacheSettings(BaseModel):
+    size: ByteSize = ByteSize(1 * GiB)
+    directory: DirectoryPath = Path("cache").resolve()
 
     @field_validator("directory")
     @classmethod
@@ -268,8 +258,7 @@ class Settings(BaseSettings):
     general: GeneralSettings
     webservice: WebserviceSettings
     worker: WorkerSettings
-    cache_package: PackageCacheSettings
-    cache_repo_index: RepoIndexCacheSettings
+    cache: CacheSettings
     collector: CollectorSettings
     auth: AuthSettings
 

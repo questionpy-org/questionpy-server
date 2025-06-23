@@ -9,6 +9,7 @@ from pydantic import ByteSize
 # General.
 KiB: Final[int] = 1024
 MiB: Final[int] = 1024 * KiB
+GiB: Final[int] = 1024 * MiB
 
 # Request.
 MAX_PACKAGE_SIZE: Final[ByteSize] = ByteSize(20 * MiB)

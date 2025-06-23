@@ -18,10 +18,9 @@ from questionpy_common.manifest import PackageFile
 from questionpy_server.hash import calculate_hash
 from questionpy_server.settings import (
     AuthSettings,
+    CacheSettings,
     CollectorSettings,
     GeneralSettings,
-    PackageCacheSettings,
-    RepoIndexCacheSettings,
     Settings,
     WebserviceSettings,
     WorkerSettings,
@@ -127,8 +126,7 @@ def qpy_server(tmp_path_factory: pytest.TempPathFactory) -> QPyServer:
             general=GeneralSettings(),
             webservice=WebserviceSettings(listen_address="127.0.0.1", listen_port=0),
             worker=WorkerSettings(type=ThreadWorker),
-            cache_package=PackageCacheSettings(directory=tmp_path_factory.mktemp("qpy_package_cache")),
-            cache_repo_index=RepoIndexCacheSettings(directory=tmp_path_factory.mktemp("qpy_repo_index_cache")),
+            cache=CacheSettings(directory=tmp_path_factory.mktemp("qpy_cache")),
             collector=CollectorSettings(),
             auth=AuthSettings(enabled=False),
         )

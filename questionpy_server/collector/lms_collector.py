@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from questionpy_server.cache import FileLimitLRU
+from questionpy_server.cache import LRUCache
 from questionpy_server.collector.abc import CachedCollector
 from questionpy_server.worker.runtime.messages import BaseWorkerError
 
@@ -24,7 +24,7 @@ class LMSCollector(CachedCollector):
     a cache, and can be retrieved exclusively by their hash.
     """
 
-    def __init__(self, cache: FileLimitLRU, indexer: "Indexer"):
+    def __init__(self, cache: LRUCache, indexer: "Indexer"):
         super().__init__(cache=cache, indexer=indexer)
 
     async def start(self) -> None:

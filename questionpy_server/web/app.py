@@ -4,12 +4,13 @@
 import asyncio
 import logging
 from collections.abc import AsyncIterator
+from pathlib import Path
 from typing import Any, ClassVar
 
 from aiohttp import web
 
 from questionpy_server import __version__
-from questionpy_server.cache import FileLimitLRU
+from questionpy_server.cache import LRUCache, LRUCacheSupervisor
 from questionpy_server.collector import PackageCollection
 from questionpy_server.settings import Settings
 from questionpy_server.web.middlewares import middlewares
@@ -34,12 +35,9 @@ class QPyServer:
             settings.worker.max_workers, settings.worker.max_memory, worker_type=settings.worker.type
         )
 
-        self.package_cache = FileLimitLRU(
-            settings.cache_package.directory, settings.cache_package.size, extension=".qpy", name="PackageCache"
-        )
-        self.repo_index_cache = FileLimitLRU(
-            settings.cache_repo_index.directory, settings.cache_repo_index.size, name="RepoIndexCache"
-        )
+        cache_supervisor = LRUCacheSupervisor(settings.cache.directory, settings.cache.size)
+        self.package_cache = LRUCache(cache_supervisor, Path("packages"), extension=".qpy")
+        self.repo_index_cache = LRUCache(cache_supervisor, Path("repo_index"))
 
         self.package_collection = PackageCollection(
             settings.collector.local_directory,

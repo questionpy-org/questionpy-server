@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from pydantic import HttpUrl
 
 from questionpy_server import WorkerPool
-from questionpy_server.cache import FileLimitLRU
+from questionpy_server.cache import LRUCache
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
@@ -31,8 +31,8 @@ class PackageCollection:
         self,
         local_dir: Path | None,
         repos: dict[HttpUrl, timedelta],
-        repo_index_cache: FileLimitLRU,
-        package_cache: FileLimitLRU,
+        repo_index_cache: LRUCache,
+        package_cache: LRUCache,
         worker_pool: WorkerPool,
     ):
         self._indexer = Indexer(worker_pool)
@@ -50,7 +50,7 @@ class PackageCollection:
         self._collectors.append(self._lms_collector)
 
         # Update indexer if package in cache gets removed.
-        package_cache.on_remove = self._unregister_package_from_index
+        package_cache.set_on_remove_callback(self._unregister_package_from_index)
 
     async def start(self) -> None:
         """Starts the package collection."""

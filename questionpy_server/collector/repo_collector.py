@@ -8,7 +8,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from questionpy_server.cache import FileLimitLRU
+from questionpy_server.cache import LRUCache
 from questionpy_server.collector.abc import CachedCollector
 from questionpy_server.repository import RepoMeta, RepoPackage, Repository
 from questionpy_server.repository.helper import DownloadError
@@ -29,8 +29,8 @@ class RepoCollector(CachedCollector):
         self,
         url: str,
         update_interval: timedelta,
-        package_cache: FileLimitLRU,
-        repo_index_cache: FileLimitLRU,
+        package_cache: LRUCache,
+        repo_index_cache: LRUCache,
         indexer: "Indexer",
     ):
         super().__init__(cache=package_cache, indexer=indexer)
