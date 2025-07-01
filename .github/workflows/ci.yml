@@ -8,10 +8,22 @@ on:
       - opened
 
 jobs:
-  ci:
-    # https://github.com/questionpy-org/.github
+  python:
     uses: questionpy-org/.github/.github/workflows/python-ci.yml@v10
     with:
       # GitHub workflow inputs do not support lists, so we pass JSON.
       pytest-python-versions: '["3.12", "3.13"]'
       packages: questionpy_common questionpy_server tests
+
+  lint-qppe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+
+      - name: Lint QPPE
+        working-directory: ./docs
+        run: npx @stoplight/spectral-cli lint -f stylish -f text -o.stylish "<stdout>" -o.text "$GITHUB_STEP_SUMMARY" qppe-lms.yaml qppe-server.yaml
