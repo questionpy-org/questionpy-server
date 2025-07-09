@@ -2,240 +2,193 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from dataclasses import dataclass
 from pathlib import Path
-from string import ascii_lowercase
-from typing import NamedTuple
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from _pytest.tmpdir import TempPathFactory
 
-from questionpy_server.cache import CacheItemTooLargeError, FileLimitLRU
-
-
-@dataclass
-class ItemSettings:
-    size_per_item: int
-    num_of_items: int
-
-    def __post_init__(self) -> None:
-        self.list = [(char, self.size_per_item * char.encode()) for char in ascii_lowercase[: self.num_of_items]]
-        self.total_size = self.size_per_item * self.num_of_items
-
-
-class CacheSettings(NamedTuple):
-    size: int
-    directory: Path
-
-
-class Settings(NamedTuple):
-    cache: CacheSettings
-    items: ItemSettings
-
-
-@pytest.fixture
-def settings(tmp_path_factory: TempPathFactory) -> Settings:
-    return Settings(
-        cache=CacheSettings(
-            size=100,
-            directory=tmp_path_factory.mktemp("qpy"),
-        ),
-        items=ItemSettings(size_per_item=15, num_of_items=6),
-    )
-
-
-def write_files_to_directory(files: list[tuple[str, bytes]], directory: Path) -> None:
-    """Writes files onto a specific directory on the filesystem.
-
-    Args:
-        files (List[Tuple[str, bytes]]): files to be written
-        directory (Path): where files should be created
-    """
-    for file, content in files:
-        file_path = directory / file
-        file_path.write_bytes(content)
+from questionpy_server.cache import CacheItemTooLargeError, LRUCache, LRUCacheSupervisor
 
 
 def get_file_count(directory: Path) -> int:
-    """Counts files in a directory.
-
-    Args:
-        directory (Path): of which to get the file count
-    Returns:
-        count of files in directory
-    """
+    """Counts files in a directory."""
     return len([file for file in directory.iterdir() if file.is_file()])
 
 
-def get_directory_size(directory: str) -> int:
-    """Calculates directory size.
-
-    Args:
-        directory (str): of which to get the size
-    Returns:
-        size of directory
-    """
-    return sum(file.stat().st_size for file in Path(directory).iterdir() if file.is_file())
+def get_directory_size(directory: Path) -> int:
+    """Calculates directory size."""
+    return sum(file.stat().st_size for file in directory.iterdir() if file.is_file())
 
 
-@pytest.fixture
-def path_with_too_many_bytes(tmp_path_factory: TempPathFactory, settings: Settings) -> Path:
-    directory = tmp_path_factory.mktemp("qpy")
-    write_files_to_directory(settings.items.list, directory)
-
-    large_item_path = directory / "large_item"
-    large_item_path.write_bytes(b"." * (settings.cache.size - settings.items.total_size + 1))
-
-    return directory
+def write_data(to: Path, amount: int) -> None:
+    to.parent.mkdir(exist_ok=True)
+    to.write_bytes(b"." * amount)
 
 
-@pytest.fixture
-def cache(settings: Settings) -> FileLimitLRU:
-    write_files_to_directory(settings.items.list, Path(settings.cache.directory))
-    return FileLimitLRU(settings.cache.directory, settings.cache.size)
+def test_init_removes_files_if_cache_is_full(tmp_path_factory: TempPathFactory) -> None:
+    supervisor = LRUCacheSupervisor(tmp_path_factory.mktemp("supervisor"), 2)
+
+    cache_subdirectory = Path("cache")
+    cache_path = supervisor.directory / cache_subdirectory
+
+    write_data(cache_path / "A", 1)
+    write_data(cache_path / "B", 2)
+
+    cache = LRUCache(supervisor, cache_subdirectory)
+
+    assert get_file_count(cache_path) == 1
+    assert get_directory_size(cache.directory) == supervisor.total_size
+    assert 0 < supervisor.total_size <= 2
+    assert {True, False} == {cache.contains("A"), cache.contains("B")}
 
 
-def test_init(cache: FileLimitLRU, settings: Settings, path_with_too_many_bytes: Path) -> None:
-    assert cache.total_size == settings.items.total_size
-    assert cache.space_left == settings.cache.size - settings.items.total_size
-    assert get_file_count(settings.cache.directory) == settings.items.num_of_items
+def test_supervisor_creates_cache_directory_in_supervisor_directory(tmp_path_factory: TempPathFactory) -> None:
+    supervisor = LRUCacheSupervisor(tmp_path_factory.mktemp("supervisor"), 1)
 
-    # Existing path contains more bytes than the cache can hold.
-    small_cache = FileLimitLRU(path_with_too_many_bytes, settings.cache.size)
-    assert small_cache.total_size <= settings.cache.size
-    assert get_directory_size(str(path_with_too_many_bytes)) <= settings.cache.size
+    cache_subdirectory = Path("cache")
+    cache = LRUCache(supervisor, cache_subdirectory)
 
-    # Ignore directories.
-    (Path(settings.cache.directory) / "test_dir").mkdir()
-    FileLimitLRU(settings.cache.directory, settings.cache.size)
-
-    # Remove files with temporary extension.
-    tmp_file = Path(settings.cache.directory) / ("file.txt" + cache._tmp_extension)
-    tmp_file.write_bytes(b".")
-    new_cache = FileLimitLRU(settings.cache.directory, settings.cache.size)
-    assert not tmp_file.is_file()
-    assert get_file_count(settings.cache.directory) == settings.items.num_of_items
-    assert new_cache.total_size == settings.items.total_size
+    assert cache.directory == supervisor.directory / cache_subdirectory
+    assert cache.directory.is_dir()
 
 
-async def test_remove(cache: FileLimitLRU, settings: Settings) -> None:
-    # Remove a file.
-    file, _ = settings.items.list[0]
-    await cache.remove(file)
-    assert not (cache.directory / file).is_file()
-    expected_total_size = settings.items.total_size - settings.items.size_per_item
-    assert cache.total_size == expected_total_size
+def test_init_removes_files_with_temporary_extension(tmp_path_factory: TempPathFactory) -> None:
+    supervisor = LRUCacheSupervisor(tmp_path_factory.mktemp("supervisor"), 1)
 
-    # Removing a file should fire the callback.
-    with patch.object(cache, "on_remove") as mock:
-        file, _ = settings.items.list[-1]
-        await cache.remove(file)
-        expected_total_size = settings.items.total_size - 2 * settings.items.size_per_item
-        assert not (cache.directory / file).is_file()
-        assert cache.total_size == expected_total_size
-        mock.assert_called_once()
+    cache_subdirectory = Path("cache")
 
-    # Remove previously removed file.
-    with pytest.raises(FileNotFoundError):
-        await cache.remove(file)
-    assert cache.total_size == expected_total_size
+    file_path = supervisor.directory / cache_subdirectory / "A.tmp"
+    write_data(file_path, 1)
 
-    # Remove not existing file.
-    with pytest.raises(FileNotFoundError):
-        await cache.remove("doesnotexist")
-    assert cache.total_size == expected_total_size
+    LRUCache(supervisor, cache_subdirectory)
+
+    assert not file_path.is_file()
+    assert supervisor.total_size == 0
 
 
-def test_get(cache: FileLimitLRU, settings: Settings) -> None:
-    # Get first added item.
-    file, content = settings.items.list[0]
-    path = cache.get(file)
-    assert path == Path(settings.cache.directory) / file
-    assert path.read_bytes() == content
+async def test_put_with_multiple_caches(tmp_path_factory: TempPathFactory) -> None:
+    supervisor = LRUCacheSupervisor(tmp_path_factory.mktemp("supervisor"), 2)
 
-    # Get last added item.
-    file, content = settings.items.list[-1]
-    path = cache.get(file)
-    assert path == Path(settings.cache.directory) / file
-    assert path.read_bytes() == content
+    cache_1_subdirectory = Path("cache_1")
+    cache_2_subdirectory = Path("cache_2")
 
-    # Get not existing item.
-    with pytest.raises(FileNotFoundError):
-        cache.get("doesnotexist")
+    cache_1 = LRUCache(supervisor, cache_1_subdirectory)
+    cache_2 = LRUCache(supervisor, cache_2_subdirectory)
 
+    await cache_1.put("A", b"A")
+    await cache_2.put("B", b"B")
 
-def test_contains(cache: FileLimitLRU, settings: Settings) -> None:
-    # Check first added file.
-    file, _ = settings.items.list[0]
-    assert cache.contains(file)
+    assert cache_1.contains("A")
+    assert not cache_1.contains("B")
+    assert cache_1.files.keys() == {"A"}
+    assert (supervisor.directory / cache_1_subdirectory / "A").is_file()
 
-    # Check last added file.
-    file, _ = settings.items.list[-1]
-    assert cache.contains(file)
+    assert cache_2.contains("B")
+    assert not cache_2.contains("A")
+    assert cache_2.files.keys() == {"B"}
+    assert (supervisor.directory / cache_2_subdirectory / "B").is_file()
 
-    # Check not existing file.
-    assert not cache.contains("doesnotexist")
+    assert supervisor.total_size == 2
 
 
-async def test_put(cache: FileLimitLRU, settings: Settings) -> None:
-    # Content type is not bytes.
-    with pytest.raises(TypeError):
-        await cache.put("new", "string")  # type: ignore[arg-type]
-    assert cache.total_size == settings.items.total_size
-    assert get_file_count(settings.cache.directory) == settings.items.num_of_items
+async def test_put_with_data_bigger_than_capacity_raises(tmp_path_factory: TempPathFactory) -> None:
+    supervisor = LRUCacheSupervisor(tmp_path_factory.mktemp("supervisor"), 1)
 
-    # Content size is bigger than cache size.
+    cache_subdirectory = Path("cache")
+    cache = LRUCache(supervisor, cache_subdirectory)
+
     with pytest.raises(CacheItemTooLargeError):
-        await cache.put("new", b"." * (settings.cache.size + 1))
+        await cache.put("A", b"..")
 
-    # Replace existing file.
-    file, _ = settings.items.list[0]
-    new_content = b"." * settings.items.size_per_item
-    await cache.put(file, new_content)
-    assert (Path(settings.cache.directory) / file).read_bytes() == new_content
-    assert cache.total_size == settings.items.total_size
+    assert not cache.contains("A")
+    assert supervisor.total_size == 0
+    assert not (supervisor.directory / cache_subdirectory / "A").is_file()
 
-    # Put max sized content into cache.
-    file, content = "A", b"." * settings.cache.size
-    await cache.put(file, content)
-    assert (Path(settings.cache.directory) / file).is_file()
-    assert cache.total_size == settings.cache.size
-    assert get_file_count(settings.cache.directory) == 1
 
-    # Partially written file raises error.
+async def test_put_raises_if_written_bytes_does_not_match_expected_size(tmp_path_factory: TempPathFactory) -> None:
+    supervisor = LRUCacheSupervisor(tmp_path_factory.mktemp("supervisor"), 1)
+
+    cache_subdirectory = Path("cache")
+    cache = LRUCache(supervisor, cache_subdirectory)
+
     with (
-        patch("questionpy_server.cache.Path.write_bytes", return_value=-1),
+        patch("pathlib.Path.write_bytes", return_value=-1),
         pytest.raises(IOError, match="Failed to write bytes"),
     ):
         await cache.put("B", b".")
 
-    # Delete every file in directory.
-    for filepath in Path(settings.cache.directory).iterdir():
-        filepath.unlink()
 
-    # Remove the oldest file in cache.
-    filecount = 3
-    datasize = settings.cache.size // filecount
-    files, content = [str(i) for i in range(filecount)], b"." * datasize
+async def test_put_removes_lru_file_if_cache_is_full(tmp_path_factory: TempPathFactory) -> None:
+    supervisor = LRUCacheSupervisor(tmp_path_factory.mktemp("supervisor"), 1)
 
-    for file in files:
-        await cache.put(file, content)
+    cache_1_subdirectory = Path("cache_1")
+    cache_2_subdirectory = Path("cache_2")
 
-    for i in range(filecount):
-        # Add new file to cache and check if the oldest file is removed.
-        new_file = str(filecount + i + 1)
-        await cache.put(new_file, content)
+    cache_1 = LRUCache(supervisor, cache_1_subdirectory)
+    cache_2 = LRUCache(supervisor, cache_2_subdirectory)
 
-        assert cache.total_size == datasize * filecount
-        assert cache.total_size <= settings.cache.size
-        assert get_file_count(settings.cache.directory) == filecount
-        assert (Path(settings.cache.directory) / new_file).is_file()
-        assert not (Path(settings.cache.directory) / files[i]).is_file()
+    await cache_1.put("A", b"A")
+    await cache_2.put("B", b"B")
+
+    assert not cache_1.contains("A")
+    assert not (supervisor.directory / cache_1_subdirectory / "A").is_file()
+
+    assert cache_2.contains("B")
+    assert (supervisor.directory / cache_2_subdirectory / "B").is_file()
+
+    assert supervisor.total_size == 1
 
 
-def test_get_files(cache: FileLimitLRU, settings: Settings) -> None:
-    # Check if cache.file is only a copy of the original dict.
-    assert cache.files == cache._files
-    assert cache.files is not cache._files
-    assert len(cache.files) == settings.items.num_of_items
+async def test_remove_raises_if_file_does_not_exist(tmp_path_factory: TempPathFactory) -> None:
+    supervisor = LRUCacheSupervisor(tmp_path_factory.mktemp("supervisor"), 1)
+    cache = LRUCache(supervisor, Path("cache"))
+    with pytest.raises(FileNotFoundError):
+        await cache.remove("doesnotexist")
+
+
+async def test_remove_fires_callback_if_file_is_removed(tmp_path_factory: TempPathFactory) -> None:
+    supervisor = LRUCacheSupervisor(tmp_path_factory.mktemp("supervisor"), 2)
+
+    cache_1 = LRUCache(supervisor, Path("cache_1"))
+    cache_2 = LRUCache(supervisor, Path("cache_2"))
+
+    cache_1_callback = AsyncMock()
+    cache_2_callback = AsyncMock()
+
+    cache_1.set_on_remove_callback(cache_1_callback)
+    cache_2.set_on_remove_callback(cache_2_callback)
+
+    await cache_1.put("A", b"A")
+    await cache_2.put("B", b"B")
+
+    # LRU file will be removed.
+    await cache_1.put("C", b"C")
+    cache_1_callback.assert_called_once_with("A")
+    cache_2_callback.assert_not_called()
+
+    await cache_2.remove("B")
+    cache_2_callback.assert_called_once_with("B")
+    cache_1_callback.assert_called_once()
+
+
+async def test_cache_with_file_extension(tmp_path_factory: TempPathFactory) -> None:
+    supervisor = LRUCacheSupervisor(tmp_path_factory.mktemp("supervisor"), 1)
+    cache = LRUCache(supervisor, Path("cache"), extension=".qpy")
+
+    callback = AsyncMock()
+    cache.set_on_remove_callback(callback)
+
+    key = "A"
+    expected_path = supervisor.directory / "cache" / f"{key}.qpy"
+
+    await cache.put(key, b".")
+    assert cache.contains(key)
+    assert expected_path.is_file()
+    assert cache.get(key) == expected_path
+    assert cache.files.keys() == {key}
+
+    await cache.remove(key)
+    callback.assert_called_once_with(key)
+    assert not cache.contains(key)
+    assert not expected_path.is_file()

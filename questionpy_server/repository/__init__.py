@@ -7,14 +7,14 @@ from asyncio import to_thread
 from gzip import decompress
 from urllib.parse import urljoin
 
-from questionpy_server.cache import CacheItemTooLargeError, FileLimitLRU
+from questionpy_server.cache import CacheItemTooLargeError, LRUCache
 from questionpy_server.repository.helper import download
 from questionpy_server.repository.models import RepoMeta, RepoPackage, RepoPackageIndex
 from questionpy_server.utils.logger import URLAdapter
 
 
 class Repository:
-    def __init__(self, url: str, cache: FileLimitLRU):
+    def __init__(self, url: str, cache: LRUCache):
         self._url_base = url
         self._url_index = urljoin(self._url_base, "PACKAGES.json.gz")
         self._url_meta = urljoin(self._url_base, "META.json")

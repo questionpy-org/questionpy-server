@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from questionpy_server.cache import FileLimitLRU
+from questionpy_server.cache import LRUCache
 
 if TYPE_CHECKING:
     from questionpy_server.collector.indexer import Indexer
@@ -56,8 +56,8 @@ class BaseCollector(ABC):
 class CachedCollector(BaseCollector, ABC):
     """A collector that caches retrieved packages locally."""
 
-    _cache: FileLimitLRU
+    _cache: LRUCache
 
-    def __init__(self, cache: FileLimitLRU, indexer: "Indexer"):
+    def __init__(self, cache: LRUCache, indexer: "Indexer"):
         super().__init__(indexer=indexer)
         self._cache = cache

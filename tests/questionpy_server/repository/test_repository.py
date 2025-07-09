@@ -4,6 +4,7 @@
 
 import logging
 from gzip import compress
+from pathlib import Path
 from unittest.mock import ANY, Mock, patch
 from urllib.parse import urljoin
 
@@ -11,7 +12,7 @@ import pytest
 from _pytest.tmpdir import TempPathFactory
 
 from questionpy_common.constants import KiB
-from questionpy_server.cache import CacheItemTooLargeError, FileLimitLRU
+from questionpy_server.cache import CacheItemTooLargeError, LRUCache, LRUCacheSupervisor
 from questionpy_server.repository import RepoMeta, RepoPackage, RepoPackageIndex, Repository
 from questionpy_server.utils.manifest import ComparableManifest
 from tests.test_data.factories import ManifestFactory, RepoMetaFactory, RepoPackageVersionsFactory
@@ -53,7 +54,8 @@ async def test_get_meta() -> None:
 
 
 async def test_get_packages(tmp_path_factory: TempPathFactory) -> None:
-    repository = Repository(REPO_URL, FileLimitLRU(tmp_path_factory.mktemp("qpy"), 100 * KiB))
+    supervisor_cache = LRUCacheSupervisor(tmp_path_factory.mktemp("qpy"), 100 * KiB)
+    repository = Repository(REPO_URL, LRUCache(supervisor_cache, Path("repo_index")))
 
     package_index = RepoPackageIndex(packages=[REPO_PACKAGE_VERSIONS_0, REPO_PACKAGE_VERSIONS_1])
 
@@ -86,7 +88,8 @@ async def test_get_packages(tmp_path_factory: TempPathFactory) -> None:
 
 
 async def test_get_packages_cached(tmp_path_factory: TempPathFactory) -> None:
-    cache = FileLimitLRU(tmp_path_factory.mktemp("qpy"), 100 * KiB)
+    supervisor_cache = LRUCacheSupervisor(tmp_path_factory.mktemp("qpy"), 100 * KiB)
+    cache = LRUCache(supervisor_cache, Path("repo_index"))
     repository = Repository(REPO_URL, cache)
     package_index = RepoPackageIndex(packages=[REPO_PACKAGE_VERSIONS_0])
 
@@ -113,7 +116,8 @@ async def test_get_packages_cached(tmp_path_factory: TempPathFactory) -> None:
 async def test_log_warning_when_package_index_is_too_big_for_cache(
     tmp_path_factory: TempPathFactory, caplog: pytest.LogCaptureFixture
 ) -> None:
-    cache = FileLimitLRU(tmp_path_factory.mktemp("qpy"), 100 * KiB)
+    supervisor_cache = LRUCacheSupervisor(tmp_path_factory.mktemp("qpy"), 100 * KiB)
+    cache = LRUCache(supervisor_cache, Path("repo_index"))
     repository = Repository(REPO_URL, cache)
     package_index = RepoPackageIndex(packages=[REPO_PACKAGE_VERSIONS_0])
 
