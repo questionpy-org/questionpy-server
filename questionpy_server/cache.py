@@ -1,6 +1,7 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
+import logging
 from asyncio import Lock, to_thread
 from collections import OrderedDict
 from pathlib import Path
@@ -10,6 +11,9 @@ from pydantic import ByteSize
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+
+
+_log = logging.getLogger(__name__)
 
 
 class File(NamedTuple):
@@ -51,6 +55,8 @@ class LRUCacheSupervisor:
         self._total_size: int = 0
         self._files: OrderedDict[Path, File] = OrderedDict()
         self._on_remove_callbacks: dict[Path, OnRemoveCallback] = {}
+
+        _log.info("Initialized at '%s' with a maximum size of %s.", directory, ByteSize(max_size).human_readable())
 
     def set_on_remove_callback(self, subdirectory: Path, callback: OnRemoveCallback) -> None:
         self._on_remove_callbacks[subdirectory] = callback
@@ -151,7 +157,14 @@ class LRUCacheSupervisor:
             path = self.directory / (key.with_suffix(extension))
             tmp_path = path.parent / (path.name + self._tmp_extension)
 
-            if size != await to_thread(tmp_path.write_bytes, value):
+            written_bytes = await to_thread(tmp_path.write_bytes, value)
+            if size != written_bytes:
+                _log.error(
+                    "Failed to write all bytes (%s/%s) to file '%s'.",
+                    ByteSize(written_bytes).human_readable(),
+                    ByteSize(size).human_readable(),
+                    tmp_path,
+                )
                 msg = "Failed to write bytes to file"
                 raise OSError(msg)
 
