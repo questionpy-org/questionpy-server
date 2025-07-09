@@ -159,6 +159,7 @@ class LRUCacheSupervisor:
 
             written_bytes = await to_thread(tmp_path.write_bytes, value)
             if size != written_bytes:
+                tmp_path.unlink(missing_ok=True)
                 _log.error(
                     "Failed to write all bytes (%s/%s) to file '%s'.",
                     ByteSize(written_bytes).human_readable(),
