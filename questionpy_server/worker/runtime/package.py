@@ -5,7 +5,6 @@ import inspect
 import logging
 import sys
 from abc import ABC, abstractmethod
-from functools import cached_property
 from importlib import import_module, resources
 from importlib.resources.abc import Traversable
 from pathlib import Path
@@ -14,8 +13,15 @@ from zipfile import ZipFile
 
 from questionpy_common.api.package import QPyPackageInterface
 from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME
-from questionpy_common.environment import Environment, Package, PackageState
-from questionpy_common.manifest import Manifest
+from questionpy_common.environment import (
+    Environment,
+    Package,
+    PackageNamespaceAndShortName,
+    PackageNotInitializedError,
+    PackageNotLoadedError,
+    PackageState,
+)
+from questionpy_common.manifest import DistStaticQPyDependency, Manifest
 from questionpy_server.worker.runtime.package_location import (
     DirPackageLocation,
     FunctionPackageLocation,
@@ -34,96 +40,74 @@ class NoInitFunctionError(Exception):
 class ImportablePackage(ABC, Package):
     """Adds methods needed for loading and running the package to :class:`Package`."""
 
-    def __init__(self) -> None:
-        self._state = PackageState.PREPARED
+    def __init__(self, manifest: Manifest) -> None:
+        self._manifest = manifest
 
-    @abstractmethod
-    def setup_imports(self) -> None:
-        """Modifies ``sys.path`` to include the package's python code."""
-
-    def init(self, env: Environment) -> QPyPackageInterface:
-        """Imports the package's entrypoint and executes its ``init`` function.
-
-        :meth:`setup_imports` should be called beforehand to allow the import.
-        """
-        main_module: ModuleType
-        if self.manifest.entrypoint:
-            main_module = import_module(
-                f"{self.manifest.namespace}.{self.manifest.short_name}.{self.manifest.entrypoint}"
-            )
-        else:
-            main_module = import_module(f"{self.manifest.namespace}.{self.manifest.short_name}")
-
-        self._state = PackageState.LOADED
-
-        if not hasattr(main_module, "init") or not callable(main_module.init):
-            raise NoInitFunctionError(main_module, "init")
-
-        signature = inspect.signature(main_module.init)
-        package_interface = main_module.init(*(self, env)[: len(signature.parameters)])
-        self._state = PackageState.INITIALIZED
-        return package_interface
-
-    @property
-    def state(self) -> PackageState:
-        return self._state
-
-
-class UnpackingZipBasedPackage(ImportablePackage):
-    """A zip-formatted QuestionPy package which will be unpacked into a temporary directory before use."""
-
-    def __init__(self, location: ZipPackageLocation, worker_home: Path) -> None:
-        super().__init__()
-        self.path = location.path
-        self.hash = location.hash
-
-        self._dir_package = self._unpack(worker_home / "packages" / self.hash)
-
-    def _unpack(self, to_dir: Path) -> "DirBasedPackage":
-        to_dir.mkdir(parents=True)
-        with ZipFile(self.path) as zip_file:
-            dist_prefix = f"{DIST_DIR}/"
-            for info in zip_file.infolist():
-                if info.filename.startswith(dist_prefix):
-                    zip_file.extract(info, to_dir)
-
-        _log.debug("Unpacked package '%s' to '%s'.", self.path, to_dir)
-
-        return DirBasedPackage(to_dir / DIST_DIR)
-
-    def setup_imports(self) -> None:
-        self._dir_package.setup_imports()
+        self._main_module: ModuleType | None = None
+        self._interface: QPyPackageInterface | None = None
+        self._dependencies: dict[PackageNamespaceAndShortName, ImportablePackage] = {}
 
     @property
     def manifest(self) -> Manifest:
-        return self._dir_package.manifest
+        return self._manifest
+
+    @property
+    def state(self) -> PackageState:
+        if self._interface is not None:
+            return PackageState.INITIALIZED
+        if self._main_module is not None:
+            return PackageState.LOADED
+        return PackageState.OPENED
+
+    @property
+    def dependencies(self) -> dict[PackageNamespaceAndShortName, "ImportablePackage"]:
+        return self._dependencies
+
+    @property
+    def interface(self) -> QPyPackageInterface:
+        if not self._interface:
+            raise PackageNotInitializedError
+        return self._interface
+
+    @abstractmethod
+    def load(self) -> None:
+        """Import the package's main module."""
+
+    @abstractmethod
+    def init(self, env: Environment) -> None:
+        """Executes the package's `init` function.
+
+        `load` must have been called beforehand.
+        """
+
+    @abstractmethod
+    def resolve_static_dependencies(self) -> list[PackageLocation]:
+        pass
+
+
+class RegularPackage(ImportablePackage):
+    """Implementation using a package dist directory, which might be run directly or extracted from a zip package."""
+
+    def __init__(self, path: Path, manifest: Manifest) -> None:
+        super().__init__(manifest)
+        self.path = path
 
     def get_path(self, path: str) -> Traversable:
-        return self._dir_package.get_path(path)
+        return self.path.joinpath(path)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.path})"
 
     __str__ = __repr__
 
+    def resolve_static_dependencies(self) -> list[PackageLocation]:
+        return [
+            DirPackageLocation(self.path / "dependencies" / "qpy" / dep.name / DIST_DIR)
+            for dep in self.manifest.dependencies.qpy
+            if isinstance(dep, DistStaticQPyDependency)
+        ]
 
-class DirBasedPackage(ImportablePackage):
-    """A package's dist directory to be used directly."""
-
-    def __init__(self, path: Path) -> None:
-        super().__init__()
-        self.path = path
-
-    @cached_property
-    def manifest(self) -> Manifest:
-        """Load QuestionPy manifest from package."""
-        manifest_path = self.path / MANIFEST_FILENAME
-        return Manifest.model_validate_json(manifest_path.read_bytes())
-
-    def get_path(self, path: str) -> Traversable:
-        return self.path.joinpath(path)
-
-    def setup_imports(self) -> None:
+    def load(self) -> None:
         for new_path in (
             str(self.path / "dependencies" / "site-packages"),
             str(self.path / "python"),
@@ -131,10 +115,22 @@ class DirBasedPackage(ImportablePackage):
             if new_path not in sys.path:
                 sys.path.insert(0, new_path)
 
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.path})"
+        if self.manifest.entrypoint:
+            self._main_module = import_module(
+                f"{self.manifest.namespace}.{self.manifest.short_name}.{self.manifest.entrypoint}"
+            )
+        else:
+            self._main_module = import_module(f"{self.manifest.namespace}.{self.manifest.short_name}")
 
-    __str__ = __repr__
+    def init(self, env: Environment) -> None:
+        if not self._main_module:
+            raise PackageNotLoadedError
+
+        if not hasattr(self._main_module, "init"):
+            raise NoInitFunctionError(self._main_module, "init")
+
+        signature = inspect.signature(self._main_module.init)
+        self._interface = self._main_module.init(*(self, env)[: len(signature.parameters)])
 
 
 class FunctionBasedPackage(ImportablePackage):
@@ -144,50 +140,72 @@ class FunctionBasedPackage(ImportablePackage):
     """
 
     def __init__(self, module_name: str, function_name: str, manifest: Manifest) -> None:
-        super().__init__()
+        super().__init__(manifest)
         self.module_name = module_name
         self.function_name = function_name
-        self._manifest = manifest
-
-    @property
-    def manifest(self) -> Manifest:
-        return self._manifest
 
     def get_path(self, path: str) -> Traversable:
         return resources.files(self.module_name).joinpath(path)
 
-    def setup_imports(self) -> None:
-        # Nothing to do.
-        pass
+    def load(self) -> None:
+        self._main_module = import_module(self.module_name)
 
-    def init(self, env: Environment) -> QPyPackageInterface:
-        main_module = import_module(self.module_name)
+    def init(self, env: Environment) -> None:
+        if not self._main_module:
+            raise PackageNotLoadedError
 
-        self._state = PackageState.LOADED
-
-        init_function = getattr(main_module, self.function_name, None)
-        if not init_function or not callable(init_function):
-            raise NoInitFunctionError(main_module, self.function_name)
+        init_function = getattr(self._main_module, self.function_name, None)
+        if not init_function:
+            raise NoInitFunctionError(self._main_module, self.function_name)
 
         signature = inspect.signature(init_function)
-        package_interface = init_function(*(self, env)[: len(signature.parameters)])
-        self._state = PackageState.INITIALIZED
-        return package_interface
+        self._interface = init_function(*(self, env)[: len(signature.parameters)])
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.module_name, self.function_name})"
 
     __str__ = __repr__
 
+    def resolve_static_dependencies(self) -> list[PackageLocation]:
+        return []
 
-def load_package(location: PackageLocation, worker_home: Path) -> ImportablePackage:
+
+def _package_dir(worker_home: Path, manifest: Manifest) -> Path:
+    slug = f"{manifest.namespace}-{manifest.short_name}-{manifest.version}"
+    package_dir = worker_home / "packages" / slug
+    if package_dir.exists():
+        msg = f"A package with slug '{slug}' has already been loaded or is in the process of being loaded."
+        raise RuntimeError(msg)
+    return package_dir
+
+
+def open_qpy_package(location: PackageLocation, worker_home: Path) -> ImportablePackage:
     """Turn a pure :class:`PackageLocation` into an :class:`ImportablePackage` which can be imported and executed."""
-    if isinstance(location, ZipPackageLocation):
-        return UnpackingZipBasedPackage(location, worker_home)
-    if isinstance(location, DirPackageLocation):
-        return DirBasedPackage(location.path)
     if isinstance(location, FunctionPackageLocation):
         return FunctionBasedPackage(location.module_name, location.function_name, location.manifest)
+
+    if isinstance(location, ZipPackageLocation):
+        # Unpack the dist part of the ZIP into the package dir.
+        with ZipFile(location.path) as zip_file:
+            manifest = Manifest.model_validate_json(zip_file.read(f"{DIST_DIR}/{MANIFEST_FILENAME}"))
+            package_dir = _package_dir(worker_home, manifest)
+            package_dir.mkdir(parents=True)
+
+            dist_prefix = f"{DIST_DIR}/"
+            for info in zip_file.infolist():
+                if info.filename.startswith(dist_prefix):
+                    zip_file.extract(info, package_dir)
+
+        _log.debug("Unpacked package '%s' to '%s'.", location.path, package_dir)
+
+        return RegularPackage(package_dir / DIST_DIR, manifest)
+
+    if isinstance(location, DirPackageLocation):
+        manifest = Manifest.model_validate_json((location.path / MANIFEST_FILENAME).read_text())
+        package_dir = _package_dir(worker_home, manifest)
+        package_dir.parent.mkdir(parents=True, exist_ok=True)
+        package_dir.symlink_to(location.path)
+        return RegularPackage(package_dir, manifest)
 
     msg = f"Unknown package location: '{location}'"
     raise ValueError(msg)

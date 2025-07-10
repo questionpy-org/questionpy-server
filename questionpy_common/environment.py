@@ -21,6 +21,8 @@ __all__ = [
     "Package",
     "PackageInitFunction",
     "PackageNamespaceAndShortName",
+    "PackageNotInitializedError",
+    "PackageNotLoadedError",
     "PackageState",
     "RequestUser",
     "WorkerResourceLimits",
@@ -46,7 +48,7 @@ class WorkerResourceLimits:
 
 @total_ordering
 class PackageState(Enum):
-    PREPARED = 1
+    OPENED = 1
     """The package is present and in the process of being loaded, but none of its code has been executed yet."""
     LOADED = 2
     """The package entrypoint has been imported."""
@@ -57,6 +59,16 @@ class PackageState(Enum):
         if isinstance(other, PackageState):
             return self.value < other.value
         return NotImplemented
+
+
+class PackageNamespaceAndShortName(NamedTuple):
+    """Tuple of namespace and short name, identifying any version of a specific package."""
+
+    namespace: str
+    short_name: str
+
+    def __str__(self) -> str:
+        return f"@{self.namespace}/{self.short_name}"
 
 
 class Package(Protocol):
@@ -75,15 +87,20 @@ class Package(Protocol):
     @property
     def state(self) -> PackageState: ...
 
+    @property
+    def interface(self) -> QPyPackageInterface:
+        """Gives access to the package's outward interface.
+
+        Raises:
+            PackageNotInitializedError
+        """
+
+    @property
+    def dependencies(self) -> Mapping[PackageNamespaceAndShortName, "Package"]:
+        """The direct QPy dependencies of this package."""
+
 
 type OnRequestCallback = Callable[[RequestUser], None]
-
-
-class PackageNamespaceAndShortName(NamedTuple):
-    """Tuple of namespace and short name, identifying any version of a specific package."""
-
-    namespace: str
-    short_name: str
 
 
 class Environment(Protocol):
@@ -106,8 +123,8 @@ class Environment(Protocol):
 
     When no request is being processed (such as during a call to the package's `init` function), this will be None.
     """
-    main_package: Package
-    """The main package whose entrypoint was called."""
+    main_package: Package | None
+    """The main package in this worker, if one is loaded yet."""
     packages: Mapping[PackageNamespaceAndShortName, Package]
     """All packages loaded in the worker, including the main package.
 
@@ -155,3 +172,11 @@ def set_qpy_environment(env: Environment | None) -> None:
 
 class NoEnvironmentError(Exception):
     pass
+
+
+class PackageNotInitializedError(Exception):
+    """The packages state was not INITIALIZED."""
+
+
+class PackageNotLoadedError(Exception):
+    """The packages state was not LOADED or higher."""

@@ -17,3 +17,5 @@ MAX_QUESTION_STATE_SIZE: Final[ByteSize] = ByteSize(2 * MiB)
 
 MANIFEST_FILENAME = "qpy_manifest.json"
 DIST_DIR = "dist"
+
+MAX_QPY_DEPENDENCY_LEVELS = 5
