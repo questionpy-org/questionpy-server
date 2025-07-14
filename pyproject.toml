@@ -7,7 +7,7 @@ name = "questionpy-server"
 description = "QuestionPy application server"
 license = { file = "LICENSE.md" }
 urls = { homepage = "https://questionpy.org" }
-version = "0.7.0"
+version = "0.8.0"
 authors = [
     { name = "TU Berlin innoCampus" },
     { email = "info@isis.tu-berlin.de" }
