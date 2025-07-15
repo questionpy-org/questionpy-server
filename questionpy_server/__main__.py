@@ -13,8 +13,8 @@ from . import __version__
 from .settings import Settings
 
 _DEFAULT_CONFIG_FILES = (
-    Path(".", "config.ini"),
-    Path("/etc/questionpy-server.ini"),
+    Path(".", "config.yml"),
+    Path("/etc/questionpy-server.yml"),
 )
 
 

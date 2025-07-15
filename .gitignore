@@ -2,7 +2,7 @@
 /.venv
 /.idea
 *.iml
-config.ini
+config.yml
 __pycache__
 /dist
 /.vscode
