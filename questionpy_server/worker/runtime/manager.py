@@ -1,20 +1,22 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
+import dataclasses
 import resource
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import TYPE_CHECKING, NoReturn, TypeVar, cast
 
 from questionpy_common.constants import MAX_QPY_DEPENDENCY_LEVELS
 from questionpy_common.environment import (
     Environment,
     OnRequestCallback,
+    Package,
     PackageNamespaceAndShortName,
     RequestUser,
     WorkerResourceLimits,
-    get_qpy_environment,
     set_qpy_environment,
 )
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
@@ -44,14 +46,37 @@ if TYPE_CHECKING:
 __all__ = ["WorkerManager"]
 
 
-@dataclass
+@dataclass(frozen=True)
 class EnvironmentImpl(Environment):
-    type: str
-    packages: dict[PackageNamespaceAndShortName, ImportablePackage]
+    _type: str
+    _packages: dict[PackageNamespaceAndShortName, ImportablePackage]
     _on_request_callbacks: list[OnRequestCallback]
-    main_package: ImportablePackage | None = None
-    request_user: RequestUser | None = None
-    limits: WorkerResourceLimits | None = None
+    _main_package: ImportablePackage | None = None
+    _request_user: RequestUser | None = None
+    _limits: WorkerResourceLimits | None = None
+
+    @property
+    def type(self) -> str:
+        return self._type
+
+    @property
+    def packages(self) -> Mapping[PackageNamespaceAndShortName, Package]:
+        return MappingProxyType(self._packages)
+
+    @property
+    def main_package(self) -> Package:
+        if not self._main_package:
+            raise MainPackageNotLoadedError
+
+        return self._main_package
+
+    @property
+    def request_user(self) -> RequestUser | None:
+        return self._request_user
+
+    @property
+    def limits(self) -> WorkerResourceLimits | None:
+        return self._limits
 
     def register_on_request_callback(self, callback: OnRequestCallback) -> None:
         self._on_request_callbacks.append(callback)
@@ -96,9 +121,9 @@ class WorkerManager:
             resource.setrlimit(resource.RLIMIT_AS, (init_msg.limits.max_memory, init_msg.limits.max_memory))
 
         self._env = EnvironmentImpl(
-            type=init_msg.worker_type,
-            limits=init_msg.limits,
-            packages=self._packages,
+            _type=init_msg.worker_type,
+            _limits=init_msg.limits,
+            _packages=self._packages,
             _on_request_callbacks=self._on_request_callbacks,
         )
         set_qpy_environment(self._env)
@@ -179,7 +204,9 @@ class WorkerManager:
         self._load_and_init_recursively(msg, package, as_main=msg.main)
 
         if msg.main:
-            self._env.main_package = package
+            self._env = dataclasses.replace(self._env, _main_package=package)
+            set_qpy_environment(self._env)
+
             self._question_type = cast("QuestionTypeInterface", package.interface)
 
         return LoadQPyPackage.Response(nssn=nssn)
@@ -198,7 +225,7 @@ class WorkerManager:
         if not self._question_type:
             self._raise_no_main_package_loaded(msg)
 
-        with self._with_request_user(msg.request_user):
+        with self._with_request_user(msg, msg.request_user):
             definition, form_data = self._question_type.get_options_form(msg.question_state)
 
             return GetOptionsForm.Response(definition=definition, form_data=form_data)
@@ -209,7 +236,7 @@ class WorkerManager:
         if not self._question_type:
             self._raise_no_main_package_loaded(msg)
 
-        with self._with_request_user(msg.request_user):
+        with self._with_request_user(msg, msg.request_user):
             question = self._question_type.create_question_from_options(msg.question_state, msg.form_data)
 
             return CreateQuestionFromOptions.Response(
@@ -222,7 +249,7 @@ class WorkerManager:
         if not self._question_type:
             self._raise_no_main_package_loaded(msg)
 
-        with self._with_request_user(msg.request_user):
+        with self._with_request_user(msg, msg.request_user):
             question = self._question_type.create_question_from_state(msg.question_state)
             attempt_started_model = question.start_attempt(msg.variant)
             return StartAttempt.Response(attempt_started_model=attempt_started_model)
@@ -233,7 +260,7 @@ class WorkerManager:
         if not self._question_type:
             self._raise_no_main_package_loaded(msg)
 
-        with self._with_request_user(msg.request_user):
+        with self._with_request_user(msg, msg.request_user):
             question = self._question_type.create_question_from_state(msg.question_state)
             attempt_model = question.get_attempt(msg.attempt_state, msg.scoring_state, msg.response)
             return ViewAttempt.Response(attempt_model=attempt_model)
@@ -244,7 +271,7 @@ class WorkerManager:
         if not self._question_type:
             self._raise_no_main_package_loaded(msg)
 
-        with self._with_request_user(msg.request_user):
+        with self._with_request_user(msg, msg.request_user):
             question = self._question_type.create_question_from_state(msg.question_state)
             attempt_scored_model = question.score_attempt(msg.attempt_state, msg.scoring_state, msg.response)
             return ScoreAttempt.Response(attempt_scored_model=attempt_scored_model)
@@ -260,20 +287,24 @@ class WorkerManager:
         raise MainPackageNotLoadedError(errmsg)
 
     @contextmanager
-    def _with_request_user(self, request_user: RequestUser) -> Generator[None, None, None]:
-        env = get_qpy_environment()
-        if env.request_user:
-            msg = "There is already a request_user in the current environment."
-            raise RuntimeError(msg)
+    def _with_request_user(self, msg: MessageToWorker, request_user: RequestUser) -> Generator[None, None, None]:
+        if not self._env:
+            self._raise_not_initialized(msg)
 
-        env.request_user = request_user
+        if self._env.request_user:
+            err_msg = "There is already a request_user in the current environment."
+            raise RuntimeError(err_msg)
+
+        self._env = dataclasses.replace(self._env, _request_user=request_user)
+        set_qpy_environment(self._env)
         try:
             for callback in self._on_request_callbacks:
                 callback(request_user)
 
             yield
         finally:
-            env.request_user = None
+            self._env = dataclasses.replace(self._env, _request_user=None)
+            set_qpy_environment(self._env)
 
 
 class PackageInitFailedError(Exception):

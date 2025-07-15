@@ -1,7 +1,6 @@
 #  This file is part of QuestionPy. (https://questionpy.org)
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-from abc import abstractmethod
 from collections.abc import Callable, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -104,35 +103,43 @@ type OnRequestCallback = Callable[[RequestUser], None]
 
 
 class Environment(Protocol):
-    type: str
-    """The kind of worker we are running in.
+    @property
+    def type(self) -> str:
+        """The kind of worker we are running in.
 
-    The well-known values are:
+        The well-known values are:
 
-    - process: The worker is running in a subprocess of the server process.
-    - thread: The worker is running in a thread of the server process. Should only be used for debugging since it is
-      not possible to isolate workers effectively.
-    - container: The worker is sandboxed in a Docker(-like) container.
+        - process: The worker is running in a subprocess of the server process.
+        - thread: The worker is running in a thread of the server process. Should only be used for debugging since it is
+          not possible to isolate workers effectively.
+        - container: The worker is sandboxed in a Docker(-like) container.
 
-    Other worker types may be added in future. (Hence the `str` type.)
-    """
-    limits: WorkerResourceLimits | None
-    """The resource limits imposed on the worker, if any."""
-    request_user: RequestUser | None
-    """If the worker is currently processing a request, information about the user that it is being processed for.
+        Other worker types may be added in the future. (Hence the `str` type.)
+        """
 
-    When no request is being processed (such as during a call to the package's `init` function), this will be None.
-    """
-    main_package: Package | None
-    """The main package in this worker, if one is loaded yet."""
-    packages: Mapping[PackageNamespaceAndShortName, Package]
-    """All packages loaded in the worker, including the main package.
+    @property
+    def limits(self) -> WorkerResourceLimits | None:
+        """The resource limits imposed on the worker, if any."""
 
-    Keys are the package namespace and short name. Only one version of a package can be loaded at a time. This may
-    include packages which are not yet initialized (i.e. their `init` function has not finished yet).
-    """
+    @property
+    def request_user(self) -> RequestUser | None:
+        """If the worker is currently processing a request, information about the user that it is being processed for.
 
-    @abstractmethod
+        When no request is being processed (such as during a call to the package's `init` function), this will be None.
+        """
+
+    @property
+    def main_package(self) -> Package:
+        """The main package in this worker."""
+
+    @property
+    def packages(self) -> Mapping[PackageNamespaceAndShortName, Package]:
+        """All packages loaded in the worker, including the main package.
+
+        Keys are the package namespace and short name. Only one version of a package can be loaded at a time. This may
+        include packages which are not yet initialized (i.e. their `init` function has not finished yet).
+        """
+
     def register_on_request_callback(self, callback: OnRequestCallback) -> None:
         """Register a new on-request callback.
 
