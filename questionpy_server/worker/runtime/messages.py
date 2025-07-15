@@ -2,6 +2,7 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import traceback
+from collections.abc import Sequence
 from enum import IntEnum, StrEnum, auto, unique
 from pathlib import Path
 from struct import Struct
@@ -120,7 +121,11 @@ class LoadQPyPackage(MessageToWorker):
         """Success message in return to LoadQPyPackage."""
 
         message_id: ClassVar[MessageIds] = MessageIds.LOADED_QPY_PACKAGE
-        nssn: PackageNamespaceAndShortName
+
+        root_nssn: PackageNamespaceAndShortName
+        """NSSN of the package which was requested, to distinguish it from its loaded dependencies."""
+        loaded_packages: Sequence[PackageNamespaceAndShortName]
+        """All packages loaded as a result of THIS request, including dependencies."""
 
 
 class GetQPyPackageManifest(MessageToWorker):
