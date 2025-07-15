@@ -23,7 +23,7 @@ webservice:
   #max_package_size: 20 MiB
 
   # Allow packages from the LMS
-  #allow_lms_packages: True
+  #allow_lms_packages: true
 
 worker:
   # Fully qualified name of the worker class
@@ -52,7 +52,7 @@ collector:
 
 auth:
   # Enable or disable authentication for requests
-  #enabled: True
+  #enabled: true
 
   # List of usernames and password hashes (SHA256)
   # E.g., tu-berlin.de: eee26bb21675236b7e98598e31d5db887cbc5d671c1d46c3e4e03e46cd3a35e0
