@@ -107,10 +107,17 @@ class BaseWorker(Worker, ABC):
                 LoadQPyPackage.Response,
                 self._load_qpy_package_timeout,
             )
-            package_hash = self.package.hash if isinstance(self.package, ZipPackageLocation) else None
-            self.loaded_packages.append(
-                LoadedPackage(namespace=loaded.nssn.namespace, short_name=loaded.nssn.short_name, hash=package_hash)
-            )
+
+            main_package_hash = self.package.hash if isinstance(self.package, ZipPackageLocation) else None
+            for newly_loaded_nssn in loaded.loaded_packages:
+                loaded_package = LoadedPackage(
+                    namespace=newly_loaded_nssn.namespace,
+                    short_name=newly_loaded_nssn.short_name,
+                    hash=main_package_hash if newly_loaded_nssn == loaded.root_nssn else None,
+                )
+
+                self.loaded_packages.append(loaded_package)
+
         except BaseWorkerError as e:
             await self.stop(3)
             msg = "Worker has exited before or during initialization."

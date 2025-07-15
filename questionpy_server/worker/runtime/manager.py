@@ -3,9 +3,10 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import dataclasses
 import resource
-from collections.abc import Callable, Generator, Mapping
+from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
+from graphlib import TopologicalSorter
 from types import MappingProxyType
 from typing import TYPE_CHECKING, NoReturn, TypeVar, cast
 
@@ -15,10 +16,12 @@ from questionpy_common.environment import (
     OnRequestCallback,
     Package,
     PackageNamespaceAndShortName,
+    PackageState,
     RequestUser,
     WorkerResourceLimits,
     set_qpy_environment,
 )
+from questionpy_common.manifest import PackageType
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
 from questionpy_server.worker.runtime.messages import (
     CreateQuestionFromOptions,
@@ -84,6 +87,16 @@ class EnvironmentImpl(Environment):
 
 M = TypeVar("M", bound=MessageToWorker)
 type OnMessageCallback[M: MessageToWorker] = Callable[[M], MessageToServer]
+
+
+def _linearize_packages(
+    packages: Mapping[PackageNamespaceAndShortName, ImportablePackage],
+) -> Sequence[PackageNamespaceAndShortName]:
+    sorter = TopologicalSorter[PackageNamespaceAndShortName]()
+    for nssn, package in packages.items():
+        sorter.add(nssn, *package.dependencies.keys())
+
+    return tuple(sorter.static_order())
 
 
 class WorkerManager:
@@ -175,47 +188,39 @@ class WorkerManager:
 
         return nssn, package
 
-    def _load_and_init_recursively(
-        self,
-        msg: LoadQPyPackage,
-        package: ImportablePackage,
-        *,
-        as_main: bool,
-    ) -> None:
-        if not self._env or not self._worker_home:
-            self._raise_not_initialized(msg)
-
-        for dep in package.dependencies.values():
-            self._load_and_init_recursively(msg, dep, as_main=False)
-
-        package.load()
-        try:
-            package.init(self._env)
-        except NoInitFunctionError:
-            if as_main:
-                # The main package must have an init function.
-                raise
-
     def on_msg_load_qpy_package(self, msg: LoadQPyPackage) -> MessageToServer:
         if not self._env or not self._worker_home:
             self._raise_not_initialized(msg)
 
-        nssn, package = self._open_packages_recursively(msg, msg.location, ())
-        self._load_and_init_recursively(msg, package, as_main=msg.main)
+        root_nssn, root_package = self._open_packages_recursively(msg, msg.location, ())
 
         if msg.main:
-            self._env = dataclasses.replace(self._env, _main_package=package)
+            self._env = dataclasses.replace(self._env, _main_package=root_package)
             set_qpy_environment(self._env)
 
-            self._question_type = cast("QuestionTypeInterface", package.interface)
+        linearized = _linearize_packages(self._packages)
+        for nssn in linearized:
+            package = self._packages[nssn]
+            if package.state < PackageState.LOADED:
+                package.load()
 
-        return LoadQPyPackage.Response(nssn=nssn)
+            if package.state < PackageState.INITIALIZED:
+                is_question_like = package.manifest.type in {PackageType.QUESTION, PackageType.QUESTIONTYPE}
+                try:
+                    package.init(self._env)
+                except NoInitFunctionError:
+                    if is_question_like:
+                        # Questions and question types MUST have init functions. (Others MAY.)
+                        raise
+
+                if package is root_package and msg.main and is_question_like:
+                    self._question_type = cast("QuestionTypeInterface", package.interface)
+
+        return LoadQPyPackage.Response(root_nssn=root_nssn, loaded_packages=linearized)
 
     def on_msg_get_qpy_package_manifest(self, msg: GetQPyPackageManifest) -> MessageToServer:
         if not self._env:
             self._raise_not_initialized(msg)
-        if not self._env.main_package:
-            self._raise_no_main_package_loaded(msg)
 
         return GetQPyPackageManifest.Response(manifest=self._env.main_package.manifest)
 
