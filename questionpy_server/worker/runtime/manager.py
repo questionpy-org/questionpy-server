@@ -182,10 +182,11 @@ class WorkerManager:
 
         self._packages[nssn] = package
 
-        if len(stack) >= MAX_QPY_DEPENDENCY_LEVELS and package.manifest.dependencies.qpy:
-            raise TooDeeplyNestedDependencyError(stack)
-
         new_stack = (*stack, nssn)
+
+        if len(stack) >= MAX_QPY_DEPENDENCY_LEVELS and package.manifest.dependencies.qpy:
+            raise TooDeeplyNestedDependencyError(new_stack)
+
         for dep_location in package.resolve_static_dependencies():
             dep_nssn, dep_package = self._open_packages_recursively(msg, dep_location, new_stack)
             package.dependencies[dep_nssn] = dep_package
@@ -339,6 +340,6 @@ class CircularDependencyError(DependencyError):
         super().__init__(f"'{nssn}'. Dependency stack: {stack}", stack)
 
 
-class TooDeeplyNestedDependencyError(Exception):
+class TooDeeplyNestedDependencyError(DependencyError):
     def __init__(self, stack: tuple[PackageNamespaceAndShortName, ...]) -> None:
         super().__init__(f"Dependency graph is deeper than '{MAX_QPY_DEPENDENCY_LEVELS}' levels at '{stack}'.", stack)
