@@ -123,8 +123,10 @@ class PackageFile(BaseModel):
 
 
 class DistStaticQPyDependency(BaseModel):
-    name: str
+    dir_name: str
+    """Name (without `dist/dependencies/qpy/`) of the directory the dependency package contents reside in."""
     hash: str
+    """Hash of the ZIP package whose contents lie in `dir_name`."""
 
 
 type DistQPyDependency = DistStaticQPyDependency
