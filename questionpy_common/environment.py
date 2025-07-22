@@ -181,8 +181,8 @@ class NoEnvironmentError(Exception):
 
 
 class PackageNotInitializedError(Exception):
-    """The packages state was not INITIALIZED."""
+    """The package's state was not INITIALIZED."""
 
 
 class PackageNotLoadedError(Exception):
-    """The packages state was not LOADED or higher."""
+    """The package's state was not LOADED or higher."""
