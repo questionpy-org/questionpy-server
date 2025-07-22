@@ -102,7 +102,7 @@ class RegularPackage(ImportablePackage):
 
     def resolve_static_dependencies(self) -> list[PackageLocation]:
         return [
-            DirPackageLocation(self.path / "dependencies" / "qpy" / dep.name / DIST_DIR)
+            DirPackageLocation(self.path / "dependencies" / "qpy" / dep.dir_name / DIST_DIR)
             for dep in self.manifest.dependencies.qpy
             if isinstance(dep, DistStaticQPyDependency)
         ]
