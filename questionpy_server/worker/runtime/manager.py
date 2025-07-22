@@ -7,6 +7,7 @@ from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from graphlib import TopologicalSorter
+from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, NoReturn, TypeVar, cast
 
@@ -42,8 +43,6 @@ from questionpy_server.worker.runtime.package import ImportablePackage, NoInitFu
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from questionpy_common.api.qtype import QuestionTypeInterface
 
 __all__ = ["WorkerManager"]
@@ -156,6 +155,11 @@ class WorkerManager:
                 response = WorkerError.from_exception(error, cause=msg)
             self._connection.send_message(response)
 
+    @staticmethod
+    def _open_package(location: PackageLocation, worker_home: Path) -> ImportablePackage:
+        # This is a separate method to allow it to be mocked separately.
+        return open_qpy_package(location, worker_home)
+
     def _open_packages_recursively(
         self,
         msg: LoadQPyPackage,
@@ -165,7 +169,7 @@ class WorkerManager:
         if not self._env or not self._worker_home:
             self._raise_not_initialized(msg)
 
-        package = open_qpy_package(package_location, self._worker_home)
+        package = self._open_package(package_location, self._worker_home)
         nssn = PackageNamespaceAndShortName(package.manifest.namespace, package.manifest.short_name)
 
         if nssn in stack and self._packages[nssn].manifest.version == package.manifest.version:

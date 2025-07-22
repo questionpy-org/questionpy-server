@@ -48,6 +48,7 @@ from questionpy_server.worker.runtime.messages import (
 from questionpy_server.worker.runtime.package_location import (
     DirPackageLocation,
     FunctionPackageLocation,
+    PackageLocation,
     ZipPackageLocation,
 )
 
@@ -102,26 +103,29 @@ class BaseWorker(Worker, ABC):
                 InitWorker.Response,
                 self._init_worker_timeout,
             )
-            loaded = await self.send_and_wait_for_response(
-                LoadQPyPackage(location=self.package, main=True),
-                LoadQPyPackage.Response,
-                self._load_qpy_package_timeout,
-            )
 
-            main_package_hash = self.package.hash if isinstance(self.package, ZipPackageLocation) else None
-            for newly_loaded_nssn in loaded.loaded_packages:
-                loaded_package = LoadedPackage(
-                    namespace=newly_loaded_nssn.namespace,
-                    short_name=newly_loaded_nssn.short_name,
-                    hash=main_package_hash if newly_loaded_nssn == loaded.root_nssn else None,
-                )
-
-                self.loaded_packages.append(loaded_package)
-
+            await self._load_package(self.package, main=True)
         except BaseWorkerError as e:
             await self.stop(3)
             msg = "Worker has exited before or during initialization."
             raise WorkerStartError(msg, temporary=e.temporary, worker_name=self.name) from e
+
+    async def _load_package(self, package_location: PackageLocation, *, main: bool) -> None:
+        loaded = await self.send_and_wait_for_response(
+            LoadQPyPackage(location=package_location, main=main),
+            LoadQPyPackage.Response,
+            self._load_qpy_package_timeout,
+        )
+
+        root_package_hash = package_location.hash if isinstance(package_location, ZipPackageLocation) else None
+        for newly_loaded_nssn in loaded.loaded_packages:
+            loaded_package = LoadedPackage(
+                namespace=newly_loaded_nssn.namespace,
+                short_name=newly_loaded_nssn.short_name,
+                hash=root_package_hash if newly_loaded_nssn == loaded.root_nssn else None,
+            )
+
+            self.loaded_packages.append(loaded_package)
 
     def send(self, message: MessageToWorker) -> None:
         if self._connection is None or self._observe_task is None or self._observe_task.done():
