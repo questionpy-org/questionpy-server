@@ -176,7 +176,9 @@ class WorkerManager:
             raise CircularDependencyError(nssn, stack)
 
         if nssn in self._packages:
-            # For now, we don't support two packages using the same version of a static dependency.
+            # For now, we don't support two packages using the same static dependency, even if they would use the same
+            # version. Supporting the latter case would require us to either trust or check that both dependency's
+            # content is identical.
             err_msg = f"Package '{nssn}' is already loaded. Dependency stack: {stack}"
             raise DependencyError(err_msg, stack)
 
