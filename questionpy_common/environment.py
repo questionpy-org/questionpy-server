@@ -10,7 +10,6 @@ from importlib.resources.abc import Traversable
 from typing import NamedTuple, Protocol
 
 from questionpy_common.api.package import QPyPackageInterface
-from questionpy_common.api.qtype import QuestionTypeInterface
 from questionpy_common.manifest import Bcp47LanguageTag, Manifest
 
 __all__ = [
@@ -152,7 +151,7 @@ class Environment(Protocol):
 type PackageInitFunction = (
     Callable[[Package, Environment], QPyPackageInterface]
     | Callable[[Package], QPyPackageInterface]
-    | Callable[[], QuestionTypeInterface]
+    | Callable[[], QPyPackageInterface]
 )
 """Signature of the "init"-function expected in the main package."""
 
