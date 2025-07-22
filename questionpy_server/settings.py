@@ -3,13 +3,13 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import builtins
 import logging
-from configparser import ConfigParser
 from datetime import timedelta
 from pathlib import Path
 from pydoc import locate
 from typing import Any, ClassVar, Final, Literal
 
-from pydantic import BaseModel, ByteSize, DirectoryPath, HttpUrl, ValidationInfo, field_validator
+import yaml
+from pydantic import BaseModel, ByteSize, DirectoryPath, HttpUrl, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import (
     BaseSettings,
@@ -28,7 +28,7 @@ REPOSITORY_MINIMUM_INTERVAL: Final[timedelta] = timedelta(minutes=5)
 _log = logging.getLogger("questionpy-server:settings")
 
 
-class IniFileSettingsSource(PydanticBaseSettingsSource):
+class YamlFileSettingsSource(PydanticBaseSettingsSource):
     def __init__(self, settings_cls: type[BaseSettings], config_files: tuple[Path, ...]):
         super().__init__(settings_cls)
         self._config_files = config_files
@@ -45,9 +45,12 @@ class IniFileSettingsSource(PydanticBaseSettingsSource):
                 continue
             _log.info("Reading config file '%s'", path)
 
-            parser = ConfigParser()
-            parser.read(path)
-            return {key: dict(section) for key, section in parser.items() if key != "DEFAULT"}
+            config = yaml.safe_load(path.read_text())
+            if not isinstance(config, dict):
+                _log.warning("Malformed config file '%s'! Skipping", path)
+                continue
+
+            return {title: section or {} for title, section in config.items()}
 
         _log.warning("No config file found!")
         return {}
@@ -118,7 +121,6 @@ class CacheSettings(BaseModel):
 
 class CollectorSettings(BaseModel):
     local_directory: DirectoryPath | None = None
-    repository_default_interval: timedelta = timedelta(hours=1, minutes=30)
     repositories: dict[HttpUrl, timedelta] = {}
 
     @field_validator("local_directory")
@@ -128,53 +130,11 @@ class CollectorSettings(BaseModel):
             return None
         return value.resolve()
 
-    @field_validator("repository_default_interval")
-    @classmethod
-    def check_is_bigger_than_minimum_interval(cls, value: timedelta) -> timedelta:
-        if value < REPOSITORY_MINIMUM_INTERVAL:
-            msg = f"must be at least {REPOSITORY_MINIMUM_INTERVAL}"
-            raise ValueError(msg)
-        return value
-
-    @field_validator("repositories", mode="before")
-    @classmethod
-    def transform_to_set_of_repositories(cls, value: str, info: ValidationInfo) -> dict[str, str | timedelta]:
-        repositories: dict[str, str | timedelta] = {}
-
-        for line in map(str.strip, value.splitlines()):
-            if not line:
-                continue
-
-            # Split line into url and custom update interval.
-            data = line.split(maxsplit=1)
-
-            if len(data) == 1:
-                url = data[0]
-                custom_interval = None
-            else:
-                url, custom_interval = data
-
-            if not url.endswith("/"):
-                url += "/"
-
-            if url in repositories:
-                msg = f"must contain unique repositories: failed for {url}"
-                raise ValueError(msg)
-
-            # Either use the custom or default update interval.
-            # If no custom interval is specified and the validation for `repository_default_interval` failed, a valid
-            # interval (the minimum) is provided to ensure that the validation continues to take place.
-            repositories[url] = (
-                custom_interval or info.data.get("repository_default_interval") or REPOSITORY_MINIMUM_INTERVAL
-            )
-
-        return repositories
-
     @field_validator("repositories")
     @classmethod
-    def check_custom_interval_is_bigger_than_minimum(cls, value: dict[HttpUrl, timedelta]) -> dict[HttpUrl, timedelta]:
-        for url, custom_interval in value.items():
-            if custom_interval < REPOSITORY_MINIMUM_INTERVAL:
+    def check_interval_is_bigger_than_minimum(cls, value: dict[HttpUrl, timedelta]) -> dict[HttpUrl, timedelta]:
+        for url, interval in value.items():
+            if interval < REPOSITORY_MINIMUM_INTERVAL:
                 msg = f"update intervals must be at least {REPOSITORY_MINIMUM_INTERVAL}: failed for {url}"
                 raise ValueError(msg)
         return value
@@ -184,37 +144,11 @@ class AuthSettings(BaseModel):
     enabled: bool = True
     users: dict[str, str] = {}
 
-    @field_validator("users", mode="before")
-    @classmethod
-    def transform_to_username_password_map(cls, value: str) -> dict[str, str]:
-        users: dict[str, str] = {}
-
-        for line in value.splitlines():
-            if not line:
-                continue
-
-            if ":" not in line:
-                msg = f"must contain username:password pairs: failed for {line}"
-                raise ValueError(msg)
-
-            username, password = line.split(":", maxsplit=1)
-
-            if username in users:
-                msg = f"must contain unique usernames: failed for {username}"
-                raise ValueError(msg)
-
-            users[username] = password
-
-        return users
-
 
 class CustomEnvSettingsSource(EnvSettingsSource):
     """Load settings from environment variables.
 
     Notify the user if any environment variables are found which overwrite the settings file.
-
-    pydantic-settings v2 tries to parse multi-line ('complex') environment variables as JSON. This subclass overrides
-    that behaviour.
 
     If the loglevel is `DEBUG` it outputs the exact variables.
     """
@@ -234,14 +168,9 @@ class CustomEnvSettingsSource(EnvSettingsSource):
 
         return result
 
-    def decode_complex_value(self, field_name: str, field: FieldInfo, value: Any) -> Any:
-        # pydantic-settings v2 tries to parse multi-line ('complex') environment variables as JSON, which we don't want,
-        # so we override it with a no-op.
-        return value
-
     def __call__(self) -> dict[str, Any]:
         env_settings = super().__call__()
-        if env_settings:
+        if _log.isEnabledFor(logging.INFO) and env_settings:
             formatted_settings = self._format_settings(env_settings)
             _log.info(
                 "Reading settings from environment variables, %s in total. Environment variables overwrite "
@@ -278,7 +207,7 @@ class Settings(BaseSettings):
             raise TypeError(msg)
 
         if "config_files" in init_settings.init_kwargs:
-            ini_settings = IniFileSettingsSource(settings_cls, init_settings.init_kwargs["config_files"])
-            return init_settings, CustomEnvSettingsSource(settings_cls), ini_settings
+            yaml_settings = YamlFileSettingsSource(settings_cls, init_settings.init_kwargs["config_files"])
+            return init_settings, CustomEnvSettingsSource(settings_cls), yaml_settings
 
         return init_settings, env_settings

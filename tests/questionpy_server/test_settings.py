@@ -1,15 +1,15 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-
+import json
 import logging
-from configparser import ConfigParser
 from datetime import timedelta
 from os import environ
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import yaml
 from pydantic import ValidationError
 from pydantic.networks import HttpUrl
 from pydantic_settings import EnvSettingsSource
@@ -19,18 +19,12 @@ from questionpy_server.settings import CustomEnvSettingsSource, Settings
 
 @pytest.fixture
 def path_with_empty_config_file(tmp_path: Path) -> Path:
-    parser = ConfigParser()
-    parser.read_string("""
-        [general]
-        [webservice]
-        [worker]
-        [cache]
-        [collector]
-        [auth]
-    """)
-    path = tmp_path / "config.ini"
+    config = {"general": None, "webservice": None, "worker": None, "cache": None, "collector": None, "auth": None}
+
+    path = tmp_path / "config.yml"
     with path.open("w") as file:
-        parser.write(file)
+        yaml.safe_dump(config, file)
+
     return path
 
 
@@ -62,13 +56,12 @@ def test_env_settings_source_wrapper(caplog: pytest.LogCaptureFixture) -> None:
 
 
 def test_env_var_has_higher_priority_than_config_file(path_with_empty_config_file: Path) -> None:
-    config = ConfigParser()
-    config.read(path_with_empty_config_file)
+    config = yaml.safe_load(path_with_empty_config_file.read_text())
 
-    # Set log level to 'DEBUG' inside config.ini.
+    # Set log level to 'DEBUG' inside config.yml.
+    config["general"] = {"log_level": "DEBUG"}
     with path_with_empty_config_file.open("w") as file:
-        config.set("general", "log_level", "DEBUG")
-        config.write(file)
+        yaml.safe_dump(config, file)
 
     # Set log level environment variable to 'WARNING'.
     with patch.dict(environ, {"QPY_GENERAL__LOG_LEVEL": "WARNING"}):
@@ -88,10 +81,11 @@ def test_env_var_get_validated(path_with_empty_config_file: Path) -> None:
 
 
 def test_multiline_env_var_gets_parsed_correctly(path_with_empty_config_file: Path) -> None:
-    env_value = """
-    http://www.example.com/1\t03:30:30
-    http://www.example.com/2 2d, 07:00:00
-    """
+    env_value = json.dumps({
+        "http://www.example.com/1/": "03:30:30",
+        "http://www.example.com/2/": "2d, 07:00:00",
+    })
+
     with patch.dict(
         environ,
         {"QPY_COLLECTOR__REPOSITORIES": env_value},
