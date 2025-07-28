@@ -5,12 +5,14 @@
 from abc import ABC
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
+
+from questionpy_common.constants import FORM_REFERENCE_PATTERN
 
 
 class _BaseCondition(ABC, BaseModel):
     kind: str
-    name: str
+    name: Annotated[str, StringConstraints(pattern=FORM_REFERENCE_PATTERN)]
 
 
 class IsChecked(_BaseCondition):

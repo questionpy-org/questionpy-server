@@ -3,10 +3,9 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, PositiveInt
+from pydantic import BaseModel, Field, PositiveInt, StringConstraints
 
 from questionpy_common import TranslatableString
-from questionpy_common.conditions import Condition
 
 __all__ = [
     "CanHaveConditions",
@@ -26,11 +25,14 @@ __all__ = [
     "TextInputElement",
 ]
 
+from questionpy_common.conditions import Condition
+from questionpy_common.constants import FORM_NAME_PATTERN
+
 
 class _BaseElement(BaseModel):
     kind: str
     """Discriminator that decides the subclass when deserializing to FormElement."""
-    name: str
+    name: Annotated[str, StringConstraints(pattern=FORM_NAME_PATTERN)]
     """Name that will later identify the element in submitted form data."""
 
 
@@ -191,7 +193,7 @@ type FormElement = Annotated[LeafFormElement | ContainerFormElement, Field(discr
 class FormSection(BaseModel):
     """Form section that can be expanded and collapsed."""
 
-    name: str
+    name: Annotated[str, StringConstraints(pattern=FORM_NAME_PATTERN)]
     """Name that will later identify the element in submitted form data."""
     header: str | TranslatableString
     """Header to be shown at the top of the section."""
