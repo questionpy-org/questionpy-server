@@ -23,6 +23,7 @@ __all__ = [
     "StaticTextElement",
     "TextAreaElement",
     "TextInputElement",
+    "WysiwygEditorElement",
 ]
 
 from questionpy_common.conditions import Condition
@@ -135,6 +136,10 @@ class GeneratedIdElement(_BaseElement):
     kind: Literal["id"] = "id"
 
 
+class WysiwygEditorElement(_BaseElement, _Labelled, CanHaveHelp):
+    kind: Literal["wysiwyg_editor"] = "wysiwyg_editor"
+
+
 type LeafFormElement = Annotated[
     CheckboxElement
     | HiddenElement
@@ -142,7 +147,8 @@ type LeafFormElement = Annotated[
     | SelectElement
     | StaticTextElement
     | TextInputElement
-    | TextAreaElement,
+    | TextAreaElement
+    | WysiwygEditorElement,
     Field(discriminator="kind"),
 ]
 
