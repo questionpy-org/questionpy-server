@@ -8,7 +8,7 @@
 set -o nounset -o errexit
 
 readonly SERVER_DIR="$(realpath .)"
-readonly SDK_DIR="$(realpath ../questionpy-sdk)"
+readonly SDK_DIR="$(realpath ../sdk)"
 
 build_package() {
   local tmp_source_dir package

@@ -110,6 +110,7 @@ class AttemptScoredResponse(AttemptScoredModel, PackageDependenciesModel):
 
 
 class RequestErrorCode(Enum):
+    WORKER_PERMISSION_ERROR = "WORKER_PERMISSION_ERROR"
     QUEUE_WAITING_TIMEOUT = "QUEUE_WAITING_TIMEOUT"
     WORKER_TIMEOUT = "WORKER_TIMEOUT"
     OUT_OF_MEMORY = "OUT_OF_MEMORY"

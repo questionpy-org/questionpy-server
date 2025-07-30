@@ -89,9 +89,12 @@ class ThreadWorker(BaseWorker):
                 self._pipe = None
 
     async def start(self) -> None:
-        if self.limits:
-            log.warning("Limits '%s' were given, but thread-based workers don't support resource limits", self.limits)
-            self.limits = None
+        if self.permissions:
+            log.warning(
+                "Permissions '%s' were given, but thread-based workers don't support permissions.",
+                self.permissions,
+            )
+            self.permissions = None
 
         self._pipe = DuplexPipe.open()
         thread = _WorkerThread(f"worker-{self.name}", self._pipe)

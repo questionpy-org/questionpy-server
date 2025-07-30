@@ -25,15 +25,39 @@ webservice:
   # Allow packages from the LMS
   #allow_lms_packages: true
 
-worker:
+worker_pool:
   # Fully qualified name of the worker class
   #type: questionpy_server.worker.impl.subprocess.SubprocessWorker
 
-  # Maximum number of running workers
-  #max_workers: 8
+  # Maximum number of CPUs that can be used by all workers
+  #max_cpus: 8
 
   # Maximum combined memory usage of all workers
   #max_memory: 500 MiB
+
+permissions:
+  # Permissions that are granted automatically
+  auto_grant_limits:
+    # Maximum number of CPUs that a worker can use
+    #cpus: 1
+
+    # Maximum memory usage of a worker (at least 200 MiB)
+    #memory: 200 MiB
+
+    # Allowed execution modes for the worker main process. Allowed values are:
+    #  - container: executed in isolated containers
+    #  - trusted: executed as a normal process (but with CPU and memory limits), implies unrestricted_network_access
+    #main_process_execution_modes:
+    #  - container
+
+    # Maximum time in seconds per request (at least 10)
+    #request_timeout: 10
+
+    # Maximum time in seconds for the worker to start (at least 4)
+    #bootstrap_timeout: 4
+
+  # Package- and request-specific permissions
+  packages:
 
 cache:
   # Maximum cache size

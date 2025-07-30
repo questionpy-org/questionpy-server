@@ -160,7 +160,7 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
     ) -> _T:
         try:
             if timeout is None:
-                timeout = self.limits.max_cpu_time_seconds_per_call if self.limits else math.inf
+                timeout = self.permissions.request_timeout if self.permissions else math.inf
             self._set_time_limit(timeout)
             return await super().send_and_wait_for_response(message, expected_response_message, timeout)
         finally:

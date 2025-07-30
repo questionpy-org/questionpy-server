@@ -19,7 +19,7 @@ from questionpy_common.environment import (
     PackageNamespaceAndShortName,
     PackageState,
     RequestUser,
-    WorkerResourceLimits,
+    WorkerPermissions,
     set_qpy_environment,
 )
 from questionpy_common.manifest import PackageType
@@ -55,7 +55,7 @@ class EnvironmentImpl(Environment):
     _on_request_callbacks: list[OnRequestCallback]
     _main_package: ImportablePackage | None = None
     _request_user: RequestUser | None = None
-    _limits: WorkerResourceLimits | None = None
+    _permissions: WorkerPermissions | None = None
 
     @property
     def type(self) -> str:
@@ -77,8 +77,8 @@ class EnvironmentImpl(Environment):
         return self._request_user
 
     @property
-    def limits(self) -> WorkerResourceLimits | None:
-        return self._limits
+    def permissions(self) -> WorkerPermissions | None:
+        return self._permissions
 
     def register_on_request_callback(self, callback: OnRequestCallback) -> None:
         self._on_request_callbacks.append(callback)
@@ -128,13 +128,13 @@ class WorkerManager:
 
         self._worker_home = init_msg.worker_home
 
-        if init_msg.limits:
+        if init_msg.permissions:
             # Limit memory usage.
-            resource.setrlimit(resource.RLIMIT_AS, (init_msg.limits.max_memory, init_msg.limits.max_memory))
+            resource.setrlimit(resource.RLIMIT_AS, (init_msg.permissions.memory, init_msg.permissions.memory))
 
         self._env = EnvironmentImpl(
             _type=init_msg.worker_type,
-            _limits=init_msg.limits,
+            _permissions=init_msg.permissions,
             _packages=self._packages,
             _on_request_callbacks=self._on_request_callbacks,
         )

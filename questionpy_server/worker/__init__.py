@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import RequestUser, WorkerResourceLimits
+from questionpy_common.environment import RequestUser, WorkerPermissions
 from questionpy_common.manifest import PackageFile
 from questionpy_server.models import LoadedPackage, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
@@ -58,8 +58,8 @@ class WorkerArgs(TypedDict):
     """The main package that the worker should load when [start][questionpy_server.worker.Worker.start] is called."""
     worker_home: Path
     """An existing directory owned by the worker, with the same lifetime as the worker."""
-    limits: NotRequired[WorkerResourceLimits | None]
-    """Resource limits to enforce on the worker."""
+    permissions: NotRequired[WorkerPermissions | None]
+    """The worker permissions."""
 
 
 class Worker(ABC):
@@ -70,7 +70,7 @@ class Worker(ABC):
         self.name = kwargs["name"]
         self.package = kwargs["package"]
         self.worker_home = kwargs["worker_home"]
-        self.limits = kwargs["limits"]
+        self.permissions = kwargs["permissions"]
 
         self.state = WorkerState.NOT_RUNNING
         self.loaded_packages: list[LoadedPackage] = []

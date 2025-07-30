@@ -1,0 +1,128 @@
+#  This file is part of the QuestionPy Server. (https://questionpy.org)
+#  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
+#  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
+from typing import NamedTuple
+
+from questionpy_common.environment import WorkerPermissions
+from questionpy_common.error import QPyBaseError
+from questionpy_server.cache import LRUCacheMemory
+from questionpy_server.package import Package
+from questionpy_server.settings import (
+    MainProcessExecutionModeValues,
+    PackageSelector,
+    SpecificWorkerPermissions,
+    StandardWorkerPermissions,
+    WorkerPermissionsSettings,
+)
+
+
+class WorkerPermissionError(QPyBaseError):
+    pass
+
+
+def _has_enough_permissions(allowed: StandardWorkerPermissions, requested: StandardWorkerPermissions) -> bool:
+    return (
+        requested.cpus <= allowed.cpus
+        and requested.memory <= allowed.memory
+        and requested.request_timeout <= allowed.request_timeout
+        and requested.bootstrap_timeout <= allowed.bootstrap_timeout
+        and not requested.main_process_execution_modes.isdisjoint(allowed.main_process_execution_modes)
+    )
+
+
+def _is_wildcard_matching(selector_value: str, package_value: str) -> bool:
+    return selector_value in {package_value, "*"}
+
+
+def _is_selector_matching(selector: PackageSelector, package: Package, context: int | None) -> bool:
+    return (
+        # Package data.
+        _is_wildcard_matching(selector.hash, package.hash)
+        and _is_wildcard_matching(selector.namespace, package.manifest.namespace)
+        and _is_wildcard_matching(selector.short_name, package.manifest.short_name)
+        and (selector.version == "*" or package.manifest.version.match(selector.version))
+        # Package origin.
+        and _is_wildcard_matching(selector.origin.repositories, "*")  # TODO: handle repositories
+        and (selector.origin.local is None or selector.origin.local == package.sources.is_local())
+        and _is_wildcard_matching(selector.origin.users, "*")  # TODO: handle users
+        # Request data.
+        and _is_wildcard_matching(selector.request_context, str(context) if context else "")
+    )
+
+
+class _WorkerPermissionIdentifier(NamedTuple):
+    package: Package
+    context: int | None
+
+
+class WorkerPermissionsHandler:
+    """Handles package permissions for a request."""
+
+    def __init__(self, settings: WorkerPermissionsSettings):
+        self._default_permissions = StandardWorkerPermissions()
+
+        self._auto_grant_limits = settings.auto_grant_limits
+        self._specific_package_permissions = settings.packages
+
+        self._cache: LRUCacheMemory[_WorkerPermissionIdentifier, WorkerPermissions] = LRUCacheMemory(max_size=128)
+
+    def _get_requested_permissions(self, package: Package) -> StandardWorkerPermissions:
+        requested_permissions = package.manifest.permissions
+        if requested_permissions is None:
+            # If the package requests no permissions, we use the default ones.
+            actual_permissions = self._default_permissions
+        else:
+            if modes := requested_permissions.main_process_execution_modes:
+                requested_permissions.main_process_execution_modes = (
+                    modes.intersection(MainProcessExecutionModeValues)
+                    or self._default_permissions.main_process_execution_modes
+                )
+            requested_permissions_dict = requested_permissions.model_dump(exclude_none=True)
+            actual_permissions = StandardWorkerPermissions(**requested_permissions_dict)
+        return actual_permissions
+
+    def _get_actual_auto_grant_limits(self, permissions: SpecificWorkerPermissions) -> StandardWorkerPermissions:
+        if permissions.auto_grant_limits is None:
+            return self._auto_grant_limits
+
+        specific_auto_grant_limits = permissions.auto_grant_limits.model_dump(exclude_none=True)
+        return self._auto_grant_limits.model_copy(update=specific_auto_grant_limits)
+
+    def _get_specific_permissions(self, package: Package, context: int | None) -> SpecificWorkerPermissions | None:
+        # We want to select the last defined one if multiple selectors match.
+        for permissions in reversed(self._specific_package_permissions):
+            if _is_selector_matching(permissions.package_selector, package, context):
+                return permissions
+        return None
+
+    def get(self, package: Package, context: int | None) -> WorkerPermissions:
+        """Gets the actual permissions for a package.
+
+        TODO: also account for the current user
+
+        Raises:
+            WorkerPermissionError: If the package does not have enough permissions.
+        """
+        key = _WorkerPermissionIdentifier(package, context)
+        if cached_permissions := self._cache.get(key):
+            return cached_permissions
+
+        auto_grant_limits = self._auto_grant_limits
+        requested_permissions = self._get_requested_permissions(package)
+
+        if specific_permissions := self._get_specific_permissions(package, context):
+            auto_grant_limits = self._get_actual_auto_grant_limits(specific_permissions)
+
+            if specific_permissions.override_limits:
+                overrides = specific_permissions.override_limits.model_dump(exclude_none=True)
+
+                auto_grant_limits = auto_grant_limits.model_copy(update=overrides)
+                requested_permissions = requested_permissions.model_copy(update=overrides)
+
+        if not _has_enough_permissions(auto_grant_limits, requested_permissions):
+            msg = f"The package '{package.hash}' requested more permissions than allowed."
+            raise WorkerPermissionError(msg)
+
+        actual_permissions = WorkerPermissions(**auto_grant_limits.model_dump())
+        self._cache.put(key, actual_permissions)
+        return actual_permissions

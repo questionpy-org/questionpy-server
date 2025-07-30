@@ -48,9 +48,10 @@ async def post_options(
     """Get the options form definition that allow a question creator to customize a question."""
     qpyserver = request.app[QPyServer.APP_KEY]
 
+    permissions = qpyserver.worker_permissions.get(package, data.context)
     location = await package.get_zip_package_location()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(location, 0, data.context, permissions) as worker:
         definition, form_data = await worker.get_options_form(
             DEFAULT_REQUEST_USER, question_state.decode() if question_state else None
         )
@@ -68,9 +69,10 @@ async def post_question(
 ) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
+    permissions = qpyserver.worker_permissions.get(package, data.context)
     location = await package.get_zip_package_location()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(location, 0, data.context, permissions) as worker:
         question = await worker.create_question_from_options(
             DEFAULT_REQUEST_USER, question_state.decode() if question_state else None, data.form_data
         )

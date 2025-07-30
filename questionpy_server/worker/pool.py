@@ -14,8 +14,7 @@ from typing import NamedTuple, Self, assert_never
 
 from pydantic import ByteSize
 
-from questionpy_common.constants import MiB
-from questionpy_common.environment import WorkerResourceLimits
+from questionpy_common.environment import WorkerPermissions
 from questionpy_common.error import QPyBaseError
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
 from questionpy_server.worker.runtime.package_location import (
@@ -28,8 +27,6 @@ from questionpy_server.worker.runtime.package_location import (
 from . import Worker, WorkerState
 from .impl.thread import ThreadWorker
 
-_DEFAULT_LIMITS = WorkerResourceLimits(max_memory=200 * MiB, max_cpu_time_seconds_per_call=10)
-
 _log = logging.getLogger(__name__)
 
 
@@ -40,8 +37,8 @@ class _WorkerPoolMemoryError(QPyBaseError):
         super().__init__("Cannot free the required amount of memory. This is likely a bug.")
 
 
-def _memory_limit_or_zero(limits: WorkerResourceLimits | None) -> int:
-    return limits.max_memory if limits else 0
+def _memory_limit_or_zero(limits: WorkerPermissions | None) -> int:
+    return limits.memory if limits else 0
 
 
 class _IdleWorkersIdentifier(NamedTuple):
@@ -107,7 +104,9 @@ class WorkerPool:
         return self.max_memory - self._memory_in_use >= required_memory
 
     @asynccontextmanager
-    async def get_worker(self, package: PackageLocation, lms: int, context: int | None) -> AsyncIterator[Worker]:
+    async def get_worker(
+        self, package: PackageLocation, lms: int, context: int | None, permissions: WorkerPermissions
+    ) -> AsyncIterator[Worker]:
         """Get a (new) worker executing a QuestionPy package.
 
         A context manager is used to ensure that a worker is always given back to the pool.
@@ -116,22 +115,20 @@ class WorkerPool:
             package: path to QuestionPy package
             lms: id of the LMS
             context: context id within the lms
+            permissions: worker permissions
 
         Returns:
             A worker
         """
         self._workers_requested += 1
 
-        # Limit the amount of running workers.
+        # Limit the number of running workers.
         async with self._semaphore:
             worker = None
             try:
-                # TODO: Allow packages to request different limits. While right now, this check could be in __init__,
-                #  package's custom limits will probably need to be checked in _create_or_reuse_worker once those are
-                #  implemented. (#137)
-                if self.max_memory < _DEFAULT_LIMITS.max_memory:
+                if self.max_memory < permissions.memory:
                     pool_max = ByteSize(self.max_memory).human_readable()
-                    worker_max = ByteSize(_DEFAULT_LIMITS.max_memory).human_readable()
+                    worker_max = ByteSize(permissions.memory).human_readable()
                     msg = f"Memory limit of {worker_max} for a single worker exceeds max pool memory of {pool_max}."
                     raise ValueError(msg)
 
@@ -139,8 +136,8 @@ class WorkerPool:
                 # We need the additional lock, since `Condition.wait_for`/`Condition.notify` in comparison to
                 # `Lock.acquire` is not explicitly documented as fair. This ensures that no starvation occurs.
                 async with self._lock, self._condition:
-                    await self._condition.wait_for(lambda: self._memory_available(_DEFAULT_LIMITS.max_memory))
-                    worker = await self._create_or_reuse_worker(package, lms, context, _DEFAULT_LIMITS)
+                    await self._condition.wait_for(lambda: self._memory_available(permissions.memory))
+                    worker = await self._create_or_reuse_worker(package, lms, context, permissions)
                     self._workers_in_use += 1
 
                 yield worker
@@ -172,7 +169,7 @@ class WorkerPool:
         # Stop the worker and free the memory.
         await worker.stop(10)
 
-        max_memory = _memory_limit_or_zero(worker.limits)
+        max_memory = _memory_limit_or_zero(worker.permissions)
         self._memory_idle -= max_memory
         return max_memory
 
@@ -209,9 +206,12 @@ class WorkerPool:
         return f"{package_part}-{index}"
 
     async def _create_or_reuse_worker(
-        self, package: PackageLocation, lms: int, context: int | None, limits: WorkerResourceLimits
+        self, package: PackageLocation, lms: int, context: int | None, permissions: WorkerPermissions
     ) -> Worker:
         """If possible, get an idle worker or create a new one."""
+        # Since the `WorkerPermissions` only dependent on the the `lms` and `context` the worker
+        # permissions are the same.
+        # TODO: this is currently not entirely true as the `lms` (later `user`) is not accounted for yet.
         identifier = _IdleWorkersIdentifier(package, lms, context)
         if identifier in self._idle_workers:
             # There is an idle worker with this package loaded - reuse the most recent one.
@@ -221,20 +221,20 @@ class WorkerPool:
                 del self._idle_workers[identifier]
             self._oldest_idle_workers.remove((worker, identifier))
 
-            self._memory_idle -= _memory_limit_or_zero(worker.limits)
+            self._memory_idle -= _memory_limit_or_zero(worker.permissions)
         else:
             # We need to create a new worker - free as much memory as needed to start the worker.
-            await self._free_memory(limits.max_memory)
+            await self._free_memory(permissions.memory)
 
             name = self._generate_worker_name(package)
             worker_home = self._working_dir / f"worker-{name}"
             await asyncio.to_thread(worker_home.mkdir)
 
-            worker = self._worker_type(name=name, package=package, limits=limits, worker_home=worker_home)
+            worker = self._worker_type(name=name, package=package, permissions=permissions, worker_home=worker_home)
             await worker.start()
 
         # Reserve the memory.
-        self._memory_in_use += limits.max_memory if self._worker_type is not ThreadWorker else 0
+        self._memory_in_use += permissions.memory if self._worker_type is not ThreadWorker else 0
 
         return worker
 
@@ -243,12 +243,12 @@ class WorkerPool:
     ) -> None:
         """Adds a worker to the pool of reusable workers."""
         # Free reserved memory.
-        self._memory_in_use -= _memory_limit_or_zero(worker.limits)
+        self._memory_in_use -= _memory_limit_or_zero(worker.permissions)
 
         # Check if the worker is idling.
         if worker.state == WorkerState.IDLE:
             # Free as much memory as need to store the idle worker.
-            required_memory = _memory_limit_or_zero(worker.limits)
+            required_memory = _memory_limit_or_zero(worker.permissions)
             await self._free_memory(required_memory)
 
             # Add the worker.
@@ -256,7 +256,7 @@ class WorkerPool:
             self._idle_workers[identifier].appendleft(worker)
             self._oldest_idle_workers.appendleft((worker, identifier))
 
-            self._memory_idle += _memory_limit_or_zero(worker.limits)
+            self._memory_idle += _memory_limit_or_zero(worker.permissions)
         else:
             # We cannot reuse this worker as it is not idling.
             await worker.stop(10)

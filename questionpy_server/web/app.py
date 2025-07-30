@@ -14,6 +14,7 @@ from questionpy_server.cache import LRUCache, LRUCacheSupervisor
 from questionpy_server.collector import PackageCollection
 from questionpy_server.settings import Settings
 from questionpy_server.web.middlewares import middlewares
+from questionpy_server.worker.permissions import WorkerPermissionsHandler
 from questionpy_server.worker.pool import WorkerPool
 
 _log = logging.getLogger(__name__)
@@ -32,8 +33,9 @@ class QPyServer:
         self.web_app[self.APP_KEY] = self
 
         self.worker_pool = WorkerPool(
-            settings.worker.max_workers, settings.worker.max_memory, worker_type=settings.worker.type
+            settings.worker_pool.max_cpus, settings.worker_pool.max_memory, worker_type=settings.worker_pool.type
         )
+        self.worker_permissions = WorkerPermissionsHandler(settings.permissions)
 
         cache_supervisor = LRUCacheSupervisor(settings.cache.directory, settings.cache.size)
         self.package_cache = LRUCache(cache_supervisor, Path("packages"), extension=".qpy")

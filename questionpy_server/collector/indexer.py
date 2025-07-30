@@ -7,6 +7,8 @@ from asyncio import Lock
 from pathlib import Path
 from typing import overload
 
+from questionpy_common.constants import MiB
+from questionpy_common.environment import WorkerPermissions
 from questionpy_server import WorkerPool
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.local_collector import LocalCollector
@@ -128,8 +130,10 @@ class Indexer:
                 # Create new package...
                 if isinstance(path_or_manifest, Path):
                     # ...from path.
+                    # TODO: get Manifest without worker.
+                    permissions = WorkerPermissions(1, 200 * MiB, 10, 4, {"trusted", "container"})
                     async with self._worker_pool.get_worker(
-                        ZipPackageLocation(path_or_manifest, package_hash), 0, None
+                        ZipPackageLocation(path_or_manifest, package_hash), 0, None, permissions
                     ) as worker:
                         manifest = await worker.get_manifest()
                     package = Package(package_hash, manifest, source, path_or_manifest)
