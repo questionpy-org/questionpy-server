@@ -174,7 +174,7 @@ async def test_invalid_options_form_data_error(client: TestClient) -> None:
         part = writer.append(package_fd)
         part.set_content_disposition("form-data", name="package")
 
-        part = writer.append_json({"form_data": {}})
+        part = writer.append_json({"form_data": {}, "context": "tests"})
         part.set_content_disposition("form-data", name="main")
 
         res = await client.post(

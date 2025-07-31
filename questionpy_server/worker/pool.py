@@ -44,7 +44,7 @@ def _memory_limit_or_zero(permissions: WorkerPermissions | None) -> int:
 class _IdleWorkersIdentifier(NamedTuple):
     package: PackageLocation
     lms: int
-    context: int | None
+    context: str
 
 
 class WorkerPool:
@@ -105,7 +105,7 @@ class WorkerPool:
 
     @asynccontextmanager
     async def get_worker(
-        self, package: PackageLocation, lms: int, context: int | None, permissions: WorkerPermissions
+        self, package: PackageLocation, lms: int, context: str, permissions: WorkerPermissions
     ) -> AsyncIterator[Worker]:
         """Get a (new) worker executing a QuestionPy package.
 
@@ -114,7 +114,7 @@ class WorkerPool:
         Args:
             package: path to QuestionPy package
             lms: id of the LMS
-            context: context id within the lms
+            context: context within the lms
             permissions: worker permissions
 
         Returns:
@@ -206,7 +206,7 @@ class WorkerPool:
         return f"{package_part}-{index}"
 
     async def _create_or_reuse_worker(
-        self, package: PackageLocation, lms: int, context: int | None, permissions: WorkerPermissions
+        self, package: PackageLocation, lms: int, context: str, permissions: WorkerPermissions
     ) -> Worker:
         """If possible, get an idle worker or create a new one."""
         # Since the `WorkerPermissions` only dependent on the the `lms` and `context` the worker
@@ -238,9 +238,7 @@ class WorkerPool:
 
         return worker
 
-    async def _handle_idle_worker(
-        self, package: PackageLocation, lms: int, context: int | None, worker: Worker
-    ) -> None:
+    async def _handle_idle_worker(self, package: PackageLocation, lms: int, context: str, worker: Worker) -> None:
         """Adds a worker to the pool of reusable workers."""
         # Free reserved memory.
         self._memory_in_use -= _memory_limit_or_zero(worker.permissions)

@@ -1,10 +1,14 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
+import json
+
 import pytest
 from aiohttp.test_utils import TestClient
 
 from tests.conftest import PACKAGE, TestPackageFactory, TestZipPackage
+
+_REQUEST_MAIN = json.dumps({"context": "tests"})
 
 
 @pytest.fixture
@@ -17,7 +21,8 @@ def package(package_factory: TestPackageFactory) -> TestZipPackage:
 async def test_should_get_static_file(client: TestClient, package: TestZipPackage) -> None:
     with package.path.open("rb") as package_fd:
         res = await client.post(
-            f"/packages/{package.hash}/file/local/package_1/static/path/to/file.pdf", data={"package": package_fd}
+            f"/packages/{package.hash}/file/local/package_1/static/path/to/file.pdf",
+            data={"package": package_fd, "main": _REQUEST_MAIN},
         )
 
     assert res.status == 200
@@ -29,7 +34,7 @@ async def test_should_return_not_implemented_when_not_main_package(client: TestC
     with package.path.open("rb") as package_fd:
         res = await client.post(
             f"/packages/{package.hash}/file/some_other_ns/and_short_name/static/path/to/file.pdf",
-            data={"package": package_fd},
+            data={"package": package_fd, "main": _REQUEST_MAIN},
         )
 
     assert res.status == 501
@@ -39,7 +44,8 @@ async def test_should_return_not_implemented_when_not_main_package(client: TestC
 async def test_should_return_not_found_when_file_does_not_exist(client: TestClient, package: TestZipPackage) -> None:
     with package.path.open("rb") as package_fd:
         res = await client.post(
-            f"/packages/{package.hash}/file/local/package_1/static/wrong/path/to/file.pdf", data={"package": package_fd}
+            f"/packages/{package.hash}/file/local/package_1/static/wrong/path/to/file.pdf",
+            data={"package": package_fd, "main": _REQUEST_MAIN},
         )
 
     assert res.status == 404

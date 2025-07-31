@@ -133,7 +133,7 @@ class Indexer:
                     # TODO: get Manifest without worker.
                     permissions = WorkerPermissions(1, 200 * MiB, 10, 4, {"trusted", "container"})
                     async with self._worker_pool.get_worker(
-                        ZipPackageLocation(path_or_manifest, package_hash), 0, None, permissions
+                        ZipPackageLocation(path_or_manifest, package_hash), 0, "manifest", permissions
                     ) as worker:
                         manifest = await worker.get_manifest()
                     package = Package(package_hash, manifest, source, path_or_manifest)

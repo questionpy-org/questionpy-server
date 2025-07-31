@@ -649,10 +649,8 @@ components:
             - $ref: 'qppe-lms.yaml#/components/schemas/QuestionRef'
             - nullable: true
         context:
-          type: integer
+          type: string
           description: Some context information where the question is located (e.g. course or quiz/test id).
-          nullable: true
-          default: null
         callback_url:
           type: string
           format: uri
@@ -664,7 +662,7 @@ components:
         local_package:
           type: boolean
           description: True if the LMS is able to return the .qpy file through the LMS Callback API.
-      required: [ question_ref, callback_url, lms_auth_token, local_package ]
+      required: [ question_ref, context, callback_url, lms_auth_token, local_package ]
 
     QuestionCreateArguments:
       description: Information that is needed to create a new question.

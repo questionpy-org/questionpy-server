@@ -37,7 +37,7 @@ def _is_wildcard_matching(selector_value: str, package_value: str) -> bool:
     return selector_value in {package_value, "*"}
 
 
-def _is_selector_matching(selector: PackageSelector, package: Package, context: int | None) -> bool:
+def _is_selector_matching(selector: PackageSelector, package: Package, context: str) -> bool:
     return (
         # Package data.
         _is_wildcard_matching(selector.hash, package.hash)
@@ -49,13 +49,13 @@ def _is_selector_matching(selector: PackageSelector, package: Package, context: 
         and (selector.origin.local is None or selector.origin.local == package.sources.is_local())
         and _is_wildcard_matching(selector.origin.users, "*")  # TODO: handle users
         # Request data.
-        and _is_wildcard_matching(selector.request_context, str(context) if context else "")
+        and _is_wildcard_matching(selector.request_context, context)
     )
 
 
 class _WorkerPermissionIdentifier(NamedTuple):
     package: Package
-    context: int | None
+    context: str
 
 
 class WorkerPermissionsHandler:
@@ -100,14 +100,14 @@ class WorkerPermissionsHandler:
         specific_auto_grant_permissions = permissions.auto_grant_permissions.model_dump(exclude_none=True)
         return self._auto_grant_permissions.model_copy(update=specific_auto_grant_permissions)
 
-    def _get_specific_permissions(self, package: Package, context: int | None) -> SpecificWorkerPermissions | None:
+    def _get_specific_permissions(self, package: Package, context: str) -> SpecificWorkerPermissions | None:
         # We want to select the last defined one if multiple selectors match.
         for permissions in reversed(self._specific_package_permissions):
             if _is_selector_matching(permissions.package_selector, package, context):
                 return permissions
         return None
 
-    def get_effective_permissions(self, package: Package, context: int | None) -> EnvironmentWorkerPermissions:
+    def get_effective_permissions(self, package: Package, context: str) -> EnvironmentWorkerPermissions:
         """Gets the effective permissions for a package.
 
         TODO: also account for the current user
