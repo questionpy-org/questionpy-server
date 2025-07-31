@@ -123,6 +123,6 @@ class WorkerPermissionsHandler:
             msg = f"The package '{package.hash}' requested more permissions than allowed."
             raise WorkerPermissionError(msg)
 
-        actual_permissions = WorkerPermissions(**auto_grant_limits.model_dump())
+        actual_permissions = WorkerPermissions(**requested_permissions.model_dump())
         self._cache.put(key, actual_permissions)
         return actual_permissions
