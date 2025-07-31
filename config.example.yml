@@ -57,7 +57,19 @@ permissions:
     #bootstrap_timeout: 4
 
   # Package- and request-specific permissions
-  packages:
+  # The following example would raise the auto_grant_limits->memory of every package that is locally available and has
+  # the namespace "qpy" to 1 GiB and every worker running these packages can use 2 CPUs even if the package requested a
+  # different amount:
+  # packages:
+  #   - package_selector:
+  #       origin:
+  #         local: true
+  #       namespace: "qpy"
+  #     auto_grant_limits:
+  #       memory: 1 GiB
+  #     override_limits:
+  #       cpus: 2
+  #packages:
 
 cache:
   # Maximum cache size
