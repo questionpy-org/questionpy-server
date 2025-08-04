@@ -713,9 +713,9 @@ components:
               enum:
                 - ALWAYS_MANUAL_SCORING_REQUIRED
                 - AUTOMATICALLY_SCORABLE
-                - AUTOMATICALLY_SCORABLE_WITH_COUNTBACK
-              description: AUTOMATICALLY_SCORABLE_WITH_COUNTBACK means the package is able to compute a final score,
-                taking into account previous submissions to this question.
+                - AUTOMATICALLY_SCORABLE_WITH_SCORE_ADJUSTMENT
+              description: AUTOMATICALLY_SCORABLE_WITH_SCORE_ADJUSTMENT means the package is able to compute
+                an adjusted score, taking into account previous submissions to this question.
             penalty:
               type: number
               format: double
@@ -958,14 +958,14 @@ components:
                 reached, the server will score the attempt in background and push the score to the LMS (asynchronous
                 scoring). Null if there should be no timeout (only synchronous scoring) or
                 zero for asynchronous scoring only.
-            try_scoring_with_countback:
+            compute_adjusted_score:
               type: boolean
-              description: Try to compute a final score, taking into account previous submissions to this question
-                (only when question.scoring_method is AUTOMATICALLY_SCORABLE_WITH_COUNTBACK).
+              description: Try to compute an adjusted score, taking into account previous submissions to this question
+                (only when Question.scoring_method is AUTOMATICALLY_SCORABLE_WITH_SCORE_ADJUSTMENT).
             generate_hint:
               type: boolean
               description: Try to give a hint on how to improve the response.
-          required: [ response, timeout, try_scoring_with_countback, generate_hint ]
+          required: [ response, timeout, compute_adjusted_score, generate_hint ]
 
     AttemptScored:
       allOf:
@@ -989,10 +989,13 @@ components:
               nullable: true
               description: The score for this question attempt, must lie between the `score_min` and `score_max` set by
                 the question.
-            score_final:
+            score_adjusted:
               type: number
               format: double
               nullable: true
+              description: An adjusted score (between `score_min` and `score_max` set by the question) that is
+                computed based on previous submissions (computed only when
+                AttemptScoreArguments.compute_adjusted_score is true).
             scored_inputs:
               type: object
               default: { }
@@ -1023,7 +1026,7 @@ components:
                     format: double
                     nullable: true
                     default: null
-                  score_final:
+                  score_adjusted:
                     type: number
                     format: double
                     nullable: true

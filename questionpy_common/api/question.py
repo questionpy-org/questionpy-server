@@ -16,7 +16,7 @@ __all__ = ["PossibleResponse", "QuestionInterface", "QuestionModel", "ScoringMet
 class ScoringMethod(Enum):
     ALWAYS_MANUAL_SCORING_REQUIRED = "ALWAYS_MANUAL_SCORING_REQUIRED"
     AUTOMATICALLY_SCORABLE = "AUTOMATICALLY_SCORABLE"
-    AUTOMATICALLY_SCORABLE_WITH_COUNTBACK = "AUTOMATICALLY_SCORABLE_WITH_COUNTBACK"
+    AUTOMATICALLY_SCORABLE_WITH_SCORE_ADJUSTMENT = "AUTOMATICALLY_SCORABLE_WITH_SCORE_ADJUSTMENT"
 
 
 class PossibleResponse(BaseModel):
@@ -75,8 +75,8 @@ class QuestionInterface(Protocol):
         scoring_state: str | None = None,
         response: dict[str, JsonValue] | None = None,
         *,
-        try_scoring_with_countback: bool = False,
-        try_giving_hint: bool = False,
+        compute_adjusted_score: bool = False,
+        generate_hint: bool = False,
     ) -> AttemptScoredModel:
         """Create an attempt object for a previously started attempt.
 
@@ -85,8 +85,8 @@ class QuestionInterface(Protocol):
                            [start_attempt][].
             scoring_state: Not implemented.
             response: The response currently entered by the student.
-            try_scoring_with_countback: TBD
-            try_giving_hint: TBD
+            compute_adjusted_score: TBD
+            generate_hint: TBD
         """
 
     @abstractmethod

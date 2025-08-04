@@ -121,7 +121,7 @@ class ScoredInputModel(BaseModel):
 
 class ScoredSubquestionModel(BaseModel):
     score: float | None = None
-    score_final: float | None = None
+    score_adjusted: float | None = None
     scoring_code: ScoringCode | None = None
     response_summary: str
     response_class: str
@@ -132,7 +132,7 @@ class ScoreModel(BaseModel):
     scoring_code: ScoringCode
     score: float | None
     """The score for this question attempt, must lie between the `score_min` and `score_max` set by the question."""
-    score_final: float | None
+    score_adjusted: float | None
     scored_inputs: dict[str, ScoredInputModel] = {}
     """Maps input names to their individual scores."""
     scored_subquestions: dict[str, ScoredSubquestionModel] = {}
