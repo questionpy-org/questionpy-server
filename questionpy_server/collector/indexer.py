@@ -7,16 +7,13 @@ from asyncio import Lock
 from pathlib import Path
 from typing import overload
 
-from questionpy_common.constants import MiB
-from questionpy_common.environment import WorkerPermissions
 from questionpy_server import WorkerPool
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.models import PackageInfo, PackageVersionsInfo, PackageVersionSpecificInfo
 from questionpy_server.package import Package
-from questionpy_server.utils.manifest import ComparableManifest, SemVer
-from questionpy_server.worker.runtime.package_location import ZipPackageLocation
+from questionpy_server.utils.manifest import ComparableManifest, SemVer, read_manifest
 
 
 class Indexer:
@@ -118,6 +115,9 @@ class Indexer:
             package_hash (str): The hash of the package.
             path_or_manifest (Union[Path, ComparableManifest]): The manifest of the package.
             source (BaseCollector): The source of the package.
+
+        Raises:
+            ManifestError: If the manifest could not be read.
         """
         if not self._lock:
             self._lock = Lock()
@@ -130,12 +130,7 @@ class Indexer:
                 # Create new package...
                 if isinstance(path_or_manifest, Path):
                     # ...from path.
-                    # TODO: get Manifest without worker.
-                    permissions = WorkerPermissions(1, 200 * MiB, 10, 4, {"trusted", "container"})
-                    async with self._worker_pool.get_worker(
-                        ZipPackageLocation(path_or_manifest, package_hash), 0, "manifest", permissions
-                    ) as worker:
-                        manifest = await worker.get_manifest()
+                    manifest = await read_manifest(path_or_manifest)
                     package = Package(package_hash, manifest, source, path_or_manifest)
                 else:
                     # ...from manifest.
