@@ -37,7 +37,7 @@ def _is_wildcard_matching(selector_value: str, package_value: str) -> bool:
     return selector_value in {package_value, "*"}
 
 
-def _is_selector_matching(selector: PackageSelector, package: Package, context: str) -> bool:
+def _is_selector_matching(selector: PackageSelector, package: Package, user: str | None, context: str) -> bool:
     return (
         # Package data.
         _is_wildcard_matching(selector.hash, package.hash)
@@ -49,12 +49,14 @@ def _is_selector_matching(selector: PackageSelector, package: Package, context: 
         and (selector.origin.local is None or selector.origin.local == package.sources.is_local())
         and _is_wildcard_matching(selector.origin.users, "*")  # TODO: handle users
         # Request data.
+        and _is_wildcard_matching(selector.request_user, str(user) if user else "")
         and _is_wildcard_matching(selector.request_context, context)
     )
 
 
 class _WorkerPermissionIdentifier(NamedTuple):
     package: Package
+    user: str | None
     context: str
 
 
@@ -100,29 +102,31 @@ class WorkerPermissionsHandler:
         specific_auto_grant_permissions = permissions.auto_grant_permissions.model_dump(exclude_none=True)
         return self._auto_grant_permissions.model_copy(update=specific_auto_grant_permissions)
 
-    def _get_specific_permissions(self, package: Package, context: str) -> SpecificWorkerPermissions | None:
+    def _get_specific_permissions(
+        self, package: Package, user: str | None, context: str
+    ) -> SpecificWorkerPermissions | None:
         # We want to select the last defined one if multiple selectors match.
         for permissions in reversed(self._specific_package_permissions):
-            if _is_selector_matching(permissions.package_selector, package, context):
+            if _is_selector_matching(permissions.package_selector, package, user, context):
                 return permissions
         return None
 
-    def get_effective_permissions(self, package: Package, context: str) -> EnvironmentWorkerPermissions:
+    def get_effective_permissions(
+        self, package: Package, user: str | None, context: str
+    ) -> EnvironmentWorkerPermissions:
         """Gets the effective permissions for a package.
-
-        TODO: also account for the current user
 
         Raises:
             WorkerPermissionError: If the package does not have enough permissions.
         """
-        key = _WorkerPermissionIdentifier(package, context)
+        key = _WorkerPermissionIdentifier(package, user, context)
         if cached_permissions := self._cache.get(key):
             return cached_permissions
 
         auto_grant_permissions = self._auto_grant_permissions
         requested_permissions = self._get_requested_permissions(package)
 
-        if specific_permissions := self._get_specific_permissions(package, context):
+        if specific_permissions := self._get_specific_permissions(package, user, context):
             auto_grant_permissions = self._get_actual_auto_grant_permissions(specific_permissions)
 
             if specific_permissions.override_permissions:

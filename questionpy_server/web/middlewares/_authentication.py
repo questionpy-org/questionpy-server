@@ -10,6 +10,7 @@ from aiohttp.web_request import Request
 from aiohttp.web_response import StreamResponse
 
 from questionpy_server.settings import AuthSettings
+from questionpy_server.web._utils import CURRENT_USER_KEY
 
 PASSWORD_ENCODING = "utf-8"  # noqa: S105
 
@@ -61,6 +62,7 @@ async def auth_middleware(request: Request, handler: Handler) -> StreamResponse:
 
     credentials = get_credentials(request)
     if check_credentials(credentials, settings.users):
+        request[CURRENT_USER_KEY] = credentials.login
         return await handler(request)
 
     raise HTTPUnauthorizedBasicAuth(reason="Invalid credentials")

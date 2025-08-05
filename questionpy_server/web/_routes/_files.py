@@ -1,17 +1,14 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-from typing import TYPE_CHECKING
 
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPNotImplemented
 
 from questionpy_server.package import Package
 from questionpy_server.web._decorators import ensure_package
+from questionpy_server.web._utils import CURRENT_USER_KEY
 from questionpy_server.web.app import QPyServer
-
-if TYPE_CHECKING:
-    from questionpy_server.worker import Worker
 
 file_routes = web.RouteTableDef()
 
@@ -28,10 +25,11 @@ async def serve_static_file(request: web.Request, package: Package) -> web.Respo
         # TODO: Support static files in non-main packages by using namespace and short_name.
         raise HTTPNotImplemented(text="Static file retrieval from non-main packages is not supported yet.")
 
-    permissions = qpy_server.worker_permissions.get_effective_permissions(package, "files")
+    current_user = request.get(CURRENT_USER_KEY)
+    permissions = qpy_server.worker_permissions.get_effective_permissions(package, current_user, "files")
     location = await package.get_zip_package_location()
-    worker: Worker
-    async with qpy_server.worker_pool.get_worker(location, 0, "files", permissions) as worker:
+
+    async with qpy_server.worker_pool.get_worker(location, current_user, "files", permissions) as worker:
         try:
             file = await worker.get_static_file(path)
         except FileNotFoundError as e:
