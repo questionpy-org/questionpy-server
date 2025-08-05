@@ -21,9 +21,9 @@ from questionpy_server.settings import (
     AuthSettings,
     CacheSettings,
     CollectorSettings,
+    CompleteWorkerPermissions,
     GeneralSettings,
     Settings,
-    StandardWorkerPermissions,
     WebserviceSettings,
     WorkerPermissionsSettings,
     WorkerPoolSettings,
@@ -119,7 +119,7 @@ test_data_path = Path(__file__).parent / "test_data"
 package_dir = test_data_path / "package"
 PACKAGE = TestZipPackage(package_dir / "package_1.qpy")
 PACKAGE_2 = TestZipPackage(package_dir / "package_2.qpy")
-DEFAULT_WORKER_PERMISSIONS = WorkerPermissions(**StandardWorkerPermissions().model_dump())
+DEFAULT_WORKER_PERMISSIONS = WorkerPermissions(**CompleteWorkerPermissions().model_dump())
 
 
 @pytest.fixture

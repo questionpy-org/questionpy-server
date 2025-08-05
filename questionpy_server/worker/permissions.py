@@ -3,15 +3,15 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 from typing import NamedTuple
 
-from questionpy_common.environment import WorkerPermissions
+from questionpy_common.environment import WorkerPermissions as EnvironmentWorkerPermissions
 from questionpy_common.error import QPyBaseError
 from questionpy_server.cache import LRUCacheMemory
 from questionpy_server.package import Package
 from questionpy_server.settings import (
+    CompleteWorkerPermissions,
     MainProcessExecutionModeValues,
     PackageSelector,
     SpecificWorkerPermissions,
-    StandardWorkerPermissions,
     WorkerPermissionsSettings,
 )
 
@@ -20,7 +20,7 @@ class WorkerPermissionError(QPyBaseError):
     pass
 
 
-def _has_enough_permissions(allowed: StandardWorkerPermissions, requested: StandardWorkerPermissions) -> bool:
+def _has_enough_permissions(allowed: CompleteWorkerPermissions, requested: CompleteWorkerPermissions) -> bool:
     return (
         requested.cpus <= allowed.cpus
         and requested.memory <= allowed.memory
@@ -59,14 +59,16 @@ class WorkerPermissionsHandler:
     """Handles package permissions for a request."""
 
     def __init__(self, settings: WorkerPermissionsSettings):
-        self._default_permissions = StandardWorkerPermissions()
+        self._default_permissions = CompleteWorkerPermissions()
 
         self._auto_grant_permissions = settings.auto_grant_permissions
         self._specific_package_permissions = settings.packages
 
-        self._cache: LRUCacheMemory[_WorkerPermissionIdentifier, WorkerPermissions] = LRUCacheMemory(max_size=128)
+        self._cache: LRUCacheMemory[_WorkerPermissionIdentifier, EnvironmentWorkerPermissions] = LRUCacheMemory(
+            max_size=128
+        )
 
-    def _get_requested_permissions(self, package: Package) -> StandardWorkerPermissions:
+    def _get_requested_permissions(self, package: Package) -> CompleteWorkerPermissions:
         requested_permissions = package.manifest.permissions
         if requested_permissions is None:
             # If the package requests no permissions, we use the default ones.
@@ -78,10 +80,10 @@ class WorkerPermissionsHandler:
                     or self._default_permissions.main_process_execution_modes
                 )
             requested_permissions_dict = requested_permissions.model_dump(exclude_none=True)
-            actual_permissions = StandardWorkerPermissions(**requested_permissions_dict)
+            actual_permissions = CompleteWorkerPermissions(**requested_permissions_dict)
         return actual_permissions
 
-    def _get_actual_auto_grant_permissions(self, permissions: SpecificWorkerPermissions) -> StandardWorkerPermissions:
+    def _get_actual_auto_grant_permissions(self, permissions: SpecificWorkerPermissions) -> CompleteWorkerPermissions:
         if permissions.auto_grant_permissions is None:
             return self._auto_grant_permissions
 
@@ -95,7 +97,7 @@ class WorkerPermissionsHandler:
                 return permissions
         return None
 
-    def get_effective_permissions(self, package: Package, context: int | None) -> WorkerPermissions:
+    def get_effective_permissions(self, package: Package, context: int | None) -> EnvironmentWorkerPermissions:
         """Gets the effective permissions for a package.
 
         TODO: also account for the current user
@@ -123,6 +125,6 @@ class WorkerPermissionsHandler:
             msg = f"The package '{package.hash}' requested more permissions than allowed."
             raise WorkerPermissionError(msg)
 
-        effective_permissions = WorkerPermissions(**requested_permissions.model_dump())
+        effective_permissions = EnvironmentWorkerPermissions(**requested_permissions.model_dump())
         self._cache.put(key, effective_permissions)
         return effective_permissions

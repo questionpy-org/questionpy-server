@@ -21,7 +21,7 @@ from pydantic_settings import (
 )
 
 from questionpy_common.constants import MAX_PACKAGE_SIZE, GiB, MiB
-from questionpy_common.manifest import CustomWorkerPermissions, ensure_is_valid_name
+from questionpy_common.manifest import PartialWorkerPermissions, ensure_is_valid_name
 from questionpy_server.worker import Worker
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
 
@@ -156,12 +156,12 @@ MainProcessExecutionModeValues = {"container", "trusted"}
 
 class SpecificWorkerPermissions(BaseModel):
     package_selector: PackageSelector = PackageSelector()
-    auto_grant_permissions: CustomWorkerPermissions | None = None
-    override_permissions: CustomWorkerPermissions | None = None
+    auto_grant_permissions: PartialWorkerPermissions | None = None
+    override_permissions: PartialWorkerPermissions | None = None
 
     @field_validator("auto_grant_permissions", "override_permissions")
     @classmethod
-    def check_permissions(cls, value: CustomWorkerPermissions | None) -> CustomWorkerPermissions | None:
+    def check_permissions(cls, value: PartialWorkerPermissions | None) -> PartialWorkerPermissions | None:
         if (
             value
             and value.main_process_execution_modes
@@ -172,7 +172,7 @@ class SpecificWorkerPermissions(BaseModel):
         return value
 
 
-class StandardWorkerPermissions(BaseModel):
+class CompleteWorkerPermissions(BaseModel):
     cpus: int = 1
     memory: ByteSize = ByteSize(200 * MiB)
     request_timeout: PositiveInt = 10
@@ -189,7 +189,7 @@ class StandardWorkerPermissions(BaseModel):
 
 
 class WorkerPermissionsSettings(BaseModel):
-    auto_grant_permissions: StandardWorkerPermissions = StandardWorkerPermissions()
+    auto_grant_permissions: CompleteWorkerPermissions = CompleteWorkerPermissions()
     packages: list[SpecificWorkerPermissions] = []
 
 

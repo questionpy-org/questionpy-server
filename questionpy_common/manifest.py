@@ -77,7 +77,7 @@ def ensure_is_valid_name(name: str) -> str:
 Bcp47LanguageTag = NewType("Bcp47LanguageTag", str)
 
 
-class CustomWorkerPermissions(BaseModel):
+class PartialWorkerPermissions(BaseModel):
     cpus: int | None = None
     memory: ByteSize | None = None
     request_timeout: PositiveInt | None = None
@@ -109,7 +109,7 @@ class SourceManifest(BaseModel):
     icon: str | None = None
     type: PackageType = DEFAULT_PACKAGETYPE
     license: str | None = None
-    permissions: CustomWorkerPermissions | None = None
+    permissions: PartialWorkerPermissions | None = None
     tags: set[str] = set()
     requirements: str | list[str] | None = None
 

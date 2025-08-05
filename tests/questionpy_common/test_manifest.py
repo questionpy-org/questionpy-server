@@ -7,8 +7,8 @@ from typing import Any, get_type_hints
 import pytest
 from pydantic import ValidationError
 
-from questionpy_common.manifest import CustomWorkerPermissions, Manifest, PackageType
-from questionpy_server.settings import StandardWorkerPermissions
+from questionpy_common.manifest import Manifest, PackageType, PartialWorkerPermissions
+from questionpy_server.settings import CompleteWorkerPermissions
 
 minimal_manifest: dict[str, Any] = {
     "short_name": "short_name",
@@ -155,12 +155,15 @@ def test_not_valid_api_version(version: str) -> None:
 
 
 def test_valid_permissions() -> None:
-    server = get_type_hints(StandardWorkerPermissions)
-    custom = get_type_hints(CustomWorkerPermissions)
+    complete = get_type_hints(CompleteWorkerPermissions)
+    partial = get_type_hints(PartialWorkerPermissions)
 
-    assert custom.keys() == server.keys(), "Custom permission attributes must be identical to the server permissions."
+    assert complete.keys() == partial.keys(), (
+        f"`The attributes of {CompleteWorkerPermissions.__name__} and {PartialWorkerPermissions.__name__} must be "
+        f"identical."
+    )
 
-    for permission, type_hint in custom.items():
-        assert type_hint == server[permission] | None, (
+    for permission, type_hint in partial.items():
+        assert type_hint == complete[permission] | None, (
             "Custom permissions must be of the same type as the server permissions."
         )
