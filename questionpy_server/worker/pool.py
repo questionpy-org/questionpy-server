@@ -37,8 +37,8 @@ class _WorkerPoolMemoryError(QPyBaseError):
         super().__init__("Cannot free the required amount of memory. This is likely a bug.")
 
 
-def _memory_limit_or_zero(limits: WorkerPermissions | None) -> int:
-    return limits.memory if limits else 0
+def _memory_limit_or_zero(permissions: WorkerPermissions | None) -> int:
+    return permissions.memory if permissions else 0
 
 
 class _IdleWorkersIdentifier(NamedTuple):

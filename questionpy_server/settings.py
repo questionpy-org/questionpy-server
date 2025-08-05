@@ -156,10 +156,10 @@ MainProcessExecutionModeValues = {"container", "trusted"}
 
 class SpecificWorkerPermissions(BaseModel):
     package_selector: PackageSelector = PackageSelector()
-    auto_grant_limits: CustomWorkerPermissions | None = None
-    override_limits: CustomWorkerPermissions | None = None
+    auto_grant_permissions: CustomWorkerPermissions | None = None
+    override_permissions: CustomWorkerPermissions | None = None
 
-    @field_validator("auto_grant_limits", "override_limits")
+    @field_validator("auto_grant_permissions", "override_permissions")
     @classmethod
     def check_permissions(cls, value: CustomWorkerPermissions | None) -> CustomWorkerPermissions | None:
         if (
@@ -189,7 +189,7 @@ class StandardWorkerPermissions(BaseModel):
 
 
 class WorkerPermissionsSettings(BaseModel):
-    auto_grant_limits: StandardWorkerPermissions = StandardWorkerPermissions()
+    auto_grant_permissions: StandardWorkerPermissions = StandardWorkerPermissions()
     packages: list[SpecificWorkerPermissions] = []
 
 

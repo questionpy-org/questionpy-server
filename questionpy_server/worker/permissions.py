@@ -61,7 +61,7 @@ class WorkerPermissionsHandler:
     def __init__(self, settings: WorkerPermissionsSettings):
         self._default_permissions = StandardWorkerPermissions()
 
-        self._auto_grant_limits = settings.auto_grant_limits
+        self._auto_grant_permissions = settings.auto_grant_permissions
         self._specific_package_permissions = settings.packages
 
         self._cache: LRUCacheMemory[_WorkerPermissionIdentifier, WorkerPermissions] = LRUCacheMemory(max_size=128)
@@ -81,12 +81,12 @@ class WorkerPermissionsHandler:
             actual_permissions = StandardWorkerPermissions(**requested_permissions_dict)
         return actual_permissions
 
-    def _get_actual_auto_grant_limits(self, permissions: SpecificWorkerPermissions) -> StandardWorkerPermissions:
-        if permissions.auto_grant_limits is None:
-            return self._auto_grant_limits
+    def _get_actual_auto_grant_permissions(self, permissions: SpecificWorkerPermissions) -> StandardWorkerPermissions:
+        if permissions.auto_grant_permissions is None:
+            return self._auto_grant_permissions
 
-        specific_auto_grant_limits = permissions.auto_grant_limits.model_dump(exclude_none=True)
-        return self._auto_grant_limits.model_copy(update=specific_auto_grant_limits)
+        specific_auto_grant_permissions = permissions.auto_grant_permissions.model_dump(exclude_none=True)
+        return self._auto_grant_permissions.model_copy(update=specific_auto_grant_permissions)
 
     def _get_specific_permissions(self, package: Package, context: int | None) -> SpecificWorkerPermissions | None:
         # We want to select the last defined one if multiple selectors match.
@@ -107,19 +107,19 @@ class WorkerPermissionsHandler:
         if cached_permissions := self._cache.get(key):
             return cached_permissions
 
-        auto_grant_limits = self._auto_grant_limits
+        auto_grant_permissions = self._auto_grant_permissions
         requested_permissions = self._get_requested_permissions(package)
 
         if specific_permissions := self._get_specific_permissions(package, context):
-            auto_grant_limits = self._get_actual_auto_grant_limits(specific_permissions)
+            auto_grant_permissions = self._get_actual_auto_grant_permissions(specific_permissions)
 
-            if specific_permissions.override_limits:
-                overrides = specific_permissions.override_limits.model_dump(exclude_none=True)
+            if specific_permissions.override_permissions:
+                overrides = specific_permissions.override_permissions.model_dump(exclude_none=True)
 
-                auto_grant_limits = auto_grant_limits.model_copy(update=overrides)
+                auto_grant_permissions = auto_grant_permissions.model_copy(update=overrides)
                 requested_permissions = requested_permissions.model_copy(update=overrides)
 
-        if not _has_enough_permissions(auto_grant_limits, requested_permissions):
+        if not _has_enough_permissions(auto_grant_permissions, requested_permissions):
             msg = f"The package '{package.hash}' requested more permissions than allowed."
             raise WorkerPermissionError(msg)
 
