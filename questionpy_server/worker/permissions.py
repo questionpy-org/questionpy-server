@@ -95,8 +95,8 @@ class WorkerPermissionsHandler:
                 return permissions
         return None
 
-    def get(self, package: Package, context: int | None) -> WorkerPermissions:
-        """Gets the actual permissions for a package.
+    def get_effective_permissions(self, package: Package, context: int | None) -> WorkerPermissions:
+        """Gets the effective permissions for a package.
 
         TODO: also account for the current user
 
@@ -123,6 +123,6 @@ class WorkerPermissionsHandler:
             msg = f"The package '{package.hash}' requested more permissions than allowed."
             raise WorkerPermissionError(msg)
 
-        actual_permissions = WorkerPermissions(**requested_permissions.model_dump())
-        self._cache.put(key, actual_permissions)
-        return actual_permissions
+        effective_permissions = WorkerPermissions(**requested_permissions.model_dump())
+        self._cache.put(key, effective_permissions)
+        return effective_permissions
