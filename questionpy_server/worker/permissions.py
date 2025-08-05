@@ -1,6 +1,7 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
+import logging
 from typing import NamedTuple
 
 from questionpy_common.environment import WorkerPermissions as EnvironmentWorkerPermissions
@@ -14,6 +15,8 @@ from questionpy_server.settings import (
     SpecificWorkerPermissions,
     WorkerPermissionsSettings,
 )
+
+_log = logging.getLogger(__name__)
 
 
 class WorkerPermissionError(QPyBaseError):
@@ -74,11 +77,18 @@ class WorkerPermissionsHandler:
             # If the package requests no permissions, we use the default ones.
             actual_permissions = self._default_permissions
         else:
-            if modes := requested_permissions.main_process_execution_modes:
-                requested_permissions.main_process_execution_modes = (
-                    modes.intersection(MainProcessExecutionModeValues)
-                    or self._default_permissions.main_process_execution_modes
-                )
+            if requested_modes := requested_permissions.main_process_execution_modes:
+                if intersection := requested_modes.intersection(MainProcessExecutionModeValues):
+                    requested_permissions.main_process_execution_modes = intersection
+                else:
+                    # The package requests unknown execution modes.
+                    default_modes = self._default_permissions.main_process_execution_modes
+                    requested_permissions.main_process_execution_modes = default_modes
+                    _log.info(
+                        f"The package '{package.hash}' requested unknown execution modes: {requested_modes}. "
+                        f"Falling back to: {default_modes}."
+                    )
+
             requested_permissions_dict = requested_permissions.model_dump(exclude_none=True)
             actual_permissions = CompleteWorkerPermissions(**requested_permissions_dict)
         return actual_permissions
