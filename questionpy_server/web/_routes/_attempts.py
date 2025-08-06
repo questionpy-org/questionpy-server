@@ -32,9 +32,10 @@ async def post_attempt_start(
 ) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
+    permissions = qpyserver.worker_permissions.get_effective_permissions(package, data.context)
     location = await package.get_zip_package_location()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(location, 0, data.context, permissions) as worker:
         attempt = await worker.start_attempt(DEFAULT_REQUEST_USER, question_state.decode(), data.variant)
         packages = worker.get_loaded_packages()
 
@@ -49,9 +50,10 @@ async def post_attempt_view(
 ) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
+    permissions = qpyserver.worker_permissions.get_effective_permissions(package, data.context)
     location = await package.get_zip_package_location()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(location, 0, data.context, permissions) as worker:
         attempt = await worker.get_attempt(
             request_user=DEFAULT_REQUEST_USER,
             question_state=question_state.decode(),
@@ -72,9 +74,10 @@ async def post_attempt_score(
 ) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
+    permissions = qpyserver.worker_permissions.get_effective_permissions(package, data.context)
     location = await package.get_zip_package_location()
     worker: Worker
-    async with qpyserver.worker_pool.get_worker(location, 0, data.context) as worker:
+    async with qpyserver.worker_pool.get_worker(location, 0, data.context, permissions) as worker:
         attempt_scored = await worker.score_attempt(
             request_user=DEFAULT_REQUEST_USER,
             question_state=question_state.decode(),

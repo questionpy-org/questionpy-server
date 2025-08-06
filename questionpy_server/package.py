@@ -97,6 +97,9 @@ class PackageSources:
     def contains_searchable(self) -> bool:
         return bool(self._local_collector or self._repo_collectors)
 
+    def is_local(self) -> bool:
+        return self._local_collector is not None
+
 
 class Package:
     hash: str

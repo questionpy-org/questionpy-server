@@ -25,15 +25,51 @@ webservice:
   # Allow packages from the LMS
   #allow_lms_packages: true
 
-worker:
+worker_pool:
   # Fully qualified name of the worker class
   #type: questionpy_server.worker.impl.subprocess.SubprocessWorker
 
-  # Maximum number of running workers
-  #max_workers: 8
+  # Maximum number of CPUs that can be used by all workers
+  #max_cpus: 8
 
   # Maximum combined memory usage of all workers
   #max_memory: 500 MiB
+
+permissions:
+  # Permissions that are granted automatically
+  auto_grant_permissions:
+    # Maximum number of CPUs that a worker can use
+    #cpus: 1
+
+    # Maximum memory usage of a worker (at least 200 MiB)
+    #memory: 200 MiB
+
+    # Allowed execution modes for the worker main process. Allowed values are:
+    #  - container: executed in isolated containers
+    #  - trusted: executed as a normal process (but with CPU and memory limits), implies unrestricted_network_access
+    #main_process_execution_modes:
+    #  - container
+
+    # Maximum time in seconds per request (at least 10)
+    #request_timeout: 10
+
+    # Maximum time in seconds for the worker to start (at least 4)
+    #bootstrap_timeout: 4
+
+  # Package- and request-specific permissions
+  # The following example would raise the auto_grant_permissions->memory of every package that is locally available and
+  # has the namespace "qpy" to 1 GiB and every worker running these packages can use 2 CPUs even if the package
+  # requested a different amount:
+  # packages:
+  #   - package_selector:
+  #       origin:
+  #         local: true
+  #       namespace: "qpy"
+  #     auto_grant_permissions:
+  #       memory: 1 GiB
+  #     override_permissions:
+  #       cpus: 2
+  #packages:
 
 cache:
   # Maximum cache size

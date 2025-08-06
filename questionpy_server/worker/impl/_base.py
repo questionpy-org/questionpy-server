@@ -78,7 +78,6 @@ class BaseWorker(Worker, ABC):
 
     _worker_type = "unknown"
     _init_worker_timeout = 2
-    _load_qpy_package_timeout = 4
 
     def __init__(self, **kwargs: Unpack[WorkerArgs]) -> None:
         super().__init__(**kwargs)
@@ -99,7 +98,7 @@ class BaseWorker(Worker, ABC):
 
         try:
             await self.send_and_wait_for_response(
-                InitWorker(limits=self.limits, worker_type=self._worker_type, worker_home=self.worker_home),
+                InitWorker(permissions=self.permissions, worker_type=self._worker_type, worker_home=self.worker_home),
                 InitWorker.Response,
                 self._init_worker_timeout,
             )
@@ -114,7 +113,7 @@ class BaseWorker(Worker, ABC):
         loaded = await self.send_and_wait_for_response(
             LoadQPyPackage(location=package_location, main=main),
             LoadQPyPackage.Response,
-            self._load_qpy_package_timeout,
+            self.permissions.bootstrap_timeout if self.permissions else 4,
         )
 
         root_package_hash = package_location.hash if isinstance(package_location, ZipPackageLocation) else None

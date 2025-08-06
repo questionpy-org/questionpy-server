@@ -14,12 +14,26 @@ from pydantic import ValidationError
 from pydantic.networks import HttpUrl
 from pydantic_settings import EnvSettingsSource
 
-from questionpy_server.settings import CustomEnvSettingsSource, Settings
+from questionpy_common.environment import WorkerPermissions
+from questionpy_server.settings import (
+    CompleteWorkerPermissions,
+    CustomEnvSettingsSource,
+    MainProcessExecutionModeValues,
+    Settings,
+)
 
 
 @pytest.fixture
 def path_with_empty_config_file(tmp_path: Path) -> Path:
-    config = {"general": None, "webservice": None, "worker": None, "cache": None, "collector": None, "auth": None}
+    config = {
+        "general": None,
+        "webservice": None,
+        "worker_pool": None,
+        "permissions": None,
+        "cache": None,
+        "collector": None,
+        "auth": None,
+    }
 
     path = tmp_path / "config.yml"
     with path.open("w") as file:
@@ -95,3 +109,14 @@ def test_multiline_env_var_gets_parsed_correctly(path_with_empty_config_file: Pa
             HttpUrl("http://www.example.com/1/"): timedelta(hours=3, minutes=30, seconds=30),
             HttpUrl("http://www.example.com/2/"): timedelta(days=2, hours=7),
         }
+
+
+def test_standard_package_permissions_default_main_process_execution_modes_is_valid() -> None:
+    assert MainProcessExecutionModeValues.issuperset(CompleteWorkerPermissions().main_process_execution_modes), (
+        "The default value for 'main_process_execution_modes' is invalid."
+    )
+
+
+def test_standard_package_permissions_can_convert_to_package_permissions() -> None:
+    permissions = CompleteWorkerPermissions()
+    WorkerPermissions(**permissions.model_dump())

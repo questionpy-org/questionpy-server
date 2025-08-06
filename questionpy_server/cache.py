@@ -235,3 +235,27 @@ class LRUCache:
     @property
     def directory(self) -> Path:
         return self._supervisor.directory / self._subdirectory
+
+
+class LRUCacheMemory[K, V]:
+    """A dictionary-based LRU cache."""
+
+    def __init__(self, max_size: int) -> None:
+        self._max_size = max_size
+        self._cache: OrderedDict[K, V] = OrderedDict()
+
+    def get(self, key: K) -> V | None:
+        if key not in self._cache:
+            return None
+
+        self._cache.move_to_end(key)
+        return self._cache[key]
+
+    def put(self, key: K, value: V) -> None:
+        if key in self._cache:
+            self._cache.move_to_end(key)
+
+        self._cache[key] = value
+
+        if len(self._cache) > self._max_size:
+            self._cache.popitem(last=False)

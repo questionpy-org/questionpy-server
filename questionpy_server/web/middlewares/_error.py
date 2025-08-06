@@ -17,6 +17,7 @@ from questionpy_server.worker.exception import (
     WorkerRealTimeLimitExceededError,
     WorkerStartError,
 )
+from questionpy_server.worker.permissions import WorkerPermissionError
 from questionpy_server.worker.runtime.messages import WorkerMemoryLimitExceededError, WorkerUnknownError
 
 exception_map: dict[type[QPyBaseError], type[web_error.QpyWebError]] = {
@@ -28,6 +29,7 @@ exception_map: dict[type[QPyBaseError], type[web_error.QpyWebError]] = {
     WorkerStartError: web_error.ServerError,
     WorkerMemoryLimitExceededError: web_error.OutOfMemoryError,
     WorkerUnknownError: web_error.PackageError,
+    WorkerPermissionError: web_error.WorkerPermissionError,
 }
 
 

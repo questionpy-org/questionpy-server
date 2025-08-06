@@ -7,7 +7,7 @@ from enum import StrEnum
 from keyword import iskeyword, issoftkeyword
 from typing import Annotated, NewType
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ByteSize, PositiveInt, conset, field_validator
 from pydantic.fields import Field
 
 
@@ -67,7 +67,7 @@ def ensure_is_valid_name(name: str) -> str:
         # This check should be redundant - we keep it just in case.
         msg = "is not a valid Python identifier"
         raise ValueError(msg)
-    if iskeyword(name) or issoftkeyword(name) or name in {"_", "case", "match"}:
+    if iskeyword(name) or issoftkeyword(name):
         msg = "can not be a Python keyword"
         raise ValueError(msg)
 
@@ -75,6 +75,14 @@ def ensure_is_valid_name(name: str) -> str:
 
 
 Bcp47LanguageTag = NewType("Bcp47LanguageTag", str)
+
+
+class PartialWorkerPermissions(BaseModel):
+    cpus: int | None = None
+    memory: ByteSize | None = None
+    request_timeout: PositiveInt | None = None
+    bootstrap_timeout: PositiveInt | None = None
+    main_process_execution_modes: conset(str, min_length=1) | None = None  # type: ignore[valid-type]
 
 
 class SourceManifest(BaseModel):
@@ -101,7 +109,7 @@ class SourceManifest(BaseModel):
     icon: str | None = None
     type: PackageType = DEFAULT_PACKAGETYPE
     license: str | None = None
-    permissions: set[str] = set()
+    permissions: PartialWorkerPermissions | None = None
     tags: set[str] = set()
     requirements: str | list[str] | None = None
 

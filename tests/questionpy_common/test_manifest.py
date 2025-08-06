@@ -2,12 +2,13 @@
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from typing import Any
+from typing import Any, get_type_hints
 
 import pytest
 from pydantic import ValidationError
 
-from questionpy_common.manifest import Manifest, PackageType
+from questionpy_common.manifest import Manifest, PackageType, PartialWorkerPermissions
+from questionpy_server.settings import CompleteWorkerPermissions
 
 minimal_manifest: dict[str, Any] = {
     "short_name": "short_name",
@@ -26,7 +27,7 @@ maximal_manifest = {
     "icon": "https://example.com/icon.png",
     "type": PackageType.QUESTIONTYPE,
     "license": "MIT",
-    "permissions": {"test_permission"},
+    "permissions": {"cpus": 4},
     "tags": {"test_tag"},
     "requirements": ["req_1", "req_2"],
 }
@@ -151,3 +152,18 @@ def test_not_valid_api_version(version: str) -> None:
     manifest["api_version"] = version
     with pytest.raises(ValidationError, match=error):
         Manifest(**manifest)
+
+
+def test_valid_permissions() -> None:
+    complete = get_type_hints(CompleteWorkerPermissions)
+    partial = get_type_hints(PartialWorkerPermissions)
+
+    assert complete.keys() == partial.keys(), (
+        f"`The attributes of {CompleteWorkerPermissions.__name__} and {PartialWorkerPermissions.__name__} must be "
+        f"identical."
+    )
+
+    for permission, type_hint in partial.items():
+        assert type_hint == complete[permission] | None, (
+            "Custom permissions must be of the same type as the server permissions."
+        )

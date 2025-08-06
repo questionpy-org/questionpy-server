@@ -8,8 +8,9 @@ from pathlib import Path
 from pydoc import locate
 from typing import Any, ClassVar, Final, Literal
 
+import semver
 import yaml
-from pydantic import BaseModel, ByteSize, DirectoryPath, HttpUrl, field_validator
+from pydantic import BaseModel, ByteSize, DirectoryPath, HttpUrl, PositiveInt, conset, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import (
     BaseSettings,
@@ -20,6 +21,7 @@ from pydantic_settings import (
 )
 
 from questionpy_common.constants import MAX_PACKAGE_SIZE, GiB, MiB
+from questionpy_common.manifest import PartialWorkerPermissions, ensure_is_valid_name
 from questionpy_server.worker import Worker
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
 
@@ -84,10 +86,10 @@ class WebserviceSettings(BaseModel):
         return value
 
 
-class WorkerSettings(BaseModel):
+class WorkerPoolSettings(BaseModel):
     type: builtins.type[Worker] = SubprocessWorker
     """Fully qualified name of the worker class or the class itself (for the default)."""
-    max_workers: int = 8
+    max_cpus: int = 8
     max_memory: ByteSize = ByteSize(500 * MiB)
 
     @field_validator("type", mode="before")
@@ -107,6 +109,88 @@ class WorkerSettings(BaseModel):
             raise TypeError(msg)
 
         return value
+
+
+class PackageOrigin(BaseModel):
+    repositories: str = "*"
+    local: bool | None = None
+    users: str = "*"
+
+
+class PackageSelector(BaseModel):
+    origin: PackageOrigin = PackageOrigin()
+    request_context: str = "*"
+    namespace: str = "*"
+    short_name: str = "*"
+    version: str = "*"
+    hash: str = "*"
+
+    @field_validator("version")
+    @classmethod
+    def validate_version(cls, value: str) -> str:
+        if value == "*":
+            return value
+        try:
+            # INFO: https://github.com/python-semver/python-semver/issues/241
+            semver.Version(0).match(value)
+        except ValueError as e:
+            msg = f"Invalid version expression '{value}'"
+            raise ValueError(msg) from e
+        return value
+
+    @field_validator("short_name", "namespace")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        if value == "*":
+            return value
+        try:
+            ensure_is_valid_name(value)
+        except ValueError as e:
+            msg = f"Invalid name '{value}': {e}"
+            raise ValueError(msg) from e
+        return value
+
+
+MainProcessExecutionModeValues = {"container", "trusted"}
+
+
+class SpecificWorkerPermissions(BaseModel):
+    package_selector: PackageSelector = PackageSelector()
+    auto_grant_permissions: PartialWorkerPermissions | None = None
+    override_permissions: PartialWorkerPermissions | None = None
+
+    @field_validator("auto_grant_permissions", "override_permissions")
+    @classmethod
+    def check_permissions(cls, value: PartialWorkerPermissions | None) -> PartialWorkerPermissions | None:
+        if (
+            value
+            and value.main_process_execution_modes
+            and not value.main_process_execution_modes.issubset(MainProcessExecutionModeValues)
+        ):
+            msg = f"'main_process_execution_modes' must be a subset of {MainProcessExecutionModeValues}"
+            raise ValueError(msg)
+        return value
+
+
+class CompleteWorkerPermissions(BaseModel):
+    cpus: int = 1
+    memory: ByteSize = ByteSize(200 * MiB)
+    request_timeout: PositiveInt = 10
+    bootstrap_timeout: PositiveInt = 4
+    main_process_execution_modes: conset(str, min_length=1) = {"container"}  # type: ignore[valid-type]
+
+    @field_validator("main_process_execution_modes")
+    @classmethod
+    def check_main_process_execution_modes(cls, value: set[str]) -> set[str]:
+        if not value.issubset(MainProcessExecutionModeValues):
+            msg = f"must be a subset of {MainProcessExecutionModeValues}"
+            raise ValueError(msg)
+        return value
+
+
+class WorkerPermissionsSettings(BaseModel):
+    auto_grant_permissions: CompleteWorkerPermissions = CompleteWorkerPermissions()
+    packages: list[SpecificWorkerPermissions] = []
 
 
 class CacheSettings(BaseModel):
@@ -186,7 +270,8 @@ class Settings(BaseSettings):
 
     general: GeneralSettings
     webservice: WebserviceSettings
-    worker: WorkerSettings
+    worker_pool: WorkerPoolSettings
+    permissions: WorkerPermissionsSettings
     cache: CacheSettings
     collector: CollectorSettings
     auth: AuthSettings

@@ -23,7 +23,7 @@ __all__ = [
     "PackageNotLoadedError",
     "PackageState",
     "RequestUser",
-    "WorkerResourceLimits",
+    "WorkerPermissions",
     "get_qpy_environment",
     "set_qpy_environment",
 ]
@@ -37,11 +37,14 @@ class RequestUser:
 
 
 @dataclass
-class WorkerResourceLimits:
-    """Maximum resources that a worker process is allowed to consume."""
+class WorkerPermissions:
+    """Permissions of the worker."""
 
-    max_memory: int
-    max_cpu_time_seconds_per_call: float
+    cpus: int
+    memory: int
+    request_timeout: int
+    bootstrap_timeout: int
+    main_process_execution_modes: set[str]
 
 
 @total_ordering
@@ -117,8 +120,8 @@ class Environment(Protocol):
         """
 
     @property
-    def limits(self) -> WorkerResourceLimits | None:
-        """The resource limits imposed on the worker, if any."""
+    def permissions(self) -> WorkerPermissions | None:
+        """The permissions of the worker, if any."""
 
     @property
     def request_user(self) -> RequestUser | None:
