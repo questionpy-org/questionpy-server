@@ -88,7 +88,7 @@ class InitWorker(MessageToWorker):
     """Give worker some basic information."""
 
     message_id: ClassVar[MessageIds] = MessageIds.INIT_WORKER
-    permissions: WorkerPermissions | None = None
+    permissions: WorkerPermissions
     worker_type: str
     worker_home: Path
     """The base directory for worker files.

@@ -113,7 +113,7 @@ class BaseWorker(Worker, ABC):
         loaded = await self.send_and_wait_for_response(
             LoadQPyPackage(location=package_location, main=main),
             LoadQPyPackage.Response,
-            self.permissions.bootstrap_timeout if self.permissions else 4,
+            self.permissions.bootstrap_timeout,
         )
 
         root_package_hash = package_location.hash if isinstance(package_location, ZipPackageLocation) else None

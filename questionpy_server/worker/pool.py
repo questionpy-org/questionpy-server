@@ -25,7 +25,6 @@ from questionpy_server.worker.runtime.package_location import (
 )
 
 from . import Worker, WorkerState
-from .impl.thread import ThreadWorker
 
 _log = logging.getLogger(__name__)
 
@@ -35,10 +34,6 @@ class _WorkerPoolMemoryError(QPyBaseError):
 
     def __init__(self) -> None:
         super().__init__("Cannot free the required amount of memory. This is likely a bug.")
-
-
-def _memory_limit_or_zero(permissions: WorkerPermissions | None) -> int:
-    return permissions.memory if permissions else 0
 
 
 class _IdleWorkersIdentifier(NamedTuple):
@@ -169,9 +164,8 @@ class WorkerPool:
         # Stop the worker and free the memory.
         await worker.stop(10)
 
-        max_memory = _memory_limit_or_zero(worker.permissions)
-        self._memory_idle -= max_memory
-        return max_memory
+        self._memory_idle -= worker.permissions.memory
+        return worker.permissions.memory
 
     async def _free_memory(self, required_memory: int) -> None:
         """Stops idle workers until the required amount of memory is available."""
@@ -221,7 +215,7 @@ class WorkerPool:
                 del self._idle_workers[identifier]
             self._oldest_idle_workers.remove((worker, identifier))
 
-            self._memory_idle -= _memory_limit_or_zero(worker.permissions)
+            self._memory_idle -= worker.permissions.memory
         else:
             # We need to create a new worker - free as much memory as needed to start the worker.
             await self._free_memory(permissions.memory)
@@ -234,27 +228,26 @@ class WorkerPool:
             await worker.start()
 
         # Reserve the memory.
-        self._memory_in_use += permissions.memory if self._worker_type is not ThreadWorker else 0
+        self._memory_in_use += permissions.memory
 
         return worker
 
     async def _handle_idle_worker(self, package: PackageLocation, lms: int, context: str, worker: Worker) -> None:
         """Adds a worker to the pool of reusable workers."""
         # Free reserved memory.
-        self._memory_in_use -= _memory_limit_or_zero(worker.permissions)
+        self._memory_in_use -= worker.permissions.memory
 
         # Check if the worker is idling.
         if worker.state == WorkerState.IDLE:
             # Free as much memory as need to store the idle worker.
-            required_memory = _memory_limit_or_zero(worker.permissions)
-            await self._free_memory(required_memory)
+            await self._free_memory(worker.permissions.memory)
 
             # Add the worker.
             identifier = _IdleWorkersIdentifier(package, lms, context)
             self._idle_workers[identifier].appendleft(worker)
             self._oldest_idle_workers.appendleft((worker, identifier))
 
-            self._memory_idle += _memory_limit_or_zero(worker.permissions)
+            self._memory_idle += worker.permissions.memory
         else:
             # We cannot reuse this worker as it is not idling.
             await worker.stop(10)
