@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Annotated
 from zipfile import BadZipFile, ZipFile
 
-from pydantic import ByteSize, PlainSerializer, PlainValidator, ValidationError
+from pydantic import PlainSerializer, PlainValidator, ValidationError
 from semver import VersionInfo as _Version
 
 from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, MAX_MANIFEST_SIZE
@@ -31,7 +31,7 @@ def _read_manifest_sync(package_path: Path) -> ComparableManifest:
             buffer = manifest_file.read(MAX_MANIFEST_SIZE + 1)
 
             if len(buffer) > MAX_MANIFEST_SIZE:
-                msg = f"Manifest is too large. Maximal size is {ByteSize(MAX_MANIFEST_SIZE).human_readable()}."
+                msg = f"Manifest is too large. Maximal size is {MAX_MANIFEST_SIZE.human_readable()}."
                 raise ManifestError(msg)
 
             return ComparableManifest.model_validate_json(buffer)

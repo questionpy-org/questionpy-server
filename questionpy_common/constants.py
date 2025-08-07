@@ -20,4 +20,4 @@ DIST_DIR: Final[str] = "dist"
 
 MAX_QPY_DEPENDENCY_LEVELS: Final[int] = 5
 
-MAX_MANIFEST_SIZE: Final[int] = 1 * MiB
+MAX_MANIFEST_SIZE: Final[ByteSize] = ByteSize(1 * MiB)
