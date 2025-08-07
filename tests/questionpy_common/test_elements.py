@@ -48,7 +48,7 @@ _METHOD = "POST"
 _URL = f"packages/{_PACKAGE_HASH}/options"
 
 _QUESTION_STATE = (test_data_path / "question_state" / "question_state.json").read_text()
-_REQUEST_MAIN = json.dumps({"context": 1})
+_REQUEST_MAIN = json.dumps({"context": "tests"})
 
 
 async def test_should_validate_main_body_when_question_state_is_not_given(client: TestClient) -> None:

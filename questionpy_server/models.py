@@ -62,7 +62,7 @@ class MainBaseModel(BaseModel):
 
 
 class RequestBaseData(MainBaseModel):
-    context: int | None = None
+    context: str
 
 
 class PackageDependenciesModel(BaseModel):

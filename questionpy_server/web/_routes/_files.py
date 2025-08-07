@@ -28,10 +28,10 @@ async def serve_static_file(request: web.Request, package: Package) -> web.Respo
         # TODO: Support static files in non-main packages by using namespace and short_name.
         raise HTTPNotImplemented(text="Static file retrieval from non-main packages is not supported yet.")
 
-    permissions = qpy_server.worker_permissions.get_effective_permissions(package, None)
+    permissions = qpy_server.worker_permissions.get_effective_permissions(package, "files")
     location = await package.get_zip_package_location()
     worker: Worker
-    async with qpy_server.worker_pool.get_worker(location, 0, None, permissions) as worker:
+    async with qpy_server.worker_pool.get_worker(location, 0, "files", permissions) as worker:
         try:
             file = await worker.get_static_file(path)
         except FileNotFoundError as e:

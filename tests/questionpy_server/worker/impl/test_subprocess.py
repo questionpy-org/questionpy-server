@@ -25,7 +25,7 @@ from tests.questionpy_server.worker.impl.conftest import patch_worker_pool
 
 @pytest.mark.parametrize("worker_pool", [SubprocessWorker], indirect=True)
 async def test_should_apply_limits(worker_pool: WorkerPool) -> None:
-    async with worker_pool.get_worker(PACKAGE, 1, 1, DEFAULT_WORKER_PERMISSIONS) as worker:
+    async with worker_pool.get_worker(PACKAGE, 1, "tests", DEFAULT_WORKER_PERMISSIONS) as worker:
         assert isinstance(worker, SubprocessWorker)
         assert worker._proc
         # Python's resource package can only get the rlimit of other processes on Linux, so we use psutil.
@@ -52,7 +52,7 @@ async def test_should_raise_cpu_timout_error(worker_pool: WorkerPool) -> None:
         start_time = time()
         # Change the timeout for faster testing.
         with pytest.raises(WorkerStartError) as exc_info, patch.object(BaseWorker, "_init_worker_timeout", 0.05):
-            async with worker_pool.get_worker(PACKAGE, 1, 1, DEFAULT_WORKER_PERMISSIONS):
+            async with worker_pool.get_worker(PACKAGE, 1, "tests", DEFAULT_WORKER_PERMISSIONS):
                 pass
         assert isinstance(exc_info.value.__cause__, WorkerCPUTimeLimitExceededError)
         assert 0.05 < (time() - start_time) < 0.5
@@ -79,7 +79,7 @@ async def test_should_raise_real_timout_error(worker_pool: WorkerPool) -> None:
             patch.object(BaseWorker, "_init_worker_timeout", 0.6),
             patch.object(LimitTimeUsageMixin, "_real_time_limit_factor", 1.0),
         ):
-            async with worker_pool.get_worker(PACKAGE, 1, 1, DEFAULT_WORKER_PERMISSIONS) as worker:
+            async with worker_pool.get_worker(PACKAGE, 1, "tests", DEFAULT_WORKER_PERMISSIONS) as worker:
                 await worker.get_manifest()
         assert isinstance(exc_info.value.__cause__, WorkerRealTimeLimitExceededError)
         assert 0.6 < (time() - start_time) < 2.0
