@@ -14,7 +14,7 @@ from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff,
 
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.hash import calculate_hash
-from questionpy_server.worker.runtime.messages import BaseWorkerError
+from questionpy_server.utils.manifest import ManifestError
 
 if TYPE_CHECKING:
     from questionpy_server.collector.indexer import Indexer
@@ -173,7 +173,7 @@ class LocalCollector(BaseCollector):
             try:
                 await self.indexer.register_package(pkg_hash, pkg_path, self)
                 self.map.insert(pkg_hash, pkg_path)
-            except BaseWorkerError:
+            except ManifestError:
                 self._log.warning("'%s' is an invalid package. Skipping.", pkg_path)
                 self._log.debug("Following error was thrown.", exc_info=True)
                 return False

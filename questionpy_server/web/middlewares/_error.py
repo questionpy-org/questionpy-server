@@ -11,6 +11,7 @@ from aiohttp.web_response import StreamResponse
 import questionpy_server.web.errors as web_error
 from questionpy_common.api.qtype import InvalidAttemptStateError, InvalidQuestionStateError, OptionsFormValidationError
 from questionpy_common.error import QPyBaseError
+from questionpy_server.utils.manifest import ManifestError
 from questionpy_server.worker.exception import (
     StaticFileSizeMismatchError,
     WorkerCPUTimeLimitExceededError,
@@ -23,6 +24,7 @@ from questionpy_server.worker.runtime.messages import WorkerMemoryLimitExceededE
 exception_map: dict[type[QPyBaseError], type[web_error.QpyWebError]] = {
     InvalidAttemptStateError: web_error.InvalidAttemptStateError,
     InvalidQuestionStateError: web_error.InvalidQuestionStateError,
+    ManifestError: web_error.InvalidPackageError,
     StaticFileSizeMismatchError: web_error.InvalidPackageError,
     WorkerCPUTimeLimitExceededError: web_error.WorkerTimeoutError,
     WorkerRealTimeLimitExceededError: web_error.WorkerTimeoutError,

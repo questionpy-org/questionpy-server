@@ -15,7 +15,9 @@ GiB: Final[int] = 1024 * MiB
 MAX_PACKAGE_SIZE: Final[ByteSize] = ByteSize(20 * MiB)
 MAX_QUESTION_STATE_SIZE: Final[ByteSize] = ByteSize(2 * MiB)
 
-MANIFEST_FILENAME = "qpy_manifest.json"
-DIST_DIR = "dist"
+MANIFEST_FILENAME: Final[str] = "qpy_manifest.json"
+DIST_DIR: Final[str] = "dist"
 
-MAX_QPY_DEPENDENCY_LEVELS = 5
+MAX_QPY_DEPENDENCY_LEVELS: Final[int] = 5
+
+MAX_MANIFEST_SIZE: Final[ByteSize] = ByteSize(1 * MiB)

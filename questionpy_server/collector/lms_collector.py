@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from questionpy_server.cache import LRUCache
 from questionpy_server.collector.abc import CachedCollector
-from questionpy_server.worker.runtime.messages import BaseWorkerError
+from questionpy_server.utils.manifest import ManifestError
 
 if TYPE_CHECKING:
     from questionpy_server.collector.indexer import Indexer
@@ -36,7 +36,7 @@ class LMSCollector(CachedCollector):
             try:
                 await self.indexer.register_package(package_hash, file.path, self)
                 count += 1
-            except BaseWorkerError:
+            except ManifestError:
                 invalid_count += 1
                 await self._cache.remove(package_hash)
 
@@ -56,7 +56,7 @@ class LMSCollector(CachedCollector):
 
         try:
             return await self.indexer.register_package(package_container.hash, package_path, self)
-        except BaseWorkerError:
+        except ManifestError:
             # Faulty package - remove the file.
             await self._cache.remove(package_container.hash)
             raise

@@ -13,7 +13,7 @@ from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.hash import HashContainer, calculate_hash
 from questionpy_server.package import Package
-from questionpy_server.worker.runtime.messages import BaseWorkerError
+from questionpy_server.utils.manifest import ManifestError
 from tests.conftest import PACKAGE
 
 
@@ -120,7 +120,7 @@ async def test_lms_collector_raises_error_on_faulty_package_on_put(
     invalid_package = b"this is a invalid package"
     hash_container = HashContainer(invalid_package, calculate_hash(invalid_package))
 
-    with pytest.raises(BaseWorkerError):
+    with pytest.raises(ManifestError):
         await lms_collector.put(hash_container)
 
     # The corrupt package should be removed from the cache.
