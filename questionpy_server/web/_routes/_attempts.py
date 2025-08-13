@@ -2,8 +2,6 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from typing import TYPE_CHECKING
-
 from aiohttp import web
 
 from questionpy_server.models import (
@@ -16,11 +14,8 @@ from questionpy_server.models import (
 )
 from questionpy_server.package import Package
 from questionpy_server.web._decorators import ensure_required_parts
-from questionpy_server.web._utils import DEFAULT_REQUEST_USER, pydantic_json_response
+from questionpy_server.web._utils import CURRENT_USER_KEY, DEFAULT_REQUEST_USER, pydantic_json_response
 from questionpy_server.web.app import QPyServer
-
-if TYPE_CHECKING:
-    from questionpy_server.worker import Worker
 
 attempt_routes = web.RouteTableDef()
 
@@ -32,10 +27,11 @@ async def post_attempt_start(
 ) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
-    permissions = qpyserver.worker_permissions.get_effective_permissions(package, data.context)
+    current_user = request.get(CURRENT_USER_KEY)
+    permissions = qpyserver.worker_permissions.get_effective_permissions(package, current_user, data.context)
     location = await package.get_zip_package_location()
-    worker: Worker
-    async with qpyserver.worker_pool.get_worker(location, 0, data.context, permissions) as worker:
+
+    async with qpyserver.worker_pool.get_worker(location, current_user, data.context, permissions) as worker:
         attempt = await worker.start_attempt(DEFAULT_REQUEST_USER, question_state.decode(), data.variant)
         packages = worker.get_loaded_packages()
 
@@ -50,10 +46,11 @@ async def post_attempt_view(
 ) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
-    permissions = qpyserver.worker_permissions.get_effective_permissions(package, data.context)
+    current_user = request.get(CURRENT_USER_KEY)
+    permissions = qpyserver.worker_permissions.get_effective_permissions(package, current_user, data.context)
     location = await package.get_zip_package_location()
-    worker: Worker
-    async with qpyserver.worker_pool.get_worker(location, 0, data.context, permissions) as worker:
+
+    async with qpyserver.worker_pool.get_worker(location, current_user, data.context, permissions) as worker:
         attempt = await worker.get_attempt(
             request_user=DEFAULT_REQUEST_USER,
             question_state=question_state.decode(),
@@ -74,10 +71,11 @@ async def post_attempt_score(
 ) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
-    permissions = qpyserver.worker_permissions.get_effective_permissions(package, data.context)
+    current_user = request.get(CURRENT_USER_KEY)
+    permissions = qpyserver.worker_permissions.get_effective_permissions(package, current_user, data.context)
     location = await package.get_zip_package_location()
-    worker: Worker
-    async with qpyserver.worker_pool.get_worker(location, 0, data.context, permissions) as worker:
+
+    async with qpyserver.worker_pool.get_worker(location, current_user, data.context, permissions) as worker:
         attempt_scored = await worker.score_attempt(
             request_user=DEFAULT_REQUEST_USER,
             question_state=question_state.decode(),

@@ -38,7 +38,7 @@ class _WorkerPoolMemoryError(QPyBaseError):
 
 class _IdleWorkersIdentifier(NamedTuple):
     package: PackageLocation
-    lms: int
+    user: str | None
     context: str
 
 
@@ -100,7 +100,7 @@ class WorkerPool:
 
     @asynccontextmanager
     async def get_worker(
-        self, package: PackageLocation, lms: int, context: str, permissions: WorkerPermissions
+        self, package: PackageLocation, user: str | None, context: str, permissions: WorkerPermissions
     ) -> AsyncIterator[Worker]:
         """Get a (new) worker executing a QuestionPy package.
 
@@ -108,7 +108,7 @@ class WorkerPool:
 
         Args:
             package: path to QuestionPy package
-            lms: id of the LMS
+            user: the user requesting the worker
             context: context within the lms
             permissions: worker permissions
 
@@ -132,14 +132,14 @@ class WorkerPool:
                 # `Lock.acquire` is not explicitly documented as fair. This ensures that no starvation occurs.
                 async with self._lock, self._condition:
                     await self._condition.wait_for(lambda: self._memory_available(permissions.memory))
-                    worker = await self._create_or_reuse_worker(package, lms, context, permissions)
+                    worker = await self._create_or_reuse_worker(package, user, context, permissions)
                     self._workers_in_use += 1
 
                 yield worker
             finally:
                 if worker:
                     async with self._condition:
-                        await self._handle_idle_worker(package, lms, context, worker)
+                        await self._handle_idle_worker(package, user, context, worker)
                         self._condition.notify()
                         self._workers_in_use -= 1
 
@@ -200,13 +200,12 @@ class WorkerPool:
         return f"{package_part}-{index}"
 
     async def _create_or_reuse_worker(
-        self, package: PackageLocation, lms: int, context: str, permissions: WorkerPermissions
+        self, package: PackageLocation, user: str | None, context: str, permissions: WorkerPermissions
     ) -> Worker:
         """If possible, get an idle worker or create a new one."""
-        # Since the `WorkerPermissions` only dependent on the the `lms` and `context` the worker
+        # Since the `WorkerPermissions` only dependent on the `user` and `context` the worker
         # permissions are the same.
-        # TODO: this is currently not entirely true as the `lms` (later `user`) is not accounted for yet.
-        identifier = _IdleWorkersIdentifier(package, lms, context)
+        identifier = _IdleWorkersIdentifier(package, user, context)
         if identifier in self._idle_workers:
             # There is an idle worker with this package loaded - reuse the most recent one.
             worker = self._idle_workers[identifier].popleft()
@@ -232,7 +231,9 @@ class WorkerPool:
 
         return worker
 
-    async def _handle_idle_worker(self, package: PackageLocation, lms: int, context: str, worker: Worker) -> None:
+    async def _handle_idle_worker(
+        self, package: PackageLocation, user: str | None, context: str, worker: Worker
+    ) -> None:
         """Adds a worker to the pool of reusable workers."""
         # Free reserved memory.
         self._memory_in_use -= worker.permissions.memory
@@ -243,7 +244,7 @@ class WorkerPool:
             await self._free_memory(worker.permissions.memory)
 
             # Add the worker.
-            identifier = _IdleWorkersIdentifier(package, lms, context)
+            identifier = _IdleWorkersIdentifier(package, user, context)
             self._idle_workers[identifier].appendleft(worker)
             self._oldest_idle_workers.appendleft((worker, identifier))
 

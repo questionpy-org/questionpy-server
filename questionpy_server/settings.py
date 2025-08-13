@@ -119,6 +119,7 @@ class PackageOrigin(BaseModel):
 
 class PackageSelector(BaseModel):
     origin: PackageOrigin = PackageOrigin()
+    request_user: str = "*"
     request_context: str = "*"
     namespace: str = "*"
     short_name: str = "*"

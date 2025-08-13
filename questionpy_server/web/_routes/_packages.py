@@ -2,20 +2,15 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-from typing import TYPE_CHECKING
-
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPMethodNotAllowed
 
 from questionpy_server.models import QuestionCreateArguments, QuestionEditFormResponse, RequestBaseData
 from questionpy_server.package import Package
 from questionpy_server.web._decorators import ensure_package, ensure_required_parts
-from questionpy_server.web._utils import DEFAULT_REQUEST_USER, pydantic_json_response
+from questionpy_server.web._utils import CURRENT_USER_KEY, DEFAULT_REQUEST_USER, pydantic_json_response
 from questionpy_server.web.app import QPyServer
 from questionpy_server.web.errors import PackageNotFoundError
-
-if TYPE_CHECKING:
-    from questionpy_server.worker import Worker
 
 package_routes = web.RouteTableDef()
 
@@ -48,10 +43,11 @@ async def post_options(
     """Get the options form definition that allow a question creator to customize a question."""
     qpyserver = request.app[QPyServer.APP_KEY]
 
-    permissions = qpyserver.worker_permissions.get_effective_permissions(package, data.context)
+    current_user = request.get(CURRENT_USER_KEY)
+    permissions = qpyserver.worker_permissions.get_effective_permissions(package, current_user, data.context)
     location = await package.get_zip_package_location()
-    worker: Worker
-    async with qpyserver.worker_pool.get_worker(location, 0, data.context, permissions) as worker:
+
+    async with qpyserver.worker_pool.get_worker(location, current_user, data.context, permissions) as worker:
         definition, form_data = await worker.get_options_form(
             DEFAULT_REQUEST_USER, question_state.decode() if question_state else None
         )
@@ -69,10 +65,11 @@ async def post_question(
 ) -> web.Response:
     qpyserver = request.app[QPyServer.APP_KEY]
 
-    permissions = qpyserver.worker_permissions.get_effective_permissions(package, data.context)
+    current_user = request.get(CURRENT_USER_KEY)
+    permissions = qpyserver.worker_permissions.get_effective_permissions(package, current_user, data.context)
     location = await package.get_zip_package_location()
-    worker: Worker
-    async with qpyserver.worker_pool.get_worker(location, 0, data.context, permissions) as worker:
+
+    async with qpyserver.worker_pool.get_worker(location, current_user, data.context, permissions) as worker:
         question = await worker.create_question_from_options(
             DEFAULT_REQUEST_USER, question_state.decode() if question_state else None, data.form_data
         )
