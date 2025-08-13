@@ -53,9 +53,9 @@ class EnvironmentImpl(Environment):
     _type: str
     _packages: dict[PackageNamespaceAndShortName, ImportablePackage]
     _on_request_callbacks: list[OnRequestCallback]
+    _permissions: WorkerPermissions
     _main_package: ImportablePackage | None = None
     _request_user: RequestUser | None = None
-    _permissions: WorkerPermissions | None = None
 
     @property
     def type(self) -> str:
@@ -77,7 +77,7 @@ class EnvironmentImpl(Environment):
         return self._request_user
 
     @property
-    def permissions(self) -> WorkerPermissions | None:
+    def permissions(self) -> WorkerPermissions:
         return self._permissions
 
     def register_on_request_callback(self, callback: OnRequestCallback) -> None:
@@ -128,7 +128,7 @@ class WorkerManager:
 
         self._worker_home = init_msg.worker_home
 
-        if init_msg.permissions:
+        if init_msg.worker_type != "thread":
             # Limit memory usage.
             resource.setrlimit(resource.RLIMIT_AS, (init_msg.permissions.memory, init_msg.permissions.memory))
 

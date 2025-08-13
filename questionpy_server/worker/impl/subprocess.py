@@ -4,7 +4,6 @@
 
 import asyncio
 import logging
-import math
 import re
 import signal
 import sys
@@ -160,7 +159,7 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
     ) -> _T:
         try:
             if timeout is None:
-                timeout = self.permissions.request_timeout if self.permissions else math.inf
+                timeout = self.permissions.request_timeout
             self._set_time_limit(timeout)
             return await super().send_and_wait_for_response(message, expected_response_message, timeout)
         finally:

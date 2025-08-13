@@ -120,8 +120,8 @@ class Environment(Protocol):
         """
 
     @property
-    def permissions(self) -> WorkerPermissions | None:
-        """The permissions of the worker, if any."""
+    def permissions(self) -> WorkerPermissions:
+        """The permissions of the worker."""
 
     @property
     def request_user(self) -> RequestUser | None:

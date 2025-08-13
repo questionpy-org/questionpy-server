@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import NotRequired, TypedDict, TypeVar, Unpack
+from typing import TypedDict, TypeVar, Unpack
 
 from pydantic import BaseModel
 
@@ -58,7 +58,7 @@ class WorkerArgs(TypedDict):
     """The main package that the worker should load when [start][questionpy_server.worker.Worker.start] is called."""
     worker_home: Path
     """An existing directory owned by the worker, with the same lifetime as the worker."""
-    permissions: NotRequired[WorkerPermissions | None]
+    permissions: WorkerPermissions
     """The worker permissions."""
 
 
