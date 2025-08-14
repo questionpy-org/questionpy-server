@@ -23,12 +23,12 @@ class _ExceptionMixin(web.HTTPException):
         web_logger.info(msg)
 
 
-class WorkerPermissionError(web.HTTPForbidden, _ExceptionMixin):
+class PackagePermissionError(web.HTTPForbidden, _ExceptionMixin):
     def __init__(self, *, reason: str | None, temporary: bool) -> None:
         super().__init__(
             msg="Question package requested more permissions than allowed",
             body=RequestError(
-                error_code=RequestErrorCode.WORKER_PERMISSION_ERROR,
+                error_code=RequestErrorCode.PACKAGE_PERMISSION_ERROR,
                 reason=reason,
                 temporary=temporary,
             ),
@@ -155,7 +155,7 @@ class ServerError(web.HTTPInternalServerError):
 
 
 QpyWebError = (
-    WorkerPermissionError
+    PackagePermissionError
     | WorkerTimeoutError
     | OutOfMemoryError
     | InvalidAttemptStateError

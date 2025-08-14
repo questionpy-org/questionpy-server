@@ -14,7 +14,7 @@ from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, Atte
 from questionpy_common.api.qtype import InvalidQuestionStateError, OptionsFormValidationError
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import PackageNamespaceAndShortName, RequestInfo, WorkerPermissions
+from questionpy_common.environment import PackageNamespaceAndShortName, PackagePermissions, RequestInfo
 from questionpy_common.error import QPyBaseError
 from questionpy_common.manifest import Manifest
 from questionpy_server.worker.runtime.package_location import PackageLocation
@@ -88,7 +88,7 @@ class InitWorker(MessageToWorker):
     """Give worker some basic information."""
 
     message_id: ClassVar[MessageIds] = MessageIds.INIT_WORKER
-    permissions: WorkerPermissions
+    permissions: PackagePermissions
     worker_type: str
     worker_home: Path
     """The base directory for worker files.

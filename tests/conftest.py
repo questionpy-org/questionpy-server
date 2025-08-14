@@ -14,18 +14,18 @@ from aiohttp.pytest_plugin import AiohttpClient
 from aiohttp.test_utils import TestClient
 
 from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, MiB
-from questionpy_common.environment import WorkerPermissions
+from questionpy_common.environment import PackagePermissions
 from questionpy_common.manifest import PackageFile
 from questionpy_server.hash import calculate_hash
 from questionpy_server.settings import (
     AuthSettings,
     CacheSettings,
     CollectorSettings,
-    CompleteWorkerPermissions,
+    CompletePackagePermissions,
     GeneralSettings,
+    PackagePermissionsSettings,
     Settings,
     WebserviceSettings,
-    WorkerPermissionsSettings,
     WorkerPoolSettings,
 )
 from questionpy_server.utils.manifest import ComparableManifest
@@ -119,7 +119,7 @@ test_data_path = Path(__file__).parent / "test_data"
 package_dir = test_data_path / "package"
 PACKAGE = TestZipPackage(package_dir / "package_1.qpy")
 PACKAGE_2 = TestZipPackage(package_dir / "package_2.qpy")
-DEFAULT_WORKER_PERMISSIONS = WorkerPermissions(**CompleteWorkerPermissions().model_dump())
+DEFAULT_PACKAGE_PERMISSIONS = PackagePermissions(**CompletePackagePermissions().model_dump())
 
 
 @pytest.fixture
@@ -130,7 +130,7 @@ def qpy_server(tmp_path_factory: pytest.TempPathFactory) -> QPyServer:
             general=GeneralSettings(),
             webservice=WebserviceSettings(listen_address="127.0.0.1", listen_port=0),
             worker_pool=WorkerPoolSettings(type=ThreadWorker),
-            permissions=WorkerPermissionsSettings(),
+            permissions=PackagePermissionsSettings(),
             cache=CacheSettings(directory=tmp_path_factory.mktemp("qpy_cache")),
             collector=CollectorSettings(),
             auth=AuthSettings(enabled=False),
