@@ -21,7 +21,7 @@ from pydantic_settings import (
 )
 
 from questionpy_common.constants import MAX_PACKAGE_SIZE, GiB, MiB
-from questionpy_common.manifest import PartialWorkerPermissions, ensure_is_valid_name
+from questionpy_common.manifest import PartialPackagePermissions, ensure_is_valid_name
 from questionpy_server.worker import Worker
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
 
@@ -155,14 +155,14 @@ class PackageSelector(BaseModel):
 MainProcessExecutionModeValues = {"container", "trusted"}
 
 
-class SpecificWorkerPermissions(BaseModel):
+class SpecificPackagePermissions(BaseModel):
     package_selector: PackageSelector = PackageSelector()
-    auto_grant_permissions: PartialWorkerPermissions | None = None
-    override_permissions: PartialWorkerPermissions | None = None
+    auto_grant_permissions: PartialPackagePermissions | None = None
+    override_permissions: PartialPackagePermissions | None = None
 
     @field_validator("auto_grant_permissions", "override_permissions")
     @classmethod
-    def check_permissions(cls, value: PartialWorkerPermissions | None) -> PartialWorkerPermissions | None:
+    def check_permissions(cls, value: PartialPackagePermissions | None) -> PartialPackagePermissions | None:
         if (
             value
             and value.main_process_execution_modes
@@ -173,7 +173,7 @@ class SpecificWorkerPermissions(BaseModel):
         return value
 
 
-class CompleteWorkerPermissions(BaseModel):
+class CompletePackagePermissions(BaseModel):
     cpus: int = 1
     memory: ByteSize = ByteSize(200 * MiB)
     request_timeout: PositiveInt = 10
@@ -189,9 +189,9 @@ class CompleteWorkerPermissions(BaseModel):
         return value
 
 
-class WorkerPermissionsSettings(BaseModel):
-    auto_grant_permissions: CompleteWorkerPermissions = CompleteWorkerPermissions()
-    packages: list[SpecificWorkerPermissions] = []
+class PackagePermissionsSettings(BaseModel):
+    auto_grant_permissions: CompletePackagePermissions = CompletePackagePermissions()
+    packages: list[SpecificPackagePermissions] = []
 
 
 class CacheSettings(BaseModel):
@@ -272,7 +272,7 @@ class Settings(BaseSettings):
     general: GeneralSettings
     webservice: WebserviceSettings
     worker_pool: WorkerPoolSettings
-    permissions: WorkerPermissionsSettings
+    permissions: PackagePermissionsSettings
     cache: CacheSettings
     collector: CollectorSettings
     auth: AuthSettings

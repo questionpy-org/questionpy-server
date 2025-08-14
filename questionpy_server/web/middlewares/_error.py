@@ -18,20 +18,20 @@ from questionpy_server.worker.exception import (
     WorkerRealTimeLimitExceededError,
     WorkerStartError,
 )
-from questionpy_server.worker.permissions import WorkerPermissionError
+from questionpy_server.worker.permissions import PackagePermissionError
 from questionpy_server.worker.runtime.messages import WorkerMemoryLimitExceededError, WorkerUnknownError
 
 exception_map: dict[type[QPyBaseError], type[web_error.QpyWebError]] = {
     InvalidAttemptStateError: web_error.InvalidAttemptStateError,
     InvalidQuestionStateError: web_error.InvalidQuestionStateError,
     ManifestError: web_error.InvalidPackageError,
+    PackagePermissionError: web_error.PackagePermissionError,
     StaticFileSizeMismatchError: web_error.InvalidPackageError,
     WorkerCPUTimeLimitExceededError: web_error.WorkerTimeoutError,
     WorkerRealTimeLimitExceededError: web_error.WorkerTimeoutError,
     WorkerStartError: web_error.ServerError,
     WorkerMemoryLimitExceededError: web_error.OutOfMemoryError,
     WorkerUnknownError: web_error.PackageError,
-    WorkerPermissionError: web_error.WorkerPermissionError,
 }
 
 

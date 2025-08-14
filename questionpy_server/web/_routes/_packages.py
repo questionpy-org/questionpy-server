@@ -44,7 +44,7 @@ async def post_options(
     qpyserver = request.app[QPyServer.APP_KEY]
 
     current_user = request.get(CURRENT_USER_KEY)
-    permissions = qpyserver.worker_permissions.get_effective_permissions(package, current_user, data.context)
+    permissions = qpyserver.package_permissions.get_effective_permissions(package, current_user, data.context)
     location = await package.get_zip_package_location()
 
     async with qpyserver.worker_pool.get_worker(location, current_user, data.context, permissions) as worker:
@@ -66,7 +66,7 @@ async def post_question(
     qpyserver = request.app[QPyServer.APP_KEY]
 
     current_user = request.get(CURRENT_USER_KEY)
-    permissions = qpyserver.worker_permissions.get_effective_permissions(package, current_user, data.context)
+    permissions = qpyserver.package_permissions.get_effective_permissions(package, current_user, data.context)
     location = await package.get_zip_package_location()
 
     async with qpyserver.worker_pool.get_worker(location, current_user, data.context, permissions) as worker:

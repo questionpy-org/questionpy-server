@@ -1128,7 +1128,7 @@ components:
         error_code:
           type: string
           enum:
-            - WORKER_PERMISSION_ERROR
+            - PACKAGE_PERMISSION_ERROR
             - QUEUE_WAITING_TIMEOUT
             - WORKER_TIMEOUT
             - OUT_OF_MEMORY
@@ -1142,7 +1142,7 @@ components:
             - CALLBACK_API_ERROR
             - SERVER_ERROR
           description: >
-            * `WORKER_PERMISSION_ERROR` - The package requested more worker permissions than allowed.
+            * `PACKAGE_PERMISSION_ERROR` - The package requested more permissions than allowed.
             * `QUEUE_WAITING_TIMEOUT` - The request has been waiting too long in a job queue. Try again later.
             * `WORKER_TIMEOUT` - Question package did not answer in a reasonable amount of time.
             * `OUT_OF_MEMORY` - Question package reached its memory limit.

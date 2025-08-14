@@ -21,9 +21,9 @@ __all__ = [
     "PackageNamespaceAndShortName",
     "PackageNotInitializedError",
     "PackageNotLoadedError",
+    "PackagePermissions",
     "PackageState",
     "RequestInfo",
-    "WorkerPermissions",
     "get_qpy_environment",
     "set_qpy_environment",
 ]
@@ -37,8 +37,8 @@ class RequestInfo:
 
 
 @dataclass
-class WorkerPermissions:
-    """Permissions of the worker."""
+class PackagePermissions:
+    """The permissions of the package."""
 
     cpus: int
     memory: int
@@ -120,7 +120,7 @@ class Environment(Protocol):
         """
 
     @property
-    def permissions(self) -> WorkerPermissions:
+    def permissions(self) -> PackagePermissions:
         """The permissions of the worker."""
 
     @property

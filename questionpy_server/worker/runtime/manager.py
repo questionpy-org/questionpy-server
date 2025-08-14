@@ -17,9 +17,9 @@ from questionpy_common.environment import (
     OnRequestCallback,
     Package,
     PackageNamespaceAndShortName,
+    PackagePermissions,
     PackageState,
     RequestInfo,
-    WorkerPermissions,
     set_qpy_environment,
 )
 from questionpy_common.manifest import PackageType
@@ -53,7 +53,7 @@ class EnvironmentImpl(Environment):
     _type: str
     _packages: dict[PackageNamespaceAndShortName, ImportablePackage]
     _on_request_callbacks: list[OnRequestCallback]
-    _permissions: WorkerPermissions
+    _permissions: PackagePermissions
     _main_package: ImportablePackage | None = None
     _request_info: RequestInfo | None = None
 
@@ -77,7 +77,7 @@ class EnvironmentImpl(Environment):
         return self._request_info
 
     @property
-    def permissions(self) -> WorkerPermissions:
+    def permissions(self) -> PackagePermissions:
         return self._permissions
 
     def register_on_request_callback(self, callback: OnRequestCallback) -> None:

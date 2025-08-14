@@ -14,7 +14,7 @@ from typing import NamedTuple, Self, assert_never
 
 from pydantic import ByteSize
 
-from questionpy_common.environment import WorkerPermissions
+from questionpy_common.environment import PackagePermissions
 from questionpy_common.error import QPyBaseError
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
 from questionpy_server.worker.runtime.package_location import (
@@ -100,7 +100,7 @@ class WorkerPool:
 
     @asynccontextmanager
     async def get_worker(
-        self, package: PackageLocation, user: str | None, context: str, permissions: WorkerPermissions
+        self, package: PackageLocation, user: str | None, context: str, permissions: PackagePermissions
     ) -> AsyncIterator[Worker]:
         """Get a (new) worker executing a QuestionPy package.
 
@@ -110,7 +110,7 @@ class WorkerPool:
             package: path to QuestionPy package
             user: the user requesting the worker
             context: context within the lms
-            permissions: worker permissions
+            permissions: package permissions
 
         Returns:
             A worker
@@ -200,10 +200,10 @@ class WorkerPool:
         return f"{package_part}-{index}"
 
     async def _create_or_reuse_worker(
-        self, package: PackageLocation, user: str | None, context: str, permissions: WorkerPermissions
+        self, package: PackageLocation, user: str | None, context: str, permissions: PackagePermissions
     ) -> Worker:
         """If possible, get an idle worker or create a new one."""
-        # Since the `WorkerPermissions` only dependent on the `user` and `context` the worker
+        # Since the `PackagePermissions` only dependent on the `user` and `context` the worker
         # permissions are the same.
         identifier = _IdleWorkersIdentifier(package, user, context)
         if identifier in self._idle_workers:

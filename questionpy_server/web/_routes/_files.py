@@ -26,7 +26,7 @@ async def serve_static_file(request: web.Request, package: Package) -> web.Respo
         raise HTTPNotImplemented(text="Static file retrieval from non-main packages is not supported yet.")
 
     current_user = request.get(CURRENT_USER_KEY)
-    permissions = qpy_server.worker_permissions.get_effective_permissions(package, current_user, "files")
+    permissions = qpy_server.package_permissions.get_effective_permissions(package, current_user, "files")
     location = await package.get_zip_package_location()
 
     async with qpy_server.worker_pool.get_worker(location, current_user, "files", permissions) as worker:

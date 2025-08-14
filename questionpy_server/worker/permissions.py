@@ -4,26 +4,26 @@
 import logging
 from typing import NamedTuple
 
-from questionpy_common.environment import WorkerPermissions as EnvironmentWorkerPermissions
+from questionpy_common.environment import PackagePermissions as EnvironmentPackagePermissions
 from questionpy_common.error import QPyBaseError
 from questionpy_server.cache import LRUCacheMemory
 from questionpy_server.package import Package
 from questionpy_server.settings import (
-    CompleteWorkerPermissions,
+    CompletePackagePermissions,
     MainProcessExecutionModeValues,
+    PackagePermissionsSettings,
     PackageSelector,
-    SpecificWorkerPermissions,
-    WorkerPermissionsSettings,
+    SpecificPackagePermissions,
 )
 
 _log = logging.getLogger(__name__)
 
 
-class WorkerPermissionError(QPyBaseError):
+class PackagePermissionError(QPyBaseError):
     pass
 
 
-def _has_enough_permissions(allowed: CompleteWorkerPermissions, requested: CompleteWorkerPermissions) -> bool:
+def _has_enough_permissions(allowed: CompletePackagePermissions, requested: CompletePackagePermissions) -> bool:
     return (
         requested.cpus <= allowed.cpus
         and requested.memory <= allowed.memory
@@ -54,26 +54,26 @@ def _is_selector_matching(selector: PackageSelector, package: Package, user: str
     )
 
 
-class _WorkerPermissionIdentifier(NamedTuple):
+class _PackagePermissionIdentifier(NamedTuple):
     package: Package
     user: str | None
     context: str
 
 
-class WorkerPermissionsHandler:
+class PackagePermissionsHandler:
     """Handles package permissions for a request."""
 
-    def __init__(self, settings: WorkerPermissionsSettings):
-        self._default_permissions = CompleteWorkerPermissions()
+    def __init__(self, settings: PackagePermissionsSettings):
+        self._default_permissions = CompletePackagePermissions()
 
         self._auto_grant_permissions = settings.auto_grant_permissions
         self._specific_package_permissions = settings.packages
 
-        self._cache: LRUCacheMemory[_WorkerPermissionIdentifier, EnvironmentWorkerPermissions] = LRUCacheMemory(
+        self._cache: LRUCacheMemory[_PackagePermissionIdentifier, EnvironmentPackagePermissions] = LRUCacheMemory(
             max_size=128
         )
 
-    def _get_requested_permissions(self, package: Package) -> CompleteWorkerPermissions:
+    def _get_requested_permissions(self, package: Package) -> CompletePackagePermissions:
         requested_permissions = package.manifest.permissions
         if requested_permissions is None:
             # If the package requests no permissions, we use the default ones.
@@ -92,10 +92,10 @@ class WorkerPermissionsHandler:
                     )
 
             requested_permissions_dict = requested_permissions.model_dump(exclude_none=True)
-            actual_permissions = CompleteWorkerPermissions(**requested_permissions_dict)
+            actual_permissions = CompletePackagePermissions(**requested_permissions_dict)
         return actual_permissions
 
-    def _get_actual_auto_grant_permissions(self, permissions: SpecificWorkerPermissions) -> CompleteWorkerPermissions:
+    def _get_actual_auto_grant_permissions(self, permissions: SpecificPackagePermissions) -> CompletePackagePermissions:
         if permissions.auto_grant_permissions is None:
             return self._auto_grant_permissions
 
@@ -104,7 +104,7 @@ class WorkerPermissionsHandler:
 
     def _get_specific_permissions(
         self, package: Package, user: str | None, context: str
-    ) -> SpecificWorkerPermissions | None:
+    ) -> SpecificPackagePermissions | None:
         # We want to select the last defined one if multiple selectors match.
         for permissions in reversed(self._specific_package_permissions):
             if _is_selector_matching(permissions.package_selector, package, user, context):
@@ -113,13 +113,13 @@ class WorkerPermissionsHandler:
 
     def get_effective_permissions(
         self, package: Package, user: str | None, context: str
-    ) -> EnvironmentWorkerPermissions:
+    ) -> EnvironmentPackagePermissions:
         """Gets the effective permissions for a package.
 
         Raises:
-            WorkerPermissionError: If the package does not have enough permissions.
+            PackagePermissionError: If the package does not have enough permissions.
         """
-        key = _WorkerPermissionIdentifier(package, user, context)
+        key = _PackagePermissionIdentifier(package, user, context)
         if cached_permissions := self._cache.get(key):
             return cached_permissions
 
@@ -137,8 +137,8 @@ class WorkerPermissionsHandler:
 
         if not _has_enough_permissions(auto_grant_permissions, requested_permissions):
             msg = f"The package '{package.hash}' requested more permissions than allowed."
-            raise WorkerPermissionError(msg)
+            raise PackagePermissionError(msg)
 
-        effective_permissions = EnvironmentWorkerPermissions(**requested_permissions.model_dump())
+        effective_permissions = EnvironmentPackagePermissions(**requested_permissions.model_dump())
         self._cache.put(key, effective_permissions)
         return effective_permissions

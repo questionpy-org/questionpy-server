@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import RequestInfo, WorkerPermissions
+from questionpy_common.environment import PackagePermissions, RequestInfo
 from questionpy_common.manifest import PackageFile
 from questionpy_server.models import LoadedPackage, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
@@ -58,8 +58,8 @@ class WorkerArgs(TypedDict):
     """The main package that the worker should load when [start][questionpy_server.worker.Worker.start] is called."""
     worker_home: Path
     """An existing directory owned by the worker, with the same lifetime as the worker."""
-    permissions: WorkerPermissions
-    """The worker permissions."""
+    permissions: PackagePermissions
+    """The package permissions."""
 
 
 class Worker(ABC):

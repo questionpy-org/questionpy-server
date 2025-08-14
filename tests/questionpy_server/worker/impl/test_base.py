@@ -15,7 +15,7 @@ from questionpy_server.worker import WorkerState
 from questionpy_server.worker.exception import StaticFileSizeMismatchError, WorkerStartError
 from questionpy_server.worker.runtime.manager import WorkerManager
 from questionpy_server.worker.runtime.messages import WorkerUnknownError
-from tests.conftest import DEFAULT_WORKER_PERMISSIONS, PACKAGE, TestPackageFactory
+from tests.conftest import DEFAULT_PACKAGE_PERMISSIONS, PACKAGE, TestPackageFactory
 from tests.questionpy_server.worker.impl.conftest import patch_worker_pool
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 async def test_should_get_manifest(worker_pool: WorkerPool) -> None:
-    async with worker_pool.get_worker(PACKAGE, "tester", "tests", DEFAULT_WORKER_PERMISSIONS) as worker:
+    async with worker_pool.get_worker(PACKAGE, "tester", "tests", DEFAULT_PACKAGE_PERMISSIONS) as worker:
         manifest = await worker.get_manifest()
         assert manifest == PACKAGE.manifest
 
@@ -41,7 +41,7 @@ async def test_should_get_static_file(
 
     package: PackageLocation = dir_package if package_type == "dir" else package_factory.to_zip_package(dir_package)
 
-    async with worker_pool.get_worker(package, "tester", "tests", DEFAULT_WORKER_PERMISSIONS) as worker:
+    async with worker_pool.get_worker(package, "tester", "tests", DEFAULT_PACKAGE_PERMISSIONS) as worker:
         static_file = await worker.get_static_file(_STATIC_FILE_NAME)
 
     assert static_file.data == _STATIC_FILE_CONTENT.encode()
@@ -58,7 +58,7 @@ async def test_should_raise_file_not_found_error_when_not_in_manifest(
 
     package: PackageLocation = dir_package if package_type == "dir" else package_factory.to_zip_package(dir_package)
 
-    async with worker_pool.get_worker(package, "tester", "tests", DEFAULT_WORKER_PERMISSIONS) as worker:
+    async with worker_pool.get_worker(package, "tester", "tests", DEFAULT_PACKAGE_PERMISSIONS) as worker:
         with pytest.raises(FileNotFoundError):
             await worker.get_static_file(_STATIC_FILE_NAME)
 
@@ -83,7 +83,7 @@ async def test_should_raise_file_not_found_error_when_file_is_outside(
         else package_factory.to_zip_package(dir_package, include_siblings=("my_secret_file",))
     )
 
-    async with worker_pool.get_worker(package, "tester", "tests", DEFAULT_WORKER_PERMISSIONS) as worker:
+    async with worker_pool.get_worker(package, "tester", "tests", DEFAULT_PACKAGE_PERMISSIONS) as worker:
         with caplog.at_level(logging.INFO), pytest.raises(FileNotFoundError):
             await worker.get_static_file("static/../../my_secret_file")
 
@@ -103,7 +103,7 @@ async def test_should_raise_file_not_found_error_when_symlink_target_is_outside(
 
     package.inject_static_file_into_manifest("static/my_secret_file", len(content), "text/plain")
 
-    async with worker_pool.get_worker(package, "tester", "tests", DEFAULT_WORKER_PERMISSIONS) as worker:
+    async with worker_pool.get_worker(package, "tester", "tests", DEFAULT_PACKAGE_PERMISSIONS) as worker:
         with caplog.at_level(logging.INFO), pytest.raises(FileNotFoundError):
             await worker.get_static_file("static/my_secret_file")
 
@@ -119,7 +119,7 @@ async def test_should_raise_file_not_found_error_when_not_on_disk(
 
     package: PackageLocation = dir_package if package_type == "dir" else package_factory.to_zip_package(dir_package)
 
-    async with worker_pool.get_worker(package, "tester", "tests", DEFAULT_WORKER_PERMISSIONS) as worker:
+    async with worker_pool.get_worker(package, "tester", "tests", DEFAULT_PACKAGE_PERMISSIONS) as worker:
         with pytest.raises(FileNotFoundError):
             await worker.get_static_file(_STATIC_FILE_NAME)
 
@@ -134,7 +134,7 @@ async def test_should_raise_static_file_size_mismatch_error_when_sizes_dont_matc
 
     package: PackageLocation = dir_package if package_type == "dir" else package_factory.to_zip_package(dir_package)
 
-    async with worker_pool.get_worker(package, "tester", "tests", DEFAULT_WORKER_PERMISSIONS) as worker:
+    async with worker_pool.get_worker(package, "tester", "tests", DEFAULT_PACKAGE_PERMISSIONS) as worker:
         with pytest.raises(StaticFileSizeMismatchError):
             await worker.get_static_file(_STATIC_FILE_NAME)
 
@@ -163,13 +163,13 @@ def _make_get_manifest_raise() -> Iterator[None]:
 @pytest.mark.filterwarnings("ignore:Exception in thread worker-")
 async def test_should_gracefully_handle_error_in_bootstrap(worker_pool: WorkerPool) -> None:
     with patch_worker_pool(worker_pool, _make_bootstrap_raise), pytest.raises(WorkerStartError):
-        async with worker_pool.get_worker(PACKAGE, "tester", "tests", DEFAULT_WORKER_PERMISSIONS):
+        async with worker_pool.get_worker(PACKAGE, "tester", "tests", DEFAULT_PACKAGE_PERMISSIONS):
             pass
 
 
 async def test_should_gracefully_handle_error_in_loop(worker_pool: WorkerPool) -> None:
     with patch_worker_pool(worker_pool, _make_get_manifest_raise):
-        async with worker_pool.get_worker(PACKAGE, "tester", "tests", DEFAULT_WORKER_PERMISSIONS) as worker:
+        async with worker_pool.get_worker(PACKAGE, "tester", "tests", DEFAULT_PACKAGE_PERMISSIONS) as worker:
             with pytest.raises(WorkerUnknownError, match="some custom error"):
                 await worker.get_manifest()
 

@@ -14,9 +14,9 @@ from pydantic import ValidationError
 from pydantic.networks import HttpUrl
 from pydantic_settings import EnvSettingsSource
 
-from questionpy_common.environment import WorkerPermissions
+from questionpy_common.environment import PackagePermissions
 from questionpy_server.settings import (
-    CompleteWorkerPermissions,
+    CompletePackagePermissions,
     CustomEnvSettingsSource,
     MainProcessExecutionModeValues,
     Settings,
@@ -112,11 +112,11 @@ def test_multiline_env_var_gets_parsed_correctly(path_with_empty_config_file: Pa
 
 
 def test_standard_package_permissions_default_main_process_execution_modes_is_valid() -> None:
-    assert MainProcessExecutionModeValues.issuperset(CompleteWorkerPermissions().main_process_execution_modes), (
+    assert MainProcessExecutionModeValues.issuperset(CompletePackagePermissions().main_process_execution_modes), (
         "The default value for 'main_process_execution_modes' is invalid."
     )
 
 
 def test_standard_package_permissions_can_convert_to_package_permissions() -> None:
-    permissions = CompleteWorkerPermissions()
-    WorkerPermissions(**permissions.model_dump())
+    permissions = CompletePackagePermissions()
+    PackagePermissions(**permissions.model_dump())

@@ -7,8 +7,8 @@ from typing import Any, get_type_hints
 import pytest
 from pydantic import ValidationError
 
-from questionpy_common.manifest import Manifest, PackageType, PartialWorkerPermissions
-from questionpy_server.settings import CompleteWorkerPermissions
+from questionpy_common.manifest import Manifest, PackageType, PartialPackagePermissions
+from questionpy_server.settings import CompletePackagePermissions
 
 minimal_manifest: dict[str, Any] = {
     "short_name": "short_name",
@@ -155,11 +155,11 @@ def test_not_valid_api_version(version: str) -> None:
 
 
 def test_valid_permissions() -> None:
-    complete = get_type_hints(CompleteWorkerPermissions)
-    partial = get_type_hints(PartialWorkerPermissions)
+    complete = get_type_hints(CompletePackagePermissions)
+    partial = get_type_hints(PartialPackagePermissions)
 
     assert complete.keys() == partial.keys(), (
-        f"`The attributes of {CompleteWorkerPermissions.__name__} and {PartialWorkerPermissions.__name__} must be "
+        f"`The attributes of {CompletePackagePermissions.__name__} and {PartialPackagePermissions.__name__} must be "
         f"identical."
     )
 

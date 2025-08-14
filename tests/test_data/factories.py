@@ -9,7 +9,7 @@ from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
 from semver import Version
 
-from questionpy_common.manifest import PartialWorkerPermissions
+from questionpy_common.manifest import PartialPackagePermissions
 from questionpy_server.repository.models import RepoMeta, RepoPackageVersions
 from questionpy_server.utils.manifest import ComparableManifest
 
@@ -39,4 +39,4 @@ class ManifestFactory(CustomFactory):
     namespace = Use(lambda: ModelFactory.__faker__.word().lower() + "_ns")
     url = Use(ModelFactory.__faker__.url)
     icon = None
-    permissions = PartialWorkerPermissions()
+    permissions = PartialPackagePermissions()
