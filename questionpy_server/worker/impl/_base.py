@@ -17,7 +17,7 @@ from zipfile import ZipFile
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.constants import DIST_DIR
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import RequestUser
+from questionpy_common.environment import RequestInfo
 from questionpy_common.manifest import Manifest, PackageFile
 from questionpy_server.models import LoadedPackage, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
@@ -229,29 +229,29 @@ class BaseWorker(Worker, ABC):
         return ComparableManifest(**ret.manifest.model_dump())
 
     async def get_options_form(
-        self, request_user: RequestUser, question_state: str | None
+        self, request_info: RequestInfo, question_state: str | None
     ) -> tuple[OptionsFormDefinition, dict[str, object]]:
-        msg = GetOptionsForm(question_state=question_state, request_user=request_user)
+        msg = GetOptionsForm(question_state=question_state, request_info=request_info)
         ret = await self.send_and_wait_for_response(msg, GetOptionsForm.Response)
         return ret.definition, ret.form_data
 
     async def create_question_from_options(
-        self, request_user: RequestUser, old_state: str | None, form_data: dict[str, object]
+        self, request_info: RequestInfo, old_state: str | None, form_data: dict[str, object]
     ) -> QuestionCreated:
-        msg = CreateQuestionFromOptions(question_state=old_state, form_data=form_data, request_user=request_user)
+        msg = CreateQuestionFromOptions(question_state=old_state, form_data=form_data, request_info=request_info)
         ret = await self.send_and_wait_for_response(msg, CreateQuestionFromOptions.Response)
 
         return QuestionCreated(question_state=ret.question_state, **ret.question_model.model_dump())
 
-    async def start_attempt(self, request_user: RequestUser, question_state: str, variant: int) -> AttemptStartedModel:
-        msg = StartAttempt(question_state=question_state, variant=variant, request_user=request_user)
+    async def start_attempt(self, request_info: RequestInfo, question_state: str, variant: int) -> AttemptStartedModel:
+        msg = StartAttempt(question_state=question_state, variant=variant, request_info=request_info)
         ret = await self.send_and_wait_for_response(msg, StartAttempt.Response)
         return ret.attempt_started_model
 
     async def get_attempt(
         self,
         *,
-        request_user: RequestUser,
+        request_info: RequestInfo,
         question_state: str,
         attempt_state: str,
         scoring_state: str | None = None,
@@ -262,7 +262,7 @@ class BaseWorker(Worker, ABC):
             attempt_state=attempt_state,
             scoring_state=scoring_state,
             response=response,
-            request_user=request_user,
+            request_info=request_info,
         )
         ret = await self.send_and_wait_for_response(msg, ViewAttempt.Response)
 
@@ -271,7 +271,7 @@ class BaseWorker(Worker, ABC):
     async def score_attempt(
         self,
         *,
-        request_user: RequestUser,
+        request_info: RequestInfo,
         question_state: str,
         attempt_state: str,
         scoring_state: str | None = None,
@@ -282,7 +282,7 @@ class BaseWorker(Worker, ABC):
             attempt_state=attempt_state,
             scoring_state=scoring_state,
             response=response,
-            request_user=request_user,
+            request_info=request_info,
         )
         ret = await self.send_and_wait_for_response(msg, ScoreAttempt.Response)
 
