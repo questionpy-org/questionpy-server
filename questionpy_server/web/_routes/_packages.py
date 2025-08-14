@@ -8,7 +8,7 @@ from aiohttp.web_exceptions import HTTPMethodNotAllowed
 from questionpy_server.models import QuestionCreateArguments, QuestionEditFormResponse, RequestBaseData
 from questionpy_server.package import Package
 from questionpy_server.web._decorators import ensure_package, ensure_required_parts
-from questionpy_server.web._utils import CURRENT_USER_KEY, DEFAULT_REQUEST_USER, pydantic_json_response
+from questionpy_server.web._utils import CURRENT_USER_KEY, DEFAULT_REQUEST_INFO, pydantic_json_response
 from questionpy_server.web.app import QPyServer
 from questionpy_server.web.errors import PackageNotFoundError
 
@@ -49,7 +49,7 @@ async def post_options(
 
     async with qpyserver.worker_pool.get_worker(location, current_user, data.context, permissions) as worker:
         definition, form_data = await worker.get_options_form(
-            DEFAULT_REQUEST_USER, question_state.decode() if question_state else None
+            DEFAULT_REQUEST_INFO, question_state.decode() if question_state else None
         )
         packages = worker.get_loaded_packages()
 
@@ -71,7 +71,7 @@ async def post_question(
 
     async with qpyserver.worker_pool.get_worker(location, current_user, data.context, permissions) as worker:
         question = await worker.create_question_from_options(
-            DEFAULT_REQUEST_USER, question_state.decode() if question_state else None, data.form_data
+            DEFAULT_REQUEST_INFO, question_state.decode() if question_state else None, data.form_data
         )
 
     return pydantic_json_response(data=question)

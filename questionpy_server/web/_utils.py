@@ -13,7 +13,7 @@ from aiohttp.web_exceptions import HTTPRequestEntityTooLarge
 from aiohttp.web_response import Response
 
 from questionpy_common.constants import KiB
-from questionpy_common.environment import RequestUser
+from questionpy_common.environment import RequestInfo
 from questionpy_common.manifest import Bcp47LanguageTag
 from questionpy_server.hash import HashContainer
 
@@ -68,5 +68,5 @@ async def read_part(part: BodyPartReader, max_size: int, *, calculate_hash: bool
 
 
 # TODO: Replace with Accept-Language header contents.
-DEFAULT_REQUEST_USER = RequestUser([Bcp47LanguageTag("de"), Bcp47LanguageTag("en")])
+DEFAULT_REQUEST_INFO = RequestInfo([Bcp47LanguageTag("de"), Bcp47LanguageTag("en")])
 CURRENT_USER_KEY = "qpy-current-user"

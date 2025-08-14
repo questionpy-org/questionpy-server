@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import RequestUser, WorkerPermissions
+from questionpy_common.environment import RequestInfo, WorkerPermissions
 from questionpy_common.manifest import PackageFile
 from questionpy_server.models import LoadedPackage, QuestionCreated
 from questionpy_server.utils.manifest import ComparableManifest
@@ -115,12 +115,12 @@ class Worker(ABC):
 
     @abstractmethod
     async def get_options_form(
-        self, request_user: RequestUser, question_state: str | None
+        self, request_info: RequestInfo, question_state: str | None
     ) -> tuple[OptionsFormDefinition, dict[str, object]]:
         """Get the form used to create a new or edit an existing question.
 
         Args:
-            request_user: Information on the user this request is for.
+            request_info: Information about the current request.
             question_state: The current question state if editing, or ``None`` if creating a new question.
 
         Returns:
@@ -129,12 +129,12 @@ class Worker(ABC):
 
     @abstractmethod
     async def create_question_from_options(
-        self, request_user: RequestUser, old_state: str | None, form_data: dict[str, object]
+        self, request_info: RequestInfo, old_state: str | None, form_data: dict[str, object]
     ) -> QuestionCreated:
         """Create or update the question (state) with the form data from a submitted question edit form.
 
         Args:
-            request_user: Information on the user this request is for.
+            request_info: Information about the current request.
             old_state: The current question state if editing, or ``None`` if creating a new question.
             form_data: Form data from a submitted question edit form.
 
@@ -143,11 +143,11 @@ class Worker(ABC):
         """
 
     @abstractmethod
-    async def start_attempt(self, request_user: RequestUser, question_state: str, variant: int) -> AttemptStartedModel:
+    async def start_attempt(self, request_info: RequestInfo, question_state: str, variant: int) -> AttemptStartedModel:
         """Start an attempt at this question with the given variant.
 
         Args:
-            request_user: Information on the user this request is for.
+            request_info: Information about the current request.
             question_state: The question that is to be attempted.
             variant: Not implemented.
 
@@ -159,7 +159,7 @@ class Worker(ABC):
     async def get_attempt(
         self,
         *,
-        request_user: RequestUser,
+        request_info: RequestInfo,
         question_state: str,
         attempt_state: str,
         scoring_state: str | None = None,
@@ -168,7 +168,7 @@ class Worker(ABC):
         """Create an attempt object for a previously started attempt.
 
         Args:
-            request_user: Information on the user this request is for.
+            request_info: Information about the current request.
             question_state: The question the attempt belongs to.
             attempt_state: The `attempt_state` attribute of an attempt which was previously returned by
                            :meth:`start_attempt`.
@@ -183,7 +183,7 @@ class Worker(ABC):
     async def score_attempt(
         self,
         *,
-        request_user: RequestUser,
+        request_info: RequestInfo,
         question_state: str,
         attempt_state: str,
         scoring_state: str | None = None,

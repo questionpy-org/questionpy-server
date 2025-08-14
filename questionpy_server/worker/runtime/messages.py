@@ -14,7 +14,7 @@ from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, Atte
 from questionpy_common.api.qtype import InvalidQuestionStateError, OptionsFormValidationError
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import PackageNamespaceAndShortName, RequestUser, WorkerPermissions
+from questionpy_common.environment import PackageNamespaceAndShortName, RequestInfo, WorkerPermissions
 from questionpy_common.error import QPyBaseError
 from questionpy_common.manifest import Manifest
 from questionpy_server.worker.runtime.package_location import PackageLocation
@@ -144,7 +144,7 @@ class GetOptionsForm(MessageToWorker):
     """Execute a QuestionPy package."""
 
     message_id: ClassVar[MessageIds] = MessageIds.GET_OPTIONS_FORM_DEFINITION
-    request_user: RequestUser
+    request_info: RequestInfo
     question_state: str | None
     """Old question state or ``None`` if the question is new."""
 
@@ -158,7 +158,7 @@ class GetOptionsForm(MessageToWorker):
 
 class CreateQuestionFromOptions(MessageToWorker):
     message_id: ClassVar[MessageIds] = MessageIds.CREATE_QUESTION
-    request_user: RequestUser
+    request_info: RequestInfo
     question_state: str | None
     """Old question state or ``None`` if the question is new."""
     form_data: dict[str, JsonValue]
@@ -172,7 +172,7 @@ class CreateQuestionFromOptions(MessageToWorker):
 
 class StartAttempt(MessageToWorker):
     message_id: ClassVar[MessageIds] = MessageIds.START_ATTEMPT
-    request_user: RequestUser
+    request_info: RequestInfo
     question_state: str
     variant: int
 
@@ -183,7 +183,7 @@ class StartAttempt(MessageToWorker):
 
 class ViewAttempt(MessageToWorker):
     message_id: ClassVar[MessageIds] = MessageIds.VIEW_ATTEMPT
-    request_user: RequestUser
+    request_info: RequestInfo
     question_state: str
     attempt_state: str
     scoring_state: str | None
@@ -196,7 +196,7 @@ class ViewAttempt(MessageToWorker):
 
 class ScoreAttempt(MessageToWorker):
     message_id: ClassVar[MessageIds] = MessageIds.SCORE_ATTEMPT
-    request_user: RequestUser
+    request_info: RequestInfo
     question_state: str
     attempt_state: str
     scoring_state: str | None

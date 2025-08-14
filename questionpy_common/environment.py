@@ -22,7 +22,7 @@ __all__ = [
     "PackageNotInitializedError",
     "PackageNotLoadedError",
     "PackageState",
-    "RequestUser",
+    "RequestInfo",
     "WorkerPermissions",
     "get_qpy_environment",
     "set_qpy_environment",
@@ -30,8 +30,8 @@ __all__ = [
 
 
 @dataclass
-class RequestUser:
-    """Preferences of the user that a request is being processed for."""
+class RequestInfo:
+    """Information about the current request."""
 
     preferred_languages: Sequence[Bcp47LanguageTag]
 
@@ -101,7 +101,7 @@ class Package(Protocol):
         """The direct QPy dependencies of this package."""
 
 
-type OnRequestCallback = Callable[[RequestUser], None]
+type OnRequestCallback = Callable[[RequestInfo], None]
 
 
 class Environment(Protocol):
@@ -124,8 +124,8 @@ class Environment(Protocol):
         """The permissions of the worker."""
 
     @property
-    def request_user(self) -> RequestUser | None:
-        """If the worker is currently processing a request, information about the user that it is being processed for.
+    def request_info(self) -> RequestInfo | None:
+        """If the worker is currently processing a request, information about the request.
 
         When no request is being processed (such as during a call to the package's `init` function), this will be None.
         """
@@ -146,7 +146,7 @@ class Environment(Protocol):
         """Register a new on-request callback.
 
         When processing of a new request begins, any callback(s) registered here are called to inform packages of the
-        new [RequestUser][]. This may be expanded in the future to allow cleaning up after request processing has
+        new [RequestInfo][]. This may be expanded in the future to allow cleaning up after request processing has
         finished.
         """
 
