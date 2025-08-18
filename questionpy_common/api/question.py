@@ -30,6 +30,10 @@ class SubquestionModel(BaseModel):
     response_classes: list[PossibleResponse] | None
 
 
+class LmsPermissions(BaseModel):
+    attributes: list[str] = []
+
+
 class QuestionModel(Localized):
     num_variants: Annotated[int, Field(ge=1, strict=True)] = 1
     score_min: float = 0
@@ -40,6 +44,8 @@ class QuestionModel(Localized):
     penalty: float | None = None
     random_guess_score: float | None = None
     response_analysis_by_variant: bool = False
+
+    lms_permissions: LmsPermissions | None = None
 
     subquestions: list[SubquestionModel] = []
 

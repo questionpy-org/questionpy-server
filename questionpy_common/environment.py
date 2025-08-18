@@ -9,11 +9,14 @@ from functools import total_ordering
 from importlib.resources.abc import Traversable
 from typing import NamedTuple, Protocol
 
+from pydantic import BaseModel, JsonValue
+
 from questionpy_common.api.package import QPyPackageInterface
 from questionpy_common.manifest import Bcp47LanguageTag, Manifest
 
 __all__ = [
     "Environment",
+    "LmsProvidedAttributes",
     "NoEnvironmentError",
     "OnRequestCallback",
     "Package",
@@ -29,10 +32,23 @@ __all__ = [
 ]
 
 
-@dataclass
-class RequestInfo:
+type Attributes = dict[str, JsonValue]
+
+
+class LmsProvidedAttributes(BaseModel):
+    lms: Attributes | None = None
+    """Contains requested attributes of the LMS that made the request."""
+    user: Attributes | None = None
+    """If the request is made on behalf of a user, this contains the requested attributes of that user."""
+    group: Attributes | None = None
+    """If the request is made on behalf of a group, this contains the requested attributes of that group and its
+    members."""
+
+
+class RequestInfo(BaseModel):
     """Information about the current request."""
 
+    lms_provided_attributes: LmsProvidedAttributes | None
     preferred_languages: Sequence[Bcp47LanguageTag]
 
 

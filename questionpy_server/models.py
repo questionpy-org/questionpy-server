@@ -10,6 +10,7 @@ from pydantic import BaseModel, ByteSize, ConfigDict, Field
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
+from questionpy_common.environment import LmsProvidedAttributes as EnvironmentLmsProvidedAttributes
 from questionpy_common.manifest import Bcp47LanguageTag, PackageType
 
 
@@ -82,11 +83,15 @@ class QuestionCreated(QuestionModel):
     question_state: str
 
 
-class AttemptStartArguments(RequestBaseData):
+class LmsProvidedAttributes(BaseModel):
+    lms_provided_attributes: EnvironmentLmsProvidedAttributes | None = None
+
+
+class AttemptStartArguments(RequestBaseData, LmsProvidedAttributes):
     variant: Annotated[int, Field(ge=1, strict=True)]
 
 
-class AttemptViewArguments(RequestBaseData):
+class AttemptViewArguments(RequestBaseData, LmsProvidedAttributes):
     attempt_state: str
     scoring_state: str | None = None
     response: dict[str, Any] | None = None
