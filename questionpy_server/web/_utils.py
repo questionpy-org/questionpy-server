@@ -67,6 +67,9 @@ async def read_part(part: BodyPartReader, max_size: int, *, calculate_hash: bool
     return buffer.getvalue()
 
 
-# TODO: Replace with Accept-Language header contents.
-DEFAULT_REQUEST_INFO = RequestInfo([Bcp47LanguageTag("de"), Bcp47LanguageTag("en")])
+# TODO: Replace with Accept-Language header contents and lms provided attributes.
+DEFAULT_REQUEST_INFO = RequestInfo(
+    lms_provided_attributes=None,
+    preferred_languages=[Bcp47LanguageTag("de"), Bcp47LanguageTag("en")],
+)
 CURRENT_USER_KEY = "qpy-current-user"

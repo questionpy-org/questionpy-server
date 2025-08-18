@@ -763,6 +763,19 @@ components:
                           format: double
                       required: [ response_class, score ]
                 required: [ subquestion_id, score_max, response_classes ]
+            lms_permissions:
+              type: object
+              nullable: true
+              default: null
+              description: Permissions which are requested by the package and granted by the server.
+              properties:
+                attributes:
+                  type: array
+                  default: []
+                  description: Requested LMS-, group-, and user-attributes.
+                  example: [ attempt_id, group_id, user_id ]
+                  items:
+                    type: string
           required: [ scoring_method ]
 
     QuestionCreated:
@@ -775,9 +788,31 @@ components:
               description: Arbitrary values set by the question package code (LMS must store this data unmodified)
           required: [ question_state ]
 
+    Attributes:
+      type: object
+      additionalProperties: true
+      nullable: true
+      default: null
+
+    LmsProvidedAttributes:
+        type: object
+        nullable: true
+        default: null
+        properties:
+          lms_provided_attributes:
+            type: object
+            properties:
+              lms:
+                $ref: "#/components/schemas/Attributes"
+              user:
+                $ref: "#/components/schemas/Attributes"
+              group:
+                $ref: "#/components/schemas/Attributes"
+
     AttemptStartArguments:
       allOf:
         - $ref: "#/components/schemas/RequestBaseData"
+        - $ref: "#/components/schemas/LmsProvidedAttributes"
         - type: object
           properties:
             variant:
@@ -918,6 +953,7 @@ components:
     AttemptViewArguments:
       allOf:
         - $ref: "#/components/schemas/RequestBaseData"
+        - $ref: "#/components/schemas/LmsProvidedAttributes"
         - type: object
           properties:
             attempt_ref:
