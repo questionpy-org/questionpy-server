@@ -61,6 +61,7 @@ class PackagePermissions:
     request_timeout: int
     bootstrap_timeout: int
     main_process_execution_modes: set[str]
+    lms_attributes: set[str]
 
 
 @total_ordering
