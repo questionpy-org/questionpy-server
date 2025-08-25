@@ -83,6 +83,7 @@ class PartialPackagePermissions(BaseModel):
     request_timeout: PositiveInt | None = None
     bootstrap_timeout: PositiveInt | None = None
     main_process_execution_modes: conset(str, min_length=1) | None = None  # type: ignore[valid-type]
+    lms_attributes: set[str] | None = None
 
 
 class SourceManifest(BaseModel):

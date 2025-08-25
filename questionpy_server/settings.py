@@ -179,6 +179,7 @@ class CompletePackagePermissions(BaseModel):
     request_timeout: PositiveInt = 10
     bootstrap_timeout: PositiveInt = 4
     main_process_execution_modes: conset(str, min_length=1) = {"container"}  # type: ignore[valid-type]
+    lms_attributes: set[str] = set()
 
     @field_validator("main_process_execution_modes")
     @classmethod
