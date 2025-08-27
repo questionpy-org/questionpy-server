@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, Unpack
 from zipfile import ZipFile
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
+from questionpy_common.api.question import LmsPermissions
 from questionpy_common.constants import DIST_DIR
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestInfo
@@ -236,12 +237,18 @@ class BaseWorker(Worker, ABC):
         return ret.definition, ret.form_data
 
     async def create_question_from_options(
-        self, request_info: RequestInfo, old_state: str | None, form_data: dict[str, object]
+        self,
+        request_info: RequestInfo,
+        old_state: str | None,
+        form_data: dict[str, object],
+        lms_permissions: LmsPermissions | None,
     ) -> QuestionCreated:
         msg = CreateQuestionFromOptions(question_state=old_state, form_data=form_data, request_info=request_info)
         ret = await self.send_and_wait_for_response(msg, CreateQuestionFromOptions.Response)
 
-        return QuestionCreated(question_state=ret.question_state, **ret.question_model.model_dump())
+        return QuestionCreated(
+            question_state=ret.question_state, lms_permissions=lms_permissions, **ret.question_model.model_dump()
+        )
 
     async def start_attempt(self, request_info: RequestInfo, question_state: str, variant: int) -> AttemptStartedModel:
         msg = StartAttempt(question_state=question_state, variant=variant, request_info=request_info)

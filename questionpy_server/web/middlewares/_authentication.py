@@ -10,7 +10,7 @@ from aiohttp.web_request import Request
 from aiohttp.web_response import StreamResponse
 
 from questionpy_server.settings import AuthSettings
-from questionpy_server.web._utils import CURRENT_USER_KEY
+from questionpy_server.web import CURRENT_USER_KEY
 
 PASSWORD_ENCODING = "utf-8"  # noqa: S105
 

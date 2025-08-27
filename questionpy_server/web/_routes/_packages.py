@@ -5,10 +5,12 @@
 from aiohttp import web
 from aiohttp.web_exceptions import HTTPMethodNotAllowed
 
+from questionpy_common.api.question import LmsPermissions
 from questionpy_server.models import QuestionCreateArguments, QuestionEditFormResponse, RequestBaseData
 from questionpy_server.package import Package
 from questionpy_server.web._decorators import ensure_package, ensure_required_parts
-from questionpy_server.web._utils import CURRENT_USER_KEY, DEFAULT_REQUEST_INFO, pydantic_json_response
+from questionpy_server.web._utils import pydantic_json_response
+from questionpy_server.web._worker_context import worker_context
 from questionpy_server.web.app import QPyServer
 from questionpy_server.web.errors import PackageNotFoundError
 
@@ -41,17 +43,11 @@ async def post_options(
     request: web.Request, package: Package, data: RequestBaseData, question_state: bytes | None = None
 ) -> web.Response:
     """Get the options form definition that allow a question creator to customize a question."""
-    qpyserver = request.app[QPyServer.APP_KEY]
-
-    current_user = request.get(CURRENT_USER_KEY)
-    permissions = qpyserver.package_permissions.get_effective_permissions(package, current_user, data.context)
-    location = await package.get_zip_package_location()
-
-    async with qpyserver.worker_pool.get_worker(location, current_user, data.context, permissions) as worker:
-        definition, form_data = await worker.get_options_form(
-            DEFAULT_REQUEST_INFO, question_state.decode() if question_state else None
+    async with worker_context(request, package, data) as context:
+        definition, form_data = await context.worker.get_options_form(
+            context.request_info, question_state.decode() if question_state else None
         )
-        packages = worker.get_loaded_packages()
+        packages = context.worker.get_loaded_packages()
 
     return pydantic_json_response(
         data=QuestionEditFormResponse(definition=definition, form_data=form_data, package_dependencies=packages)
@@ -63,15 +59,16 @@ async def post_options(
 async def post_question(
     request: web.Request, package: Package, data: QuestionCreateArguments, question_state: bytes | None = None
 ) -> web.Response:
-    qpyserver = request.app[QPyServer.APP_KEY]
+    async with worker_context(request, package, data) as context:
+        lms_permissions = None
+        if context.permissions.lms_attributes:
+            lms_permissions = LmsPermissions(attributes=context.permissions.lms_attributes)
 
-    current_user = request.get(CURRENT_USER_KEY)
-    permissions = qpyserver.package_permissions.get_effective_permissions(package, current_user, data.context)
-    location = await package.get_zip_package_location()
-
-    async with qpyserver.worker_pool.get_worker(location, current_user, data.context, permissions) as worker:
-        question = await worker.create_question_from_options(
-            DEFAULT_REQUEST_INFO, question_state.decode() if question_state else None, data.form_data
+        question = await context.worker.create_question_from_options(
+            context.request_info,
+            question_state.decode() if question_state else None,
+            data.form_data,
+            lms_permissions,
         )
 
     return pydantic_json_response(data=question)
