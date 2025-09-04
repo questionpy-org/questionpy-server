@@ -37,7 +37,7 @@ worker_pool:
 
 permissions:
   # Permissions that are granted automatically
-  auto_grant_permissions:
+  #auto_grant_permissions:
     # Maximum number of CPUs that a worker can use
     #cpus: 1
 
