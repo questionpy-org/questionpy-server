@@ -10,6 +10,7 @@ from typing import TypedDict, TypeVar, Unpack
 from pydantic import BaseModel
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
+from questionpy_common.api.question import LmsPermissions
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import PackagePermissions, RequestInfo
 from questionpy_common.manifest import PackageFile
@@ -129,7 +130,11 @@ class Worker(ABC):
 
     @abstractmethod
     async def create_question_from_options(
-        self, request_info: RequestInfo, old_state: str | None, form_data: dict[str, object]
+        self,
+        request_info: RequestInfo,
+        old_state: str | None,
+        form_data: dict[str, object],
+        lms_permissions: LmsPermissions | None,
     ) -> QuestionCreated:
         """Create or update the question (state) with the form data from a submitted question edit form.
 
@@ -137,6 +142,7 @@ class Worker(ABC):
             request_info: Information about the current request.
             old_state: The current question state if editing, or ``None`` if creating a new question.
             form_data: Form data from a submitted question edit form.
+            lms_permissions: LMS permissions requested by the package and granted by the server.
 
         Returns:
             New question.

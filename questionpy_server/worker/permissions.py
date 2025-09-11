@@ -77,7 +77,7 @@ class PackagePermissionsHandler:
         requested_permissions = package.manifest.permissions
         if requested_permissions is None:
             # If the package requests no permissions, we use the default ones.
-            actual_permissions = self._default_permissions
+            actual_permissions = self._default_permissions.model_copy()
         else:
             if requested_modes := requested_permissions.main_process_execution_modes:
                 if intersection := requested_modes.intersection(MainProcessExecutionModeValues):
@@ -138,6 +138,9 @@ class PackagePermissionsHandler:
         if not _has_enough_permissions(auto_grant_permissions, requested_permissions):
             msg = f"The package '{package.hash}' requested more permissions than allowed."
             raise PackagePermissionError(msg)
+
+        # Only keep explicitly allowed lms attributes.
+        requested_permissions.lms_attributes.intersection_update(auto_grant_permissions.lms_attributes)
 
         effective_permissions = EnvironmentPackagePermissions(**requested_permissions.model_dump())
         self._cache.put(key, effective_permissions)

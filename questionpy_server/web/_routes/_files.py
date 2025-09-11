@@ -6,8 +6,8 @@ from aiohttp import web
 from aiohttp.web_exceptions import HTTPNotImplemented
 
 from questionpy_server.package import Package
+from questionpy_server.web import CURRENT_USER_KEY
 from questionpy_server.web._decorators import ensure_package
-from questionpy_server.web._utils import CURRENT_USER_KEY
 from questionpy_server.web.app import QPyServer
 
 file_routes = web.RouteTableDef()

@@ -10,7 +10,14 @@ from pydantic import BaseModel, Field, JsonValue
 from . import Localized
 from .attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 
-__all__ = ["PossibleResponse", "QuestionInterface", "QuestionModel", "ScoringMethod", "SubquestionModel"]
+__all__ = [
+    "LmsPermissions",
+    "PossibleResponse",
+    "QuestionInterface",
+    "QuestionModel",
+    "ScoringMethod",
+    "SubquestionModel",
+]
 
 
 class ScoringMethod(Enum):
