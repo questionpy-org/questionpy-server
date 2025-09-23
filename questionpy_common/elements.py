@@ -3,13 +3,14 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, PositiveInt, StringConstraints
+from pydantic import BaseModel, Field, NonNegativeInt, PositiveInt, StringConstraints, model_validator
 
 from questionpy_common import TranslatableString
 
 __all__ = [
     "CanHaveConditions",
     "CheckboxElement",
+    "FileUploadElement",
     "FormElement",
     "FormSection",
     "GeneratedIdElement",
@@ -140,6 +141,24 @@ class WysiwygEditorElement(_BaseElement, _Labelled, CanHaveHelp):
     kind: Literal["wysiwyg_editor"] = "wysiwyg_editor"
 
 
+class FileUploadElement(_BaseElement, _Labelled, CanHaveHelp):
+    kind: Literal["file_upload"] = "file_upload"
+
+    min_files: NonNegativeInt = 0
+    """Minimum number of files that must be uploaded before the form can be submitted."""
+    max_files: PositiveInt | None = None
+    """Maximum number of files that can be uploaded."""
+
+    # TODO: File content type and/or extension restrictions.
+
+    @model_validator(mode="after")
+    def __validate_max_files(self):
+        if self.max_files is not None and self.max_files < self.min_files:
+            msg = f"max_files ({self.max_files}) must be greater than or equal to min_files ({self.min_files})"
+            raise ValueError(msg)
+        return self
+
+
 type LeafFormElement = Annotated[
     CheckboxElement
     | HiddenElement
@@ -148,7 +167,8 @@ type LeafFormElement = Annotated[
     | StaticTextElement
     | TextInputElement
     | TextAreaElement
-    | WysiwygEditorElement,
+    | WysiwygEditorElement
+    | FileUploadElement,
     Field(discriminator="kind"),
 ]
 
