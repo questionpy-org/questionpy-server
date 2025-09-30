@@ -1,7 +1,7 @@
 #  This file is part of QuestionPy. (https://questionpy.org)
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, Field, NonNegativeInt, PositiveInt, StringConstraints, model_validator
 
@@ -11,6 +11,7 @@ __all__ = [
     "CanHaveConditions",
     "CheckboxElement",
     "FileUploadElement",
+    "FileUploadOptions",
     "FormElement",
     "FormSection",
     "GeneratedIdElement",
@@ -137,26 +138,38 @@ class GeneratedIdElement(_BaseElement):
     kind: Literal["id"] = "id"
 
 
-class WysiwygEditorElement(_BaseElement, _Labelled, CanHaveHelp):
-    kind: Literal["wysiwyg_editor"] = "wysiwyg_editor"
-
-
-class FileUploadElement(_BaseElement, _Labelled, CanHaveHelp):
-    kind: Literal["file_upload"] = "file_upload"
+class FileUploadOptions(BaseModel):
+    """Options for elements that can upload files."""
 
     min_files: NonNegativeInt = 0
     """Minimum number of files that must be uploaded before the form can be submitted."""
     max_files: PositiveInt | None = None
     """Maximum number of files that can be uploaded."""
 
+    max_bytes_per_file: NonNegativeInt | None = None
+    """Maximum size of a single file in bytes."""
+    max_bytes_total: NonNegativeInt | None = None
+    """Maximum total size of all uploaded files in bytes."""
+
     # TODO: File content type and/or extension restrictions.
 
     @model_validator(mode="after")
-    def __validate_max_files(self):
+    def __validate_max_files(self) -> Self:
         if self.max_files is not None and self.max_files < self.min_files:
             msg = f"max_files ({self.max_files}) must be greater than or equal to min_files ({self.min_files})"
             raise ValueError(msg)
         return self
+
+
+class WysiwygEditorElement(_BaseElement, _Labelled, CanHaveHelp):
+    kind: Literal["wysiwyg_editor"] = "wysiwyg_editor"
+
+    file_uploads: FileUploadOptions | None = FileUploadOptions()
+    """Options for uploading files, or `None` to disable file uploads altogether."""
+
+
+class FileUploadElement(_BaseElement, _Labelled, CanHaveHelp, FileUploadOptions):
+    kind: Literal["file_upload"] = "file_upload"
 
 
 type LeafFormElement = Annotated[
