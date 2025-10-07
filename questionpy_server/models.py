@@ -8,7 +8,7 @@ from typing import Annotated, Any
 from pydantic import BaseModel, ByteSize, ConfigDict, Field
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
-from questionpy_common.api.question import QuestionModel
+from questionpy_common.api.question import LmsPermissions, QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import LmsProvidedAttributes as EnvironmentLmsProvidedAttributes
 from questionpy_common.manifest import Bcp47LanguageTag, PackageType
@@ -80,6 +80,7 @@ class QuestionCreateArguments(RequestBaseData):
 
 
 class QuestionCreated(QuestionModel):
+    lms_permissions: LmsPermissions | None = None
     question_state: str
 
 

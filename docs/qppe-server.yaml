@@ -763,6 +763,16 @@ components:
                           format: double
                       required: [ response_class, score ]
                 required: [ subquestion_id, score_max, response_classes ]
+          required: [ scoring_method ]
+
+    QuestionCreated:
+      allOf:
+        - $ref: '#/components/schemas/Question'
+        - type: object
+          properties:
+            question_state:
+              type: string
+              description: Arbitrary values set by the question package code (LMS must store this data unmodified)
             lms_permissions:
               type: object
               nullable: true
@@ -776,16 +786,6 @@ components:
                   example: [ attempt_id, group_id, user_id ]
                   items:
                     type: string
-          required: [ scoring_method ]
-
-    QuestionCreated:
-      allOf:
-        - $ref: '#/components/schemas/Question'
-        - type: object
-          properties:
-            question_state:
-              type: string
-              description: Arbitrary values set by the question package code (LMS must store this data unmodified)
           required: [ question_state ]
 
     Attributes:
