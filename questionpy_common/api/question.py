@@ -52,8 +52,6 @@ class QuestionModel(Localized):
     random_guess_score: float | None = None
     response_analysis_by_variant: bool = False
 
-    lms_permissions: LmsPermissions | None = None
-
     subquestions: list[SubquestionModel] = []
 
 
