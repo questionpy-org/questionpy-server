@@ -76,7 +76,7 @@ cache:
   #size: 1 GiB
 
   # The path of the cache (relative or absolute)
-  #path: cache
+  #directory: cache
 
 collector:
   # Local directory where to look for packages
