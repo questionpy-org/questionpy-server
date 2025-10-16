@@ -40,7 +40,7 @@ class WorkerTimeoutError(web.HTTPInternalServerError, _ExceptionMixin):
         super().__init__(
             msg="Question package did not answer in a reasonable amount of time",
             body=RequestError(
-                error_code=RequestErrorCode.OUT_OF_MEMORY,
+                error_code=RequestErrorCode.WORKER_TIMEOUT,
                 reason=reason,
                 temporary=temporary,
             ),
