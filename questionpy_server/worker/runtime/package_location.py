@@ -68,6 +68,7 @@ class FunctionPackageLocation:
                 version="0.1.0-debug",
                 api_version="0.1",
                 author="Debug Modulovitch",
+                name={Bcp47LanguageTag("en"): "Debug Package"},
                 languages=[Bcp47LanguageTag("en")],
             )
 

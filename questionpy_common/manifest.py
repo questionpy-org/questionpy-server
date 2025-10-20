@@ -7,7 +7,7 @@ from enum import StrEnum
 from keyword import iskeyword, issoftkeyword
 from typing import Annotated, NewType
 
-from pydantic import BaseModel, ByteSize, PositiveInt, conset, field_validator
+from pydantic import BaseModel, ByteSize, PositiveInt, StringConstraints, conset, field_validator
 from pydantic.fields import Field
 
 
@@ -97,7 +97,7 @@ class SourceManifest(BaseModel):
     version: Annotated[str, Field(pattern=RE_SEMVER)]
     api_version: Annotated[str, Field(pattern=RE_API)]
     author: str
-    name: dict[Bcp47LanguageTag, str] = {}
+    name: dict[Bcp47LanguageTag, Annotated[str, StringConstraints(min_length=1)]] = Field(min_length=1)
     entrypoint: str | None = None
     url: str | None = None
     languages: list[Bcp47LanguageTag] = Field(min_length=1)
@@ -118,6 +118,16 @@ class SourceManifest(BaseModel):
     @classmethod
     def ensure_is_valid_name(cls, value: str) -> str:
         return ensure_is_valid_name(value)
+
+    @field_validator("languages", "name")
+    @classmethod
+    def ensure_contains_english_translation(
+        cls, value: list[Bcp47LanguageTag] | dict[Bcp47LanguageTag, str]
+    ) -> list[Bcp47LanguageTag] | dict[Bcp47LanguageTag, str]:
+        if Bcp47LanguageTag("en") not in value:
+            msg = "must contain an english translation"
+            raise ValueError(msg)
+        return value
 
     @property
     def identifier(self) -> str:
