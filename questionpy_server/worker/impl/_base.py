@@ -29,6 +29,7 @@ from questionpy_server.worker.exception import (
     WorkerNotRunningError,
     WorkerRealTimeLimitExceededError,
     WorkerStartError,
+    WorkerStoppedError,
 )
 from questionpy_server.worker.runtime.messages import (
     BaseWorkerError,
@@ -141,7 +142,7 @@ class BaseWorker(Worker, ABC):
         self.state = WorkerState.SERVER_AWAITS_RESPONSE
         try:
             result = await fut
-        except WorkerNotRunningError:
+        except WorkerStoppedError:
             self.state = WorkerState.NOT_RUNNING
             raise
         finally:

@@ -5,15 +5,19 @@ from questionpy_common.error import QPyBaseError
 from questionpy_server.worker.runtime.messages import BaseWorkerError
 
 
-class WorkerNotRunningError(BaseWorkerError):
-    pass
+class WorkerStoppedError(BaseWorkerError):
+    """Represents an error that results in or was caused by a worker being stopped."""
 
 
 class WorkerStartError(BaseWorkerError):
     pass
 
 
-class WorkerCPUTimeLimitExceededError(BaseWorkerError):
+class WorkerNotRunningError(WorkerStoppedError):
+    pass
+
+
+class WorkerCPUTimeLimitExceededError(WorkerStoppedError):
     def __init__(self, limit: float, worker_name: str):
         self.limit = limit
         super().__init__(
@@ -21,7 +25,7 @@ class WorkerCPUTimeLimitExceededError(BaseWorkerError):
         )
 
 
-class WorkerRealTimeLimitExceededError(BaseWorkerError):
+class WorkerRealTimeLimitExceededError(WorkerStoppedError):
     def __init__(self, limit: float, worker_name: str):
         self.limit = limit
         super().__init__(
