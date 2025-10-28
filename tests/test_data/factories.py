@@ -9,7 +9,7 @@ from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
 from semver import Version
 
-from questionpy_common.manifest import PartialPackagePermissions
+from questionpy_common.manifest import Bcp47LanguageTag, PartialPackagePermissions
 from questionpy_server.repository.models import RepoMeta, RepoPackageVersions
 from questionpy_server.utils.manifest import ComparableManifest
 
@@ -37,6 +37,8 @@ class ManifestFactory(CustomFactory):
 
     short_name = Use(lambda: ModelFactory.__faker__.word().lower() + "_sn")
     namespace = Use(lambda: ModelFactory.__faker__.word().lower() + "_ns")
+    name = {Bcp47LanguageTag("en"): "Factory Package"}
+    languages = [Bcp47LanguageTag("en")]
     url = Use(ModelFactory.__faker__.url)
     icon = None
     permissions = PartialPackagePermissions()

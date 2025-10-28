@@ -20,15 +20,19 @@ from tests.test_data.factories import ManifestFactory, RepoMetaFactory, RepoPack
 REPO_URL = "https://example.com/repo/"
 REPO_PACKAGE_VERSIONS_0 = RepoPackageVersionsFactory.build(
     manifest={
-        "short_name": "package_1",
-        "namespace": "namespace_1",
+        "short_name": "package_0",
+        "namespace": "namespace_0",
+        "name": {"en": "Package 0"},
+        "languages": ["en"],
     },
     versions=[{"sha256": "2", "version": "3.0.0", "api_version": "3.0"}],
 )
 REPO_PACKAGE_VERSIONS_1 = RepoPackageVersionsFactory.build(
     manifest={
-        "short_name": "package_0",
-        "namespace": "namespace_0",
+        "short_name": "package_1",
+        "namespace": "namespace_1",
+        "name": {"en": "Package 1"},
+        "languages": ["en"],
     },
     versions=[
         {"sha256": "0", "version": "1.0.0", "api_version": "1.0"},
@@ -142,7 +146,7 @@ async def test_log_warning_when_package_index_is_too_big_for_cache(
 async def test_get_package() -> None:
     repository = Repository(REPO_URL, Mock())
 
-    manifest = ManifestFactory.build(short_name="package", namespace="namespace")
+    manifest = ManifestFactory.build()
     package_path = "path/to/package.qpy"
     package = RepoPackage(manifest=manifest, sha256="hash", size=1, path=package_path)
 
