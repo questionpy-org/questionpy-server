@@ -9,6 +9,7 @@ from questionpy_server.package import Package
 from questionpy_server.web import CURRENT_USER_KEY
 from questionpy_server.web._decorators import ensure_package
 from questionpy_server.web.app import QPyServer
+from questionpy_server.worker.selector import SelectorQuery
 
 file_routes = web.RouteTableDef()
 
@@ -26,10 +27,14 @@ async def serve_static_file(request: web.Request, package: Package) -> web.Respo
         raise HTTPNotImplemented(text="Static file retrieval from non-main packages is not supported yet.")
 
     current_user = request.get(CURRENT_USER_KEY)
-    permissions = qpy_server.package_permissions.get_effective_permissions(package, current_user, "files")
+    selector_query = SelectorQuery(package, current_user, "files")
+    permissions = qpy_server.package_permissions.get(selector_query)
+    environment_variables = qpy_server.environment_variables.get(selector_query)
     location = await package.get_zip_package_location()
 
-    async with qpy_server.worker_pool.get_worker(location, current_user, "files", permissions) as worker:
+    async with qpy_server.worker_pool.get_worker(
+        location, current_user, "files", permissions, environment_variables
+    ) as worker:
         try:
             file = await worker.get_static_file(path)
         except FileNotFoundError as e:

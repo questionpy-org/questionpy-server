@@ -15,7 +15,7 @@ from tests.conftest import DEFAULT_PACKAGE_PERMISSIONS, PACKAGE
 @pytest.mark.parametrize("worker_pool", [ThreadWorker], indirect=True)
 async def test_should_ignore_limits(worker_pool: WorkerPool) -> None:
     with patch.object(resource, "setrlimit") as mock:
-        async with worker_pool.get_worker(PACKAGE, "tester", "tests", DEFAULT_PACKAGE_PERMISSIONS):
+        async with worker_pool.get_worker(PACKAGE, "tester", "tests", DEFAULT_PACKAGE_PERMISSIONS, {}):
             pass
 
         mock.assert_not_called()

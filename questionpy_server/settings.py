@@ -3,15 +3,27 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import builtins
 import logging
+import os
+import re
 from datetime import timedelta
 from pathlib import Path
 from pydoc import locate
-from typing import Any, ClassVar, Final, Literal
+from typing import Any, ClassVar, Final, Literal, Self
 
 import semver
 import yaml
-from pydantic import BaseModel, ByteSize, DirectoryPath, HttpUrl, PositiveInt, conset, field_validator
-from pydantic.fields import FieldInfo
+from pydantic import (
+    BaseModel,
+    ByteSize,
+    DirectoryPath,
+    HttpUrl,
+    PositiveInt,
+    RootModel,
+    conset,
+    field_validator,
+    model_validator,
+)
+from pydantic.fields import Field, FieldInfo
 from pydantic_settings import (
     BaseSettings,
     EnvSettingsSource,
@@ -20,7 +32,7 @@ from pydantic_settings import (
     SettingsConfigDict,
 )
 
-from questionpy_common.constants import MAX_PACKAGE_SIZE, GiB, MiB
+from questionpy_common.constants import ENVIRONMENT_VARIABLE, ENVIRONMENT_VARIABLE_REGEX, MAX_PACKAGE_SIZE, GiB, MiB
 from questionpy_common.manifest import PartialPackagePermissions, ensure_is_valid_name
 from questionpy_server.worker import Worker
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
@@ -155,8 +167,11 @@ class PackageSelector(BaseModel):
 MainProcessExecutionModeValues = {"container", "trusted"}
 
 
-class SpecificPackagePermissions(BaseModel):
+class Selectable(BaseModel):
     package_selector: PackageSelector = PackageSelector()
+
+
+class SpecificPackagePermissions(Selectable):
     auto_grant_permissions: PartialPackagePermissions | None = None
     override_permissions: PartialPackagePermissions | None = None
 
@@ -193,6 +208,35 @@ class CompletePackagePermissions(BaseModel):
 class PackagePermissionsSettings(BaseModel):
     auto_grant_permissions: CompletePackagePermissions = CompletePackagePermissions()
     packages: list[SpecificPackagePermissions] = []
+
+
+class EnvironmentVariables(RootModel[dict[ENVIRONMENT_VARIABLE, str]]):
+    interpolation_pattern: ClassVar[re.Pattern] = re.compile(rf"^\$\{{({ENVIRONMENT_VARIABLE_REGEX})}}$")
+    escaped_interpolation_pattern: ClassVar[re.Pattern] = re.compile(rf"^\$(\$+\{{{ENVIRONMENT_VARIABLE_REGEX}}})$")
+
+    @model_validator(mode="after")
+    def check_environment_variables(self) -> Self:
+        for key, value in self.root.items():
+            if match := self.interpolation_pattern.match(value):
+                interpolated_key = match.group(1)
+                if interpolated_key not in os.environ:
+                    msg = f"Environment variable '{interpolated_key}' not found."
+                    raise ValueError(msg)
+                self.root[key] = os.environ[interpolated_key]
+                _log.debug("Interpolated environment variable: %s=%s.", key, self.root[key])
+            elif match := self.escaped_interpolation_pattern.match(value):
+                self.root[key] = match.group(1)
+                _log.debug("Escaped environment variable: %s=%s.", key, self.root[key])
+        return self
+
+
+class SpecificPackageEnvironmentVariables(Selectable):
+    environment_variables: EnvironmentVariables | None = None
+
+
+class EnvironmentVariablesSettings(BaseModel):
+    global_: EnvironmentVariables = Field(alias="global", default=EnvironmentVariables({}))
+    packages: list[SpecificPackageEnvironmentVariables] = []
 
 
 class CacheSettings(BaseModel):
@@ -274,6 +318,7 @@ class Settings(BaseSettings):
     webservice: WebserviceSettings
     worker_pool: WorkerPoolSettings
     permissions: PackagePermissionsSettings
+    environment_variables: EnvironmentVariablesSettings
     cache: CacheSettings
     collector: CollectorSettings
     auth: AuthSettings

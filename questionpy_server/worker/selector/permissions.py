@@ -2,19 +2,17 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import logging
-from typing import NamedTuple
 
 from questionpy_common.environment import PackagePermissions as EnvironmentPackagePermissions
 from questionpy_common.error import QPyBaseError
-from questionpy_server.cache import LRUCacheMemory
 from questionpy_server.package import Package
 from questionpy_server.settings import (
     CompletePackagePermissions,
     MainProcessExecutionModeValues,
     PackagePermissionsSettings,
-    PackageSelector,
     SpecificPackagePermissions,
 )
+from questionpy_server.worker.selector import Selector, SelectorQuery
 
 _log = logging.getLogger(__name__)
 
@@ -33,45 +31,14 @@ def _has_enough_permissions(allowed: CompletePackagePermissions, requested: Comp
     )
 
 
-def _is_wildcard_matching(selector_value: str, package_value: str) -> bool:
-    return selector_value in {package_value, "*"}
-
-
-def _is_selector_matching(selector: PackageSelector, package: Package, user: str | None, context: str) -> bool:
-    return (
-        # Package data.
-        _is_wildcard_matching(selector.hash, package.hash)
-        and _is_wildcard_matching(selector.namespace, package.manifest.namespace)
-        and _is_wildcard_matching(selector.short_name, package.manifest.short_name)
-        and (selector.version == "*" or package.manifest.version.match(selector.version))
-        # Package origin.
-        and _is_wildcard_matching(selector.origin.repositories, "*")  # TODO: handle repositories
-        and (selector.origin.local is None or selector.origin.local == package.sources.is_local())
-        and _is_wildcard_matching(selector.origin.users, "*")  # TODO: handle users
-        # Request data.
-        and _is_wildcard_matching(selector.request_user, str(user) if user else "")
-        and _is_wildcard_matching(selector.request_context, context)
-    )
-
-
-class _PackagePermissionIdentifier(NamedTuple):
-    package: Package
-    user: str | None
-    context: str
-
-
-class PackagePermissionsHandler:
+class PackagePermissionsHandler(Selector[SpecificPackagePermissions, EnvironmentPackagePermissions]):
     """Handles package permissions for a request."""
 
     def __init__(self, settings: PackagePermissionsSettings):
+        super().__init__(settings.packages)
+
         self._default_permissions = CompletePackagePermissions()
-
         self._auto_grant_permissions = settings.auto_grant_permissions
-        self._specific_package_permissions = settings.packages
-
-        self._cache: LRUCacheMemory[_PackagePermissionIdentifier, EnvironmentPackagePermissions] = LRUCacheMemory(
-            max_size=128
-        )
 
     def _get_requested_permissions(self, package: Package) -> CompletePackagePermissions:
         requested_permissions = package.manifest.permissions
@@ -102,31 +69,11 @@ class PackagePermissionsHandler:
         specific_auto_grant_permissions = permissions.auto_grant_permissions.model_dump(exclude_none=True)
         return self._auto_grant_permissions.model_copy(update=specific_auto_grant_permissions)
 
-    def _get_specific_permissions(
-        self, package: Package, user: str | None, context: str
-    ) -> SpecificPackagePermissions | None:
-        # We want to select the last defined one if multiple selectors match.
-        for permissions in reversed(self._specific_package_permissions):
-            if _is_selector_matching(permissions.package_selector, package, user, context):
-                return permissions
-        return None
-
-    def get_effective_permissions(
-        self, package: Package, user: str | None, context: str
-    ) -> EnvironmentPackagePermissions:
-        """Gets the effective permissions for a package.
-
-        Raises:
-            PackagePermissionError: If the package does not have enough permissions.
-        """
-        key = _PackagePermissionIdentifier(package, user, context)
-        if cached_permissions := self._cache.get(key):
-            return cached_permissions
-
+    def _get(self, query: SelectorQuery) -> EnvironmentPackagePermissions:
         auto_grant_permissions = self._auto_grant_permissions
-        requested_permissions = self._get_requested_permissions(package)
+        requested_permissions = self._get_requested_permissions(query.package)
 
-        if specific_permissions := self._get_specific_permissions(package, user, context):
+        if specific_permissions := self._get_matching(query):
             auto_grant_permissions = self._get_actual_auto_grant_permissions(specific_permissions)
 
             if specific_permissions.override_permissions:
@@ -136,12 +83,18 @@ class PackagePermissionsHandler:
                 requested_permissions = requested_permissions.model_copy(update=overrides)
 
         if not _has_enough_permissions(auto_grant_permissions, requested_permissions):
-            msg = f"The package '{package.hash}' requested more permissions than allowed."
+            msg = f"The package '{query.package.hash}' requested permissions that are not granted by the server."
             raise PackagePermissionError(msg)
 
         # Only keep explicitly allowed lms attributes.
         requested_permissions.lms_attributes.intersection_update(auto_grant_permissions.lms_attributes)
 
-        effective_permissions = EnvironmentPackagePermissions(**requested_permissions.model_dump())
-        self._cache.put(key, effective_permissions)
-        return effective_permissions
+        return EnvironmentPackagePermissions(**requested_permissions.model_dump())
+
+    def get(self, query: SelectorQuery) -> EnvironmentPackagePermissions:
+        """Gets the effective permissions for a package.
+
+        Raises:
+            PackagePermissionError: If the requested package permissions are not granted.
+        """
+        return super().get(query)

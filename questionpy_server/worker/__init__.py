@@ -61,6 +61,8 @@ class WorkerArgs(TypedDict):
     """An existing directory owned by the worker, with the same lifetime as the worker."""
     permissions: PackagePermissions
     """The package permissions."""
+    environment_variables: dict[str, str]
+    """Environment variables to be set in the worker."""
 
 
 class Worker(ABC):
@@ -72,6 +74,7 @@ class Worker(ABC):
         self.package = kwargs["package"]
         self.worker_home = kwargs["worker_home"]
         self.permissions = kwargs["permissions"]
+        self.environment_variables: dict[str, str] = kwargs["environment_variables"]
 
         self.state = WorkerState.NOT_RUNNING
         self.loaded_packages: list[LoadedPackage] = []

@@ -30,6 +30,7 @@ def path_with_empty_config_file(tmp_path: Path) -> Path:
         "webservice": None,
         "worker_pool": None,
         "permissions": None,
+        "environment_variables": None,
         "cache": None,
         "collector": None,
         "auth": None,

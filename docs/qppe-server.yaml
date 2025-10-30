@@ -1165,6 +1165,7 @@ components:
           type: string
           enum:
             - PACKAGE_PERMISSION_ERROR
+            - PACKAGE_ENVIRONMENT_VARIABLES_ERROR
             - QUEUE_WAITING_TIMEOUT
             - WORKER_TIMEOUT
             - OUT_OF_MEMORY
@@ -1179,6 +1180,7 @@ components:
             - SERVER_ERROR
           description: >
             * `PACKAGE_PERMISSION_ERROR` - The package requested more permissions than allowed.
+            * `PACKAGE_ENVIRONMENT_VARIABLES_ERROR` - The package requires unprovided environment variables.
             * `QUEUE_WAITING_TIMEOUT` - The request has been waiting too long in a job queue. Try again later.
             * `WORKER_TIMEOUT` - Question package did not answer in a reasonable amount of time.
             * `OUT_OF_MEMORY` - Question package reached its memory limit.

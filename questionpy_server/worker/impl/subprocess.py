@@ -108,7 +108,7 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
 
     _worker_type = "process"
 
-    # Allows to use a patched runtime in tests.
+    # Allows using a patched runtime in tests.
     _runtime_main = ["-m", "questionpy_server.worker.runtime"]
 
     def __init__(self, **kwargs: Unpack[WorkerArgs]):
@@ -117,17 +117,16 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
         self._proc: Process | None = None
         self._stderr_buffer: _StderrBuffer | None = None
 
+        if "OPENBLAS_NUM_THREADS" not in self.environment_variables:
+            # OpenBLAS is used by NumPy and creates a number of threads on import.
+            # Each thread allocates a bunch of virtual memory, so more than 2 threads break the default memory limit.
+            # By default, the number of threads is proportional to the available CPUs.
+            self.environment_variables["OPENBLAS_NUM_THREADS"] = "2"
+
     async def start(self) -> None:
         """Start the worker process."""
         # Turn off the worker's __debug__ flag unless ours is set as well.
         python_flags = [] if __debug__ else ["-O"]
-
-        env = {
-            # OpenBLAS is used by NumPy and creates a number of threads on import.
-            # Each thread allocates a bunch of virtual memory, so more than 2 threads breaks the default memory limit.
-            # By default, the number of threads is proportional to the available CPUs.
-            "OPENBLAS_NUM_THREADS": "2"
-        }
 
         self._proc = await asyncio.create_subprocess_exec(
             sys.executable,
@@ -136,7 +135,7 @@ class SubprocessWorker(BaseWorker, LimitTimeUsageMixin):
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env=env,
+            env=self.environment_variables,
             cwd=self.worker_home,
             start_new_session=True,
         )

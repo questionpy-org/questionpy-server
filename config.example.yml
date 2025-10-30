@@ -64,11 +64,18 @@ permissions:
   #   - package_selector:
   #       origin:
   #         local: true
-  #       namespace: "qpy"
+  #       namespace: qpy
   #     auto_grant_permissions:
   #       memory: 1 GiB
   #     override_permissions:
   #       cpus: 2
+  #packages:
+
+environment_variables:
+  # Environment variables that are passed to every worker
+  #global:
+
+  # Package- and request-specific environment variables
   #packages:
 
 cache:

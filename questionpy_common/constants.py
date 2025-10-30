@@ -2,9 +2,9 @@
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 import re
-from typing import Final
+from typing import Annotated, Final
 
-from pydantic import ByteSize
+from pydantic import ByteSize, Field
 
 # General.
 KiB: Final[int] = 1024
@@ -26,3 +26,6 @@ FORM_NAME_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*
 FORM_REFERENCE_PATTERN: Final[re.Pattern[str]] = re.compile(
     r"^([a-zA-Z_][a-zA-Z0-9_]*|\.\.)(\[([a-zA-Z_][a-zA-Z0-9_]*|\.\.)?])*$"
 )
+
+ENVIRONMENT_VARIABLE_REGEX: Final[str] = r"[a-zA-Z_][a-zA-Z0-9_]*"
+ENVIRONMENT_VARIABLE = Annotated[str, Field(pattern=f"^{ENVIRONMENT_VARIABLE_REGEX}$")]

@@ -10,6 +10,8 @@ from typing import Annotated, NewType
 from pydantic import BaseModel, ByteSize, PositiveInt, StringConstraints, conset, field_validator
 from pydantic.fields import Field
 
+from questionpy_common.constants import ENVIRONMENT_VARIABLE
+
 
 class PackageType(StrEnum):
     LIBRARY = "LIBRARY"
@@ -111,6 +113,7 @@ class SourceManifest(BaseModel):
     type: PackageType = DEFAULT_PACKAGETYPE
     license: str | None = None
     permissions: PartialPackagePermissions | None = None
+    environment_variables: set[ENVIRONMENT_VARIABLE] | None = None
     tags: set[str] = set()
     requirements: str | list[str] | None = None
 
