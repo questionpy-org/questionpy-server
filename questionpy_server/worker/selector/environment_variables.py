@@ -11,13 +11,14 @@ class PackageEnvironmentVariablesError(QPyBaseError):
 
 
 class EnvironmentVariablesHandler(Selector[SpecificPackageEnvironmentVariables, dict[str, str]]):
+    """Handles environment variables for a request."""
+
     def __init__(self, settings: EnvironmentVariablesSettings):
         super().__init__(settings.packages)
 
         self._global_environment_variables = settings.global_.root
 
     def _get(self, query: SelectorQuery) -> dict[str, str]:
-        """Gets the environment variables for a package."""
         environment_variables = self._global_environment_variables.copy()
 
         if (specific := self._get_matching(query)) and specific.environment_variables:
@@ -34,11 +35,3 @@ class EnvironmentVariablesHandler(Selector[SpecificPackageEnvironmentVariables, 
             raise PackageEnvironmentVariablesError(msg)
 
         return environment_variables
-
-    def get(self, query: SelectorQuery) -> dict[str, str]:
-        """Gets the environment variables for a package.
-
-        Raises:
-            PackageEnvironmentVariablesError: If the server is not providing the requested environment variables.
-        """
-        return super().get(query)

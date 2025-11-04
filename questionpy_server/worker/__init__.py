@@ -74,7 +74,7 @@ class Worker(ABC):
         self.package = kwargs["package"]
         self.worker_home = kwargs["worker_home"]
         self.permissions = kwargs["permissions"]
-        self.environment_variables: dict[str, str] = kwargs["environment_variables"]
+        self.environment_variables = kwargs["environment_variables"]
 
         self.state = WorkerState.NOT_RUNNING
         self.loaded_packages: list[LoadedPackage] = []

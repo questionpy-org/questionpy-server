@@ -212,7 +212,25 @@ class PackagePermissionsSettings(BaseModel):
 
 class EnvironmentVariables(RootModel[dict[ENVIRONMENT_VARIABLE, str]]):
     interpolation_pattern: ClassVar[re.Pattern] = re.compile(rf"^\$\{{({ENVIRONMENT_VARIABLE_REGEX})}}$")
+    """Matches environment variable interpolation syntax for replacement.
+
+    Identifies strings in the format ${VAR_NAME} that should be replaced with the
+    corresponding environment variable value.
+
+    Example:
+        "${MY_VAR}" matches and becomes the value of the environment variable "MY_VAR"
+
+    """
+
     escaped_interpolation_pattern: ClassVar[re.Pattern] = re.compile(rf"^\$(\$+\{{{ENVIRONMENT_VARIABLE_REGEX}}})$")
+    """Matches escaped interpolation syntax to prevent variable replacement.
+
+    Identifies strings with escaped dollar signs that should be unescaped rather
+    than treated as environment variable references.
+
+    Example:
+        "$${MY_VAR}" matches and becomes "${MY_VAR}" (literal string)
+    """
 
     @model_validator(mode="after")
     def check_environment_variables(self) -> Self:

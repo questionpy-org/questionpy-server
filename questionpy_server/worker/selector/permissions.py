@@ -90,11 +90,3 @@ class PackagePermissionsHandler(Selector[SpecificPackagePermissions, Environment
         requested_permissions.lms_attributes.intersection_update(auto_grant_permissions.lms_attributes)
 
         return EnvironmentPackagePermissions(**requested_permissions.model_dump())
-
-    def get(self, query: SelectorQuery) -> EnvironmentPackagePermissions:
-        """Gets the effective permissions for a package.
-
-        Raises:
-            PackagePermissionError: If the requested package permissions are not granted.
-        """
-        return super().get(query)
