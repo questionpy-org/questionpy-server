@@ -44,6 +44,8 @@ async def post_attempt_view(
             attempt_state=data.attempt_state,
             scoring_state=data.scoring_state,
             response=data.response,
+            uploads=data.uploads,
+            editors=data.editors,
         )
         packages = context.worker.get_loaded_packages()
 
@@ -63,6 +65,8 @@ async def post_attempt_score(
             attempt_state=data.attempt_state,
             scoring_state=data.scoring_state,
             response=data.response,
+            uploads=data.uploads,
+            editors=data.editors,
         )
         packages = context.worker.get_loaded_packages()
 

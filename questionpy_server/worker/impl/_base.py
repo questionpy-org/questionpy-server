@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, Unpack
 from zipfile import ZipFile
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
+from questionpy_common.api.files import EditorData, ResponseFile
 from questionpy_common.api.question import LmsPermissions
 from questionpy_common.constants import DIST_DIR
 from questionpy_common.elements import OptionsFormDefinition
@@ -264,12 +265,16 @@ class BaseWorker(Worker, ABC):
         attempt_state: str,
         scoring_state: str | None = None,
         response: dict | None = None,
+        uploads: dict[str, list[ResponseFile]] | None = None,
+        editors: dict[str, EditorData[ResponseFile]] | None = None,
     ) -> AttemptModel:
         msg = ViewAttempt(
             question_state=question_state,
             attempt_state=attempt_state,
             scoring_state=scoring_state,
             response=response,
+            uploads=uploads,
+            editors=editors,
             request_info=request_info,
         )
         ret = await self.send_and_wait_for_response(msg, ViewAttempt.Response)
@@ -284,12 +289,16 @@ class BaseWorker(Worker, ABC):
         attempt_state: str,
         scoring_state: str | None = None,
         response: dict,
+        uploads: dict[str, list[ResponseFile]],
+        editors: dict[str, EditorData[ResponseFile]],
     ) -> AttemptScoredModel:
         msg = ScoreAttempt(
             question_state=question_state,
             attempt_state=attempt_state,
             scoring_state=scoring_state,
             response=response,
+            uploads=uploads,
+            editors=editors,
             request_info=request_info,
         )
         ret = await self.send_and_wait_for_response(msg, ScoreAttempt.Response)

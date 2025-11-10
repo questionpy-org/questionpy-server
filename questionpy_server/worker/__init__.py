@@ -10,6 +10,7 @@ from typing import TypedDict, TypeVar, Unpack
 from pydantic import BaseModel
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
+from questionpy_common.api.files import EditorData, ResponseFile
 from questionpy_common.api.question import LmsPermissions
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import PackagePermissions, RequestInfo
@@ -173,6 +174,8 @@ class Worker(ABC):
         attempt_state: str,
         scoring_state: str | None = None,
         response: dict | None = None,
+        uploads: dict[str, list[ResponseFile]] | None = None,
+        editors: dict[str, EditorData[ResponseFile]] | None = None,
     ) -> AttemptModel:
         """Create an attempt object for a previously started attempt.
 
@@ -181,8 +184,11 @@ class Worker(ABC):
             question_state: The question the attempt belongs to.
             attempt_state: The `attempt_state` attribute of an attempt which was previously returned by
                            :meth:`start_attempt`.
-            scoring_state: Not implemented.
-            response: The response currently entered by the student.
+            scoring_state: The scoring state returned by the package the last time this attempt was scored.
+            response: The response by the student to primitive fields and the dynamic `data` object.
+            uploads: Files uploaded by the student in file upload elements (files belonging to editors are passed in
+                     `editors`.)
+            editors: WYSIWYG editor responses entered by the student.
 
         Returns:
             Metadata of the attempt.
@@ -197,8 +203,22 @@ class Worker(ABC):
         attempt_state: str,
         scoring_state: str | None = None,
         response: dict,
+        uploads: dict[str, list[ResponseFile]],
+        editors: dict[str, EditorData[ResponseFile]],
     ) -> AttemptScoredModel:
-        """TODO: write docstring."""
+        """Score the given response in this attempt.
+
+        Args:
+            request_info: Information about the current request.
+            question_state: The question the attempt belongs to.
+            attempt_state: The `attempt_state` attribute of an attempt which was previously returned by
+                           :meth:`start_attempt`.
+            scoring_state: The scoring state returned by the package the last time this attempt was scored.
+            response: The response by the student to primitive fields and the dynamic `data` object.
+            uploads: Files uploaded by the student in file upload elements (files belonging to editors are passed in
+                     `editors`.)
+            editors: WYSIWYG editor responses entered by the student.
+        """
 
     @abstractmethod
     async def get_static_file(self, path: str) -> PackageFileData:

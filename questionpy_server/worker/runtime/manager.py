@@ -274,7 +274,9 @@ class WorkerManager:
 
         with self._with_request_info(msg, msg.request_info):
             question = self._question_type.create_question_from_state(msg.question_state)
-            attempt_model = question.get_attempt(msg.attempt_state, msg.scoring_state, msg.response)
+            attempt_model = question.get_attempt(
+                msg.attempt_state, msg.scoring_state, msg.response, msg.uploads, msg.editors
+            )
             return ViewAttempt.Response(attempt_model=attempt_model)
 
     def on_msg_score_attempt(self, msg: ScoreAttempt) -> ScoreAttempt.Response:
@@ -285,7 +287,9 @@ class WorkerManager:
 
         with self._with_request_info(msg, msg.request_info):
             question = self._question_type.create_question_from_state(msg.question_state)
-            attempt_scored_model = question.score_attempt(msg.attempt_state, msg.scoring_state, msg.response)
+            attempt_scored_model = question.score_attempt(
+                msg.attempt_state, msg.scoring_state, msg.response, msg.uploads, msg.editors
+            )
             return ScoreAttempt.Response(attempt_scored_model=attempt_scored_model)
 
     @staticmethod
