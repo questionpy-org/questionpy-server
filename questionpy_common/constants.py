@@ -27,4 +27,19 @@ FORM_REFERENCE_PATTERN: Final[re.Pattern[str]] = re.compile(
     r"^([a-zA-Z_][a-zA-Z0-9_]*|\.\.)(\[([a-zA-Z_][a-zA-Z0-9_]*|\.\.)?])*$"
 )
 
+# Regular expressions.
+
 ENVIRONMENT_VARIABLE_REGEX: Final[str] = r"[a-zA-Z_][a-zA-Z0-9_]*"
+
+RE_SEMVER = (
+    r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)"
+    r"(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
+)
+
+RE_API = r"^(0|[1-9]\d*)\.(0|[1-9]\d*)$"
+
+# The SemVer and Api version patterns are used on pydantic fields, which uses Rust regexes, so re.compiling them makes
+# no sense. We match RE_VALID_CHARS_NAME in Python though, so here it does.
+RE_VALID_CHARS_NAME = re.compile(r"^[a-z\d_]+$")
+
+NAME_MAX_LENGTH = 127

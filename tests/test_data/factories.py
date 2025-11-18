@@ -9,7 +9,7 @@ from polyfactory import Use
 from polyfactory.factories.pydantic_factory import ModelFactory
 from semver import Version
 
-from questionpy_common.manifest import Bcp47LanguageTag, PartialPackagePermissions
+from questionpy_common.manifest import Bcp47LanguageTag, DistDependencies, PartialPackagePermissions
 from questionpy_server.repository.models import RepoMeta, RepoPackageVersions
 from questionpy_server.utils.manifest import ComparableManifest
 
@@ -31,6 +31,8 @@ class RepoMetaFactory(ModelFactory):
 class RepoPackageVersionsFactory(CustomFactory):
     __model__ = RepoPackageVersions
 
+    manifest = Use(lambda: ManifestFactory.build())
+
 
 class ManifestFactory(CustomFactory):
     __model__ = ComparableManifest
@@ -42,3 +44,4 @@ class ManifestFactory(CustomFactory):
     url = Use(ModelFactory.__faker__.url)
     icon = None
     permissions = PartialPackagePermissions()
+    dependencies = DistDependencies(qpy=[])
