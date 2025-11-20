@@ -1,10 +1,8 @@
 #  This file is part of the QuestionPy Server. (https://questionpy.org)
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
-from abc import ABC, abstractmethod
 from typing import NamedTuple
 
-from questionpy_server.cache import LRUCacheMemory
 from questionpy_server.package import Package
 from questionpy_server.settings import PackageSelector, Selectable
 
@@ -36,32 +34,12 @@ def _is_matching(selector: PackageSelector, query: SelectorQuery) -> bool:
     )
 
 
-class Selector[T: Selectable, V](ABC):
-    """Provides helpful methods for getting package and request specific data."""
+def get_matching[T: Selectable](selectables: list[T], query: SelectorQuery) -> T | None:
+    """Gets the first matching selectable, if any.
 
-    def __init__(self, selectables: list[T]):
-        self._cache: LRUCacheMemory[SelectorQuery, V] = LRUCacheMemory(max_size=128)
-        self._selectables = selectables
-
-    def _get_matching(self, query: SelectorQuery) -> T | None:
-        """Gets the first matching selectable, if any.
-
-        It assumes that the selectables are ordered from least specific to most specific.
-        """
-        for selectable in reversed(self._selectables):
-            if _is_matching(selectable.package_selector, query):
-                return selectable
-        return None
-
-    def get(self, query: SelectorQuery) -> V:
-        """Gets the result of the query, which may be cached."""
-        if cached := self._cache.get(query):
-            return cached
-
-        result = self._get(query)
-        self._cache.put(query, result)
-
-        return result
-
-    @abstractmethod
-    def _get(self, query: SelectorQuery) -> V: ...
+    It assumes that the selectables are ordered from least specific to most specific.
+    """
+    for selectable in reversed(selectables):
+        if _is_matching(selectable.package_selector, query):
+            return selectable
+    return None

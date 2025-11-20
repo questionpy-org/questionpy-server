@@ -10,7 +10,7 @@ from typing import Annotated, NewType
 from pydantic import BaseModel, ByteSize, PositiveInt, StringConstraints, conset, field_validator
 from pydantic.fields import Field
 
-from questionpy_common.constants import ENVIRONMENT_VARIABLE
+from questionpy_common.constants import ENVIRONMENT_VARIABLE_REGEX
 
 
 class PackageType(StrEnum):
@@ -88,6 +88,9 @@ class PartialPackagePermissions(BaseModel):
     lms_attributes: set[str] | None = None
 
 
+type EnvironmentVariableName = Annotated[str, Field(pattern=f"^{ENVIRONMENT_VARIABLE_REGEX}$")]
+
+
 class SourceManifest(BaseModel):
     """Represents the fields in a package source directory.
 
@@ -113,7 +116,7 @@ class SourceManifest(BaseModel):
     type: PackageType = DEFAULT_PACKAGETYPE
     license: str | None = None
     permissions: PartialPackagePermissions | None = None
-    environment_variables: set[ENVIRONMENT_VARIABLE] | None = None
+    environment_variables: set[EnvironmentVariableName] | None = None
     tags: set[str] = set()
     requirements: str | list[str] | None = None
 

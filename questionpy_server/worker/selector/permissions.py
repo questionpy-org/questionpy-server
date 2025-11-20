@@ -5,6 +5,7 @@ import logging
 
 from questionpy_common.environment import PackagePermissions as EnvironmentPackagePermissions
 from questionpy_common.error import QPyBaseError
+from questionpy_server.cache import LRUCacheMemory
 from questionpy_server.package import Package
 from questionpy_server.settings import (
     CompletePackagePermissions,
@@ -12,7 +13,7 @@ from questionpy_server.settings import (
     PackagePermissionsSettings,
     SpecificPackagePermissions,
 )
-from questionpy_server.worker.selector import Selector, SelectorQuery
+from questionpy_server.worker.selector import SelectorQuery, get_matching
 
 _log = logging.getLogger(__name__)
 
@@ -31,12 +32,12 @@ def _has_enough_permissions(allowed: CompletePackagePermissions, requested: Comp
     )
 
 
-class PackagePermissionsHandler(Selector[SpecificPackagePermissions, EnvironmentPackagePermissions]):
+class PackagePermissionsHandler:
     """Handles package permissions for a request."""
 
     def __init__(self, settings: PackagePermissionsSettings):
-        super().__init__(settings.packages)
-
+        self._cache: LRUCacheMemory[SelectorQuery, EnvironmentPackagePermissions] = LRUCacheMemory(max_size=128)
+        self._package_permissions = settings.packages
         self._default_permissions = CompletePackagePermissions()
         self._auto_grant_permissions = settings.auto_grant_permissions
 
@@ -69,11 +70,14 @@ class PackagePermissionsHandler(Selector[SpecificPackagePermissions, Environment
         specific_auto_grant_permissions = permissions.auto_grant_permissions.model_dump(exclude_none=True)
         return self._auto_grant_permissions.model_copy(update=specific_auto_grant_permissions)
 
-    def _get(self, query: SelectorQuery) -> EnvironmentPackagePermissions:
+    def get(self, query: SelectorQuery) -> EnvironmentPackagePermissions:
+        if cached_permissions := self._cache.get(query):
+            return cached_permissions
+
         auto_grant_permissions = self._auto_grant_permissions
         requested_permissions = self._get_requested_permissions(query.package)
 
-        if specific_permissions := self._get_matching(query):
+        if specific_permissions := get_matching(self._package_permissions, query):
             auto_grant_permissions = self._get_actual_auto_grant_permissions(specific_permissions)
 
             if specific_permissions.override_permissions:
@@ -89,4 +93,7 @@ class PackagePermissionsHandler(Selector[SpecificPackagePermissions, Environment
         # Only keep explicitly allowed lms attributes.
         requested_permissions.lms_attributes.intersection_update(auto_grant_permissions.lms_attributes)
 
-        return EnvironmentPackagePermissions(**requested_permissions.model_dump())
+        environment_package_permissions = EnvironmentPackagePermissions(**requested_permissions.model_dump())
+        self._cache.put(query, environment_package_permissions)
+
+        return environment_package_permissions

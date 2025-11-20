@@ -32,8 +32,8 @@ from pydantic_settings import (
     SettingsConfigDict,
 )
 
-from questionpy_common.constants import ENVIRONMENT_VARIABLE, ENVIRONMENT_VARIABLE_REGEX, MAX_PACKAGE_SIZE, GiB, MiB
-from questionpy_common.manifest import PartialPackagePermissions, ensure_is_valid_name
+from questionpy_common.constants import ENVIRONMENT_VARIABLE_REGEX, MAX_PACKAGE_SIZE, GiB, MiB
+from questionpy_common.manifest import EnvironmentVariableName, PartialPackagePermissions, ensure_is_valid_name
 from questionpy_server.worker import Worker
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
 
@@ -210,7 +210,7 @@ class PackagePermissionsSettings(BaseModel):
     packages: list[SpecificPackagePermissions] = []
 
 
-class EnvironmentVariables(RootModel[dict[ENVIRONMENT_VARIABLE, str]]):
+class EnvironmentVariables(RootModel[dict[EnvironmentVariableName, str]]):
     interpolation_pattern: ClassVar[re.Pattern] = re.compile(rf"^\$\{{({ENVIRONMENT_VARIABLE_REGEX})}}$")
     """Matches environment variable interpolation syntax for replacement.
 
@@ -219,7 +219,6 @@ class EnvironmentVariables(RootModel[dict[ENVIRONMENT_VARIABLE, str]]):
 
     Example:
         "${MY_VAR}" matches and becomes the value of the environment variable "MY_VAR"
-
     """
 
     escaped_interpolation_pattern: ClassVar[re.Pattern] = re.compile(rf"^\$(\$+\{{{ENVIRONMENT_VARIABLE_REGEX}}})$")
