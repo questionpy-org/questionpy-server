@@ -19,6 +19,8 @@ __all__ = [
     "SubquestionModel",
 ]
 
+from .files import EditorData, ResponseFile
+
 
 class ScoringMethod(Enum):
     ALWAYS_MANUAL_SCORING_REQUIRED = "ALWAYS_MANUAL_SCORING_REQUIRED"
@@ -68,7 +70,12 @@ class QuestionInterface(Protocol):
 
     @abstractmethod
     def get_attempt(
-        self, attempt_state: str, scoring_state: str | None = None, response: dict[str, JsonValue] | None = None
+        self,
+        attempt_state: str,
+        scoring_state: str | None = None,
+        response: dict[str, JsonValue] | None = None,
+        uploads: dict[str, list[ResponseFile]] | None = None,
+        editors: dict[str, EditorData] | None = None,
     ) -> AttemptModel:
         """Create an attempt object for a previously started attempt.
 
@@ -76,15 +83,20 @@ class QuestionInterface(Protocol):
             attempt_state: The `attempt_state` attribute of an attempt which was previously returned by
                            [start_attempt][].
             scoring_state: Not implemented.
-            response: The response currently entered by the student.
+            response: The response currently entered by the student, excluding uploads and editors.
+            uploads: Files uploaded by the student in file upload elements (files belonging to editors are passed in
+                     `editors`.)
+            editors: WYSIWYG editor responses entered by the student.
         """
 
     @abstractmethod
     def score_attempt(
         self,
         attempt_state: str,
-        scoring_state: str | None = None,
-        response: dict[str, JsonValue] | None = None,
+        scoring_state: str | None,
+        response: dict[str, JsonValue],
+        uploads: dict[str, list[ResponseFile]],
+        editors: dict[str, EditorData],
         *,
         compute_adjusted_score: bool = False,
         generate_hint: bool = False,
@@ -95,7 +107,10 @@ class QuestionInterface(Protocol):
             attempt_state: The `attempt_state` attribute of an attempt which was previously returned by
                            [start_attempt][].
             scoring_state: Not implemented.
-            response: The response currently entered by the student.
+            response: The response currently entered by the student, excluding uploads and editors.
+            uploads: Files uploaded by the student in file upload elements (files belonging to editors are passed in
+                     `editors`.)
+            editors: WYSIWYG editor responses entered by the student.
             compute_adjusted_score: TBD
             generate_hint: TBD
         """

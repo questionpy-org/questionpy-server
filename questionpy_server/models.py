@@ -3,11 +3,12 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from enum import Enum
-from typing import Annotated, Any
+from typing import Annotated
 
-from pydantic import BaseModel, ByteSize, ConfigDict, Field
+from pydantic import BaseModel, ByteSize, ConfigDict, Field, JsonValue
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
+from questionpy_common.api.files import EditorData, ResponseFile
 from questionpy_common.api.question import LmsPermissions, QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import LmsProvidedAttributes as EnvironmentLmsProvidedAttributes
@@ -95,11 +96,15 @@ class AttemptStartArguments(RequestBaseData, LmsProvidedAttributes):
 class AttemptViewArguments(RequestBaseData, LmsProvidedAttributes):
     attempt_state: str
     scoring_state: str | None = None
-    response: dict[str, Any] | None = None
+    response: dict[str, JsonValue] | None = None
+    uploads: dict[str, list[ResponseFile]] | None = None
+    editors: dict[str, EditorData[ResponseFile]] | None = None
 
 
 class AttemptScoreArguments(AttemptViewArguments):
-    response: dict[str, Any]
+    response: dict[str, JsonValue]
+    uploads: dict[str, list[ResponseFile]] = {}
+    editors: dict[str, EditorData[ResponseFile]] = {}
     generate_hint: bool
 
 

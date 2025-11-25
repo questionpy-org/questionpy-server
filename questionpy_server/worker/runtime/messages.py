@@ -11,6 +11,7 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, JsonValue
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
+from questionpy_common.api.files import EditorData, ResponseFile
 from questionpy_common.api.qtype import InvalidQuestionStateError, OptionsFormValidationError
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
@@ -188,6 +189,8 @@ class ViewAttempt(MessageToWorker):
     attempt_state: str
     scoring_state: str | None
     response: dict | None
+    uploads: dict[str, list[ResponseFile]] | None
+    editors: dict[str, EditorData[ResponseFile]] | None
 
     class Response(MessageToServer):
         message_id: ClassVar[MessageIds] = MessageIds.RETURN_VIEW_ATTEMPT
@@ -201,6 +204,8 @@ class ScoreAttempt(MessageToWorker):
     attempt_state: str
     scoring_state: str | None
     response: dict
+    uploads: dict[str, list[ResponseFile]]
+    editors: dict[str, EditorData[ResponseFile]]
 
     class Response(MessageToServer):
         message_id: ClassVar[MessageIds] = MessageIds.RETURN_SCORE_ATTEMPT

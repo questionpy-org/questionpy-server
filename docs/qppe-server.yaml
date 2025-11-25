@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.1
 info:
   title: Question Provider and Package Execution (QPPE) Server API
   version: 0.1.0
@@ -974,7 +974,61 @@ components:
               nullable: true
               default: null
               description: Data from the question's input fields.
+            uploads:
+              type: object
+              nullable: true
+              default: null
+              description: The files uploaded to any file upload elements, by their names.
+              additionalProperties:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserUploadedFile'
+            editors:
+              type: object
+              nullable: true
+              default: null
+              description: The text entered and files uploaded into rich text editor elements, by their names.
+              additionalProperties:
+                $ref: '#/components/schemas/RichTextEditorData'
           required: [ attempt_ref, attempt_state, response_ref ]
+
+    UserUploadedFile:
+      description: A file that is stored by the LMS. Contains metadata and a reference to retrieve the file.
+      type: object
+      properties:
+        path:
+          type: string
+          pattern: "^/(.+/)?$"
+          description: The folder path of this file. Must begin and end in `/`. Top-level files have a path of `/`.
+        filename:
+          type: string
+        file_ref:
+          $ref: "qppe-lms.yaml#/components/schemas/FileRef"
+        uploaded_at:
+          type: string
+          format: date-time
+        mime_type:
+          type: string
+          format: mime-type
+        size:
+          type: integer
+      required: [ path, filename, file_ref, uploaded_at, mime_type, size ]
+
+    RichTextEditorData:
+      description: The structure submitted by rich text editors.
+      type: object
+      properties:
+        text:
+          type: string
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserUploadedFile"
+          default: []
+      patternProperties:
+        "^_":
+          description: The LMS may send and expect to receive again any additional fields beginning with `_`.
+      required: [ text ]
 
     AttemptScoreArguments:
       allOf:
@@ -984,6 +1038,20 @@ components:
             response:
               type: object
               additionalProperties: true
+            uploads:
+              type: object
+              default: {}
+              description: The files uploaded to any file upload elements, by their names.
+              additionalProperties:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserUploadedFile'
+            editors:
+              type: object
+              default: {}
+              description: The text entered and files uploaded into rich text editor elements, by their names.
+              additionalProperties:
+                $ref: '#/components/schemas/RichTextEditorData'
             timeout:
               type: number
               minimum: 0
@@ -999,7 +1067,7 @@ components:
             generate_hint:
               type: boolean
               description: Try to give a hint on how to improve the response.
-          required: [ response, timeout, compute_adjusted_score, generate_hint ]
+          required: [ response, uploads, editors, timeout, compute_adjusted_score, generate_hint ]
 
     AttemptScored:
       allOf:
@@ -1066,7 +1134,7 @@ components:
                     nullable: true
                     default: null
                   scoring_code:
-                    type: string
+                    type: [string, "null"]
                     enum:
                       - AUTOMATICALLY_SCORED
                       - NEEDS_MANUAL_SCORING

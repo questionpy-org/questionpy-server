@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.1
 info:
   title: Question Provider and Package Execution (QPPE) LMS Callback API
   version: 0.1.0
@@ -267,8 +267,7 @@ components:
       description: A unique file identifier that is determined by the LMS. It might be a file hash or some other
         identifier that changes when the content is modified.
       schema:
-        type: string
-        pattern: '^[a-zA-Z0-9\-_=]{1,64}$'
+        $ref: '#/components/schemas/FileRef'
 
     FileName:
       name: file_name
@@ -291,6 +290,12 @@ components:
       pattern: '^[a-zA-Z0-9\-_=]{1,64}$'
       description: A question attempt reference that is determined by the LMS. It uniquely identifies an attempt
         of a question.
+
+    FileRef:
+      type: string
+      pattern: '^[a-zA-Z0-9\-_=]{1,64}$'
+      description: A unique file identifier that is determined by the LMS. It might be a file hash or some other
+        identifier that changes when the content is modified.
 
     AttemptAsyncScoringStatusFinished:
       type: object
