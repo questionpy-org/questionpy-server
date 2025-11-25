@@ -23,6 +23,18 @@ class _ExceptionMixin(web.HTTPException):
         web_logger.info(msg)
 
 
+class PackageEnvironmentVariablesError(web.HTTPForbidden, _ExceptionMixin):
+    def __init__(self, *, reason: str | None, temporary: bool) -> None:
+        super().__init__(
+            msg="Question package requires environment variables that are not provided by the server",
+            body=RequestError(
+                error_code=RequestErrorCode.PACKAGE_ENVIRONMENT_VARIABLES_ERROR,
+                reason=reason,
+                temporary=temporary,
+            ),
+        )
+
+
 class PackagePermissionError(web.HTTPForbidden, _ExceptionMixin):
     def __init__(self, *, reason: str | None, temporary: bool) -> None:
         super().__init__(
@@ -156,6 +168,7 @@ class ServerError(web.HTTPInternalServerError):
 
 QpyWebError = (
     PackagePermissionError
+    | PackageEnvironmentVariablesError
     | WorkerTimeoutError
     | OutOfMemoryError
     | InvalidAttemptStateError

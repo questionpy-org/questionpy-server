@@ -12,6 +12,7 @@ from questionpy_server.package import Package
 from questionpy_server.web import CURRENT_USER_KEY
 from questionpy_server.web.app import QPyServer
 from questionpy_server.worker import Worker
+from questionpy_server.worker.selector import SelectorQuery
 
 
 def get_request_info(
@@ -36,14 +37,20 @@ async def worker_context(request: web.Request, package: Package, data: RequestBa
     """Returns the worker context for the given request."""
     qpyserver = request.app[QPyServer.APP_KEY]
     current_user = request.get(CURRENT_USER_KEY)
-    permissions = qpyserver.package_permissions.get_effective_permissions(package, current_user, data.context)
+
+    selector_query = SelectorQuery(package, current_user, data.context)
+    permissions = qpyserver.package_permissions.get(selector_query)
+    environment_variables = qpyserver.environment_variables.get(selector_query)
+
     location = await package.get_zip_package_location()
 
     lms_provided_attributes = None
     if isinstance(data, LmsProvidedAttributesModel):
         lms_provided_attributes = data.lms_provided_attributes
 
-    async with qpyserver.worker_pool.get_worker(location, current_user, data.context, permissions) as worker:
+    async with qpyserver.worker_pool.get_worker(
+        location, current_user, data.context, permissions, environment_variables
+    ) as worker:
         yield WorkerContext(
             worker,
             get_request_info(request, lms_provided_attributes=lms_provided_attributes),
