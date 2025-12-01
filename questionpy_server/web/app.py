@@ -48,7 +48,6 @@ class QPyServer:
             settings.collector.repositories,
             self.repo_index_cache,
             self.package_cache,
-            self.worker_pool,
         )
 
         self.web_app.cleanup_ctx.append(self._worker_pool_ctx)

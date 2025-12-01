@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 
 from pydantic import HttpUrl
 
-from questionpy_server import WorkerPool
 from questionpy_server.cache import LRUCache
 from questionpy_server.collector.indexer import Indexer
 from questionpy_server.collector.lms_collector import LMSCollector
@@ -33,9 +32,8 @@ class PackageCollection:
         repos: dict[HttpUrl, timedelta],
         repo_index_cache: LRUCache,
         package_cache: LRUCache,
-        worker_pool: WorkerPool,
     ):
-        self._indexer = Indexer(worker_pool)
+        self._indexer = Indexer()
         self._collectors: list[BaseCollector] = []
 
         if local_dir:

@@ -7,7 +7,6 @@ from asyncio import Lock
 from pathlib import Path
 from typing import overload
 
-from questionpy_server import WorkerPool
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
@@ -23,9 +22,7 @@ class Indexer:
     only indexed by its hash.
     """
 
-    def __init__(self, worker_pool: WorkerPool):
-        self._worker_pool = worker_pool
-
+    def __init__(self) -> None:
         self._index_by_hash: dict[str, Package] = {}
         self._index_by_identifier: dict[str, dict[SemVer, Package]] = {}
         """dict[identifier, dict[version, Package]]"""
