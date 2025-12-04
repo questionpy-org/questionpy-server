@@ -20,7 +20,7 @@ from questionpy_common.constants import DIST_DIR
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestInfo
 from questionpy_common.manifest import Manifest, PackageFile
-from questionpy_server.models import LoadedPackage, QuestionCreated
+from questionpy_server.models import LoadedPackage, QuestionCreated, QuestionMigrated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import PackageFileData, Worker, WorkerArgs, WorkerState
 from questionpy_server.worker.exception import (
@@ -43,7 +43,9 @@ from questionpy_server.worker.runtime.messages import (
     MessageToServer,
     MessageToWorker,
     ScoreAttempt,
+    SidegradeQuestion,
     StartAttempt,
+    UpgradeQuestion,
     ViewAttempt,
     WorkerError,
 )
@@ -250,6 +252,24 @@ class BaseWorker(Worker, ABC):
         return QuestionCreated(
             question_state=ret.question_state, lms_permissions=lms_permissions, **ret.question_model.model_dump()
         )
+
+    async def upgrade_question(self, request_info: RequestInfo, question_state: str) -> QuestionMigrated:
+        msg = UpgradeQuestion(
+            request_info=request_info,
+            question_state=question_state,
+        )
+        ret = await self.send_and_wait_for_response(msg, UpgradeQuestion.Response)
+
+        return QuestionMigrated(question_state=ret.question_state)
+
+    async def sidegrade_question(self, request_info: RequestInfo, question_state: str) -> QuestionMigrated:
+        msg = SidegradeQuestion(
+            request_info=request_info,
+            question_state=question_state,
+        )
+        ret = await self.send_and_wait_for_response(msg, SidegradeQuestion.Response)
+
+        return QuestionMigrated(question_state=ret.question_state)
 
     async def start_attempt(self, request_info: RequestInfo, question_state: str, variant: int) -> AttemptStartedModel:
         msg = StartAttempt(question_state=question_state, variant=variant, request_info=request_info)

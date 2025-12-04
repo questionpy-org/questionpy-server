@@ -8,6 +8,7 @@ from typing import Annotated, Any
 from pydantic import BaseModel, ByteSize, ConfigDict, Field
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
+from questionpy_common.api.qtype import MigrationErrorKind
 from questionpy_common.api.question import LmsPermissions, QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import LmsProvidedAttributes as EnvironmentLmsProvidedAttributes
@@ -84,6 +85,18 @@ class QuestionCreated(QuestionModel):
     question_state: str
 
 
+class QuestionUpgradeArguments(RequestBaseData):
+    question_state: str
+
+
+class QuestionSidegradeArguments(RequestBaseData):
+    question_state: str
+
+
+class QuestionMigrated(BaseModel):
+    question_state: str
+
+
 class LmsProvidedAttributes(BaseModel):
     lms_provided_attributes: EnvironmentLmsProvidedAttributes | None = None
 
@@ -128,6 +141,7 @@ class RequestErrorCode(Enum):
     INVALID_OPTIONS_FORM = "INVALID_OPTIONS_FORM"
     PACKAGE_ERROR = "PACKAGE_ERROR"
     PACKAGE_NOT_FOUND = "PACKAGE_NOT_FOUND"
+    MIGRATION_ERROR = "MIGRATION_ERROR"
     CALLBACK_API_ERROR = "CALLBACK_API_ERROR"
     SERVER_ERROR = "SERVER_ERROR"
 
@@ -144,20 +158,8 @@ class OptionsFormValidationError(RequestError):
     errors: dict[str, str]
 
 
-class QuestionStateMigrationErrorCode(Enum):
-    NOT_IMPLEMENTED = "NOT_IMPLEMENTED"
-    DOWNGRADE_NOT_POSSIBLE = "DOWNGRADE_NOT_POSSIBLE"
-    PACKAGE_MISMATCH = "PACKAGE_MISMATCH"
-    CURRENT_QUESTION_STATE_INVALID = "CURRENT_QUESTION_STATE_INVALID"
-    MAJOR_VERSION_MISMATCH = "MAJOR_VERSION_MISMATCH"
-    OTHER_ERROR = "OTHER_ERROR"
-
-
-class QuestionStateMigrationError(BaseModel):
-    model_config = ConfigDict(use_enum_values=True)
-
-    error_code: QuestionStateMigrationErrorCode
-    reason: str | None = None
+class MigrationError(RequestError):
+    kind: MigrationErrorKind
 
 
 class Usage(BaseModel):

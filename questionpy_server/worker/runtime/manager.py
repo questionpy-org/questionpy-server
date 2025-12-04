@@ -35,7 +35,9 @@ from questionpy_server.worker.runtime.messages import (
     MessageToServer,
     MessageToWorker,
     ScoreAttempt,
+    SidegradeQuestion,
     StartAttempt,
+    UpgradeQuestion,
     ViewAttempt,
     WorkerError,
 )
@@ -114,6 +116,8 @@ class WorkerManager:
             GetQPyPackageManifest.message_id: self.on_msg_get_qpy_package_manifest,
             GetOptionsForm.message_id: self.on_msg_get_options_form_definition,
             CreateQuestionFromOptions.message_id: self.on_msg_create_question_from_options,
+            UpgradeQuestion.message_id: self.on_msg_upgrade_question,
+            SidegradeQuestion.message_id: self.on_msg_sidegrade_question,
             StartAttempt.message_id: self.on_msg_start_attempt,
             ViewAttempt.message_id: self.on_msg_view_attempt,
             ScoreAttempt.message_id: self.on_msg_score_attempt,
@@ -254,6 +258,26 @@ class WorkerManager:
             return CreateQuestionFromOptions.Response(
                 question_state=question.export_question_state(), question_model=question.export()
             )
+
+    def on_msg_upgrade_question(self, msg: UpgradeQuestion) -> UpgradeQuestion.Response:
+        if not self._env:
+            self._raise_not_initialized(msg)
+        if not self._question_type:
+            self._raise_no_main_package_loaded(msg)
+
+        with self._with_request_info(msg, msg.request_info):
+            migrated_question_state = self._question_type.upgrade(msg.question_state)
+            return UpgradeQuestion.Response(question_state=migrated_question_state)
+
+    def on_msg_sidegrade_question(self, msg: SidegradeQuestion) -> SidegradeQuestion.Response:
+        if not self._env:
+            self._raise_not_initialized(msg)
+        if not self._question_type:
+            self._raise_no_main_package_loaded(msg)
+
+        with self._with_request_info(msg, msg.request_info):
+            migrated_question_state = self._question_type.sidegrade(msg.question_state)
+            return SidegradeQuestion.Response(question_state=migrated_question_state)
 
     def on_msg_start_attempt(self, msg: StartAttempt) -> StartAttempt.Response:
         if not self._env:

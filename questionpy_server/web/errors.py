@@ -6,6 +6,8 @@ from typing import Any
 from aiohttp import web
 from aiohttp.log import web_logger
 
+from questionpy_common.api.qtype import MigrationErrorKind
+from questionpy_server.models import MigrationError as MigrationErrorModel
 from questionpy_server.models import OptionsFormValidationError, RequestError, RequestErrorCode
 
 
@@ -152,6 +154,19 @@ class PackageNotFoundError(web.HTTPNotFound, _ExceptionMixin):
                 error_code=RequestErrorCode.PACKAGE_NOT_FOUND,
                 temporary=temporary,
                 reason=reason,
+            ),
+        )
+
+
+class MigrationError(web.HTTPUnprocessableEntity, _ExceptionMixin):
+    def __init__(self, *, reason: str | None, temporary: bool, kind: MigrationErrorKind) -> None:
+        super().__init__(
+            "Migration failed or is not possible.",
+            MigrationErrorModel(
+                error_code=RequestErrorCode.MIGRATION_ERROR,
+                temporary=temporary,
+                reason=reason,
+                kind=kind,
             ),
         )
 

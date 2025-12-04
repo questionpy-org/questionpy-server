@@ -11,7 +11,7 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, JsonValue
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
-from questionpy_common.api.qtype import InvalidQuestionStateError, OptionsFormValidationError
+from questionpy_common.api.qtype import InvalidQuestionStateError, MigrationError, OptionsFormValidationError
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import PackageNamespaceAndShortName, PackagePermissions, RequestInfo
@@ -35,7 +35,10 @@ class MessageIds(IntEnum):
     LOAD_QPY_PACKAGE = 10
     GET_QPY_PACKAGE_MANIFEST = 20
     GET_OPTIONS_FORM_DEFINITION = 30
+
     CREATE_QUESTION = 40
+    UPGRADE_QUESTION = 41
+    SIDEGRADE_QUESTION = 43
 
     START_ATTEMPT = 50
     VIEW_ATTEMPT = 51
@@ -48,7 +51,10 @@ class MessageIds(IntEnum):
     LOADED_QPY_PACKAGE = 1010
     RETURN_QPY_PACKAGE_MANIFEST = 1020
     RETURN_OPTIONS_FORM_DEFINITION = 1030
+
     RETURN_CREATE_QUESTION = 1040
+    RETURN_UPGRADE_QUESTION = 1041
+    RETURN_SIDEGRADE_QUESTION = 1043
 
     RETURN_START_ATTEMPT = 1050
     RETURN_VIEW_ATTEMPT = 1051
@@ -207,6 +213,26 @@ class ScoreAttempt(MessageToWorker):
         attempt_scored_model: AttemptScoredModel
 
 
+class UpgradeQuestion(MessageToWorker):
+    message_id: ClassVar[MessageIds] = MessageIds.UPGRADE_QUESTION
+    request_info: RequestInfo
+    question_state: str
+
+    class Response(MessageToServer):
+        message_id: ClassVar[MessageIds] = MessageIds.RETURN_UPGRADE_QUESTION
+        question_state: str
+
+
+class SidegradeQuestion(MessageToWorker):
+    message_id: ClassVar[MessageIds] = MessageIds.SIDEGRADE_QUESTION
+    request_info: RequestInfo
+    question_state: str
+
+    class Response(MessageToServer):
+        message_id: ClassVar[MessageIds] = MessageIds.RETURN_SIDEGRADE_QUESTION
+        question_state: str
+
+
 class WorkerError(MessageToServer):
     """Error message."""
 
@@ -217,6 +243,7 @@ class WorkerError(MessageToServer):
         MEMORY_EXCEEDED = auto()
         QUESTION_STATE_INVALID = auto()
         FORM_OPTIONS_INVALID = auto()
+        MIGRATION_ERROR = auto()
 
     message_id: ClassVar[MessageIds] = MessageIds.ERROR
     expected_response_id: MessageIds
@@ -239,6 +266,8 @@ class WorkerError(MessageToServer):
         elif isinstance(error, OptionsFormValidationError):
             error_type = WorkerError.ErrorType.FORM_OPTIONS_INVALID
             error_data = error.errors
+        elif isinstance(error, MigrationError):
+            error_type = WorkerError.ErrorType.MIGRATION_ERROR
         else:
             error_type = WorkerError.ErrorType.UNKNOWN
 
@@ -264,6 +293,8 @@ class WorkerError(MessageToServer):
             error = InvalidQuestionStateError(self.message)
         elif self.type == WorkerError.ErrorType.FORM_OPTIONS_INVALID:
             error = OptionsFormValidationError(self.error_data or {})
+        elif self.type == WorkerError.ErrorType.MIGRATION_ERROR:
+            error = MigrationError(self.message)
         else:
             error = WorkerUnknownError(self.message, worker_name=worker_name)
 
