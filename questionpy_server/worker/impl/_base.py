@@ -34,6 +34,7 @@ from questionpy_server.worker.exception import (
 from questionpy_server.worker.runtime.messages import (
     BaseWorkerError,
     CreateQuestionFromOptions,
+    DowngradeQuestion,
     Exit,
     GetOptionsForm,
     GetQPyPackageManifest,
@@ -259,6 +260,16 @@ class BaseWorker(Worker, ABC):
             question_state=question_state,
         )
         ret = await self.send_and_wait_for_response(msg, UpgradeQuestion.Response)
+
+        return QuestionMigrated(question_state=ret.question_state)
+
+    async def downgrade_question(self, request_info: RequestInfo, question_state: str, to: int) -> QuestionMigrated:
+        msg = DowngradeQuestion(
+            request_info=request_info,
+            question_state=question_state,
+            target_question_state_version=to,
+        )
+        ret = await self.send_and_wait_for_response(msg, DowngradeQuestion.Response)
 
         return QuestionMigrated(question_state=ret.question_state)
 

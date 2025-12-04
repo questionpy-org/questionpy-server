@@ -164,6 +164,20 @@ class Worker(ABC):
         """
 
     @abstractmethod
+    async def downgrade_question(self, request_info: RequestInfo, question_state: str, to: int) -> QuestionMigrated:
+        """Downgrade the given question state to the question state version of this package.
+
+        Args:
+            request_info: Information about the current request.
+            question_state: The question state with the same question state version as this package which should be
+                            downgraded.
+            to: The question state version to downgrade to.
+
+        Returns:
+            Migrated question state.
+        """
+
+    @abstractmethod
     async def sidegrade_question(self, request_info: RequestInfo, question_state: str) -> QuestionMigrated:
         """Sidegrade the given question state to the question state version of this package.
 

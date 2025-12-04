@@ -69,6 +69,10 @@ class QuestionTypeInterface(BasePackageInterface, Protocol):
         """Upgrade the given question state to the question state version of the main package."""
 
     @abstractmethod
+    def downgrade(self, question_state: str, to: int) -> str:
+        """Downgrade the given question state to the provided question state version of the main package."""
+
+    @abstractmethod
     def sidegrade(self, question_state: str) -> str:
         """Sidegrade the given question state to the version used by the main package."""
 

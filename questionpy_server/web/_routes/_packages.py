@@ -7,6 +7,7 @@ from aiohttp import web
 from questionpy_common.api.question import LmsPermissions
 from questionpy_server.models import (
     QuestionCreateArguments,
+    QuestionDowngradeArguments,
     QuestionEditFormResponse,
     QuestionSidegradeArguments,
     QuestionUpgradeArguments,
@@ -87,6 +88,17 @@ async def post_question_upgrade(request: web.Request, package: Package, data: Qu
             context.request_info,
             data.question_state,
         )
+
+    return pydantic_json_response(data=new_question_state)
+
+
+@package_routes.post(r"/packages/{package_hash:\w+}/question/downgrade")
+@ensure_required_parts
+async def post_question_downgrade(
+    request: web.Request, package: Package, data: QuestionDowngradeArguments
+) -> web.Response:
+    async with worker_context(request, package, data) as context:
+        new_question_state = await context.worker.downgrade_question(context.request_info, data.question_state, data.to)
 
     return pydantic_json_response(data=new_question_state)
 

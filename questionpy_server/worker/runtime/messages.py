@@ -38,6 +38,7 @@ class MessageIds(IntEnum):
 
     CREATE_QUESTION = 40
     UPGRADE_QUESTION = 41
+    DOWNGRADE_QUESTION = 42
     SIDEGRADE_QUESTION = 43
 
     START_ATTEMPT = 50
@@ -54,6 +55,7 @@ class MessageIds(IntEnum):
 
     RETURN_CREATE_QUESTION = 1040
     RETURN_UPGRADE_QUESTION = 1041
+    RETURN_DOWNGRADE_QUESTION = 1042
     RETURN_SIDEGRADE_QUESTION = 1043
 
     RETURN_START_ATTEMPT = 1050
@@ -220,6 +222,17 @@ class UpgradeQuestion(MessageToWorker):
 
     class Response(MessageToServer):
         message_id: ClassVar[MessageIds] = MessageIds.RETURN_UPGRADE_QUESTION
+        question_state: str
+
+
+class DowngradeQuestion(MessageToWorker):
+    message_id: ClassVar[MessageIds] = MessageIds.DOWNGRADE_QUESTION
+    request_info: RequestInfo
+    question_state: str
+    target_question_state_version: int
+
+    class Response(MessageToServer):
+        message_id: ClassVar[MessageIds] = MessageIds.RETURN_DOWNGRADE_QUESTION
         question_state: str
 
 

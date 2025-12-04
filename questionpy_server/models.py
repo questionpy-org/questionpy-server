@@ -89,6 +89,11 @@ class QuestionUpgradeArguments(RequestBaseData):
     question_state: str
 
 
+class QuestionDowngradeArguments(RequestBaseData):
+    question_state: str
+    to: int
+
+
 class QuestionSidegradeArguments(RequestBaseData):
     question_state: str
 
