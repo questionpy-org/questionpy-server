@@ -14,7 +14,7 @@ from questionpy_common.api.question import LmsPermissions
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import PackagePermissions, RequestInfo
 from questionpy_common.manifest import PackageFile
-from questionpy_server.models import LoadedPackage, QuestionCreated
+from questionpy_server.models import LoadedPackage, QuestionCreated, QuestionMigrated
 from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
 from questionpy_server.worker.runtime.package_location import PackageLocation
@@ -149,6 +149,46 @@ class Worker(ABC):
 
         Returns:
             New question.
+        """
+
+    @abstractmethod
+    async def upgrade_question(self, request_info: RequestInfo, question_state: str) -> QuestionMigrated:
+        """Upgrade the given question state to the question state version of this package.
+
+        Args:
+            request_info: Information about the current request.
+            question_state: The question state which should be upgraded.
+
+        Returns:
+            Migrated question state.
+        """
+
+    @abstractmethod
+    async def downgrade_question(self, request_info: RequestInfo, question_state: str, to: int) -> QuestionMigrated:
+        """Downgrade the given question state to the question state version of this package.
+
+        Args:
+            request_info: Information about the current request.
+            question_state: The question state with the same question state version as this package which should be
+                            downgraded.
+            to: The question state version to downgrade to.
+
+        Returns:
+            Migrated question state.
+        """
+
+    @abstractmethod
+    async def sidegrade_question(self, request_info: RequestInfo, question_state: str) -> QuestionMigrated:
+        """Sidegrade the given question state to the question state version of this package.
+
+        The question state can origin from a different package.
+
+        Args:
+            request_info: Information about the current request.
+            question_state: The question state which should be upgraded.
+
+        Returns:
+            Migrated question state.
         """
 
     @abstractmethod

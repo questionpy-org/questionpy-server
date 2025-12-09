@@ -7,7 +7,16 @@ from enum import StrEnum
 from keyword import iskeyword, issoftkeyword
 from typing import Annotated, NewType
 
-from pydantic import BaseModel, ByteSize, PositiveInt, StringConstraints, conset, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ByteSize,
+    NonNegativeInt,
+    PositiveInt,
+    StringConstraints,
+    conset,
+    field_validator,
+)
 from pydantic.fields import Field
 
 from questionpy_common.constants import ENVIRONMENT_VARIABLE_REGEX
@@ -79,6 +88,10 @@ def ensure_is_valid_name(name: str) -> str:
 Bcp47LanguageTag = NewType("Bcp47LanguageTag", str)
 
 
+type Namespace = Annotated[str, AfterValidator(ensure_is_valid_name)]
+type ShortName = Namespace
+
+
 class PartialPackagePermissions(BaseModel):
     cpus: int | None = None
     memory: ByteSize | None = None
@@ -97,8 +110,8 @@ class SourceManifest(BaseModel):
     These fields are valid inside a package's configuration file.
     """
 
-    short_name: str
-    namespace: str = DEFAULT_NAMESPACE
+    short_name: ShortName
+    namespace: Namespace = DEFAULT_NAMESPACE
     version: Annotated[str, Field(pattern=RE_SEMVER)]
     api_version: Annotated[str, Field(pattern=RE_API)]
     author: str
@@ -119,11 +132,6 @@ class SourceManifest(BaseModel):
     environment_variables: set[EnvironmentVariableName] | None = None
     tags: set[str] = set()
     requirements: str | list[str] | None = None
-
-    @field_validator("short_name", "namespace")
-    @classmethod
-    def ensure_is_valid_name(cls, value: str) -> str:
-        return ensure_is_valid_name(value)
 
     @field_validator("languages", "name")
     @classmethod
@@ -170,3 +178,6 @@ class Manifest(SourceManifest):
     static_files: dict[str, PackageFile] = {}
 
     dependencies: DistDependencies = DistDependencies()
+
+    state_version: NonNegativeInt = 0
+    possible_side_migrations: dict[Namespace, dict[ShortName, set[NonNegativeInt]]] = {}

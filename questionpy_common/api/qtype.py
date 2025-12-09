@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from enum import Enum
 from typing import TYPE_CHECKING, Protocol
 
 from questionpy_common.api.package import BasePackageInterface
@@ -19,6 +20,8 @@ if TYPE_CHECKING:
 __all__ = [
     "InvalidAttemptStateError",
     "InvalidQuestionStateError",
+    "MigrationError",
+    "MigrationErrorKind",
     "OptionsFormValidationError",
     "QuestionTypeInterface",
 ]
@@ -61,12 +64,24 @@ class QuestionTypeInterface(BasePackageInterface, Protocol):
             InvalidQuestionStateError: When the given question state is invalid and cannot be reused.
         """
 
+    @abstractmethod
+    def upgrade(self, question_state: str) -> str:
+        """Upgrade the given question state to the question state version of the main package."""
+
+    @abstractmethod
+    def downgrade(self, question_state: str, to: int) -> str:
+        """Downgrade the given question state to the provided question state version of the main package."""
+
+    @abstractmethod
+    def sidegrade(self, question_state: str) -> str:
+        """Sidegrade the given question state to the version used by the main package."""
+
 
 class OptionsFormValidationError(QPyBaseError):
-    def __init__(self, errors: dict[str, str]):
+    def __init__(self, errors: dict[str, str], reason: str | None = None, temporary: bool = False):  # noqa: FBT001, FBT002
         """There was at least one validation error."""
         self.errors = errors  # input element name -> error description
-        super().__init__("Form input data could not be validated successfully.")
+        super().__init__("Form input data could not be validated successfully.", reason=reason, temporary=temporary)
 
 
 class InvalidAttemptStateError(QPyBaseError):
@@ -75,3 +90,23 @@ class InvalidAttemptStateError(QPyBaseError):
 
 class InvalidQuestionStateError(QPyBaseError):
     """Error to raise when your package cannot parse the question state it is given."""
+
+
+class MigrationErrorKind(Enum):
+    NOT_IMPLEMENTED = "NOT_IMPLEMENTED"
+    NOT_POSSIBLE = "NOT_POSSIBLE"
+    PACKAGE_MISSMATCH = "PACKAGE_MISSMATCH"
+    QUESTION_STATE_INVALID = "QUESTION_STATE_INVALID"
+    FAILED = "FAILED"
+    DISCOVERY_ERROR = "DISCOVERY_ERROR"
+    OTHER_ERROR = "OTHER_ERROR"
+
+
+class MigrationError(QPyBaseError):
+    """The migration failed."""
+
+    def __init__(
+        self, *args: object, kind: MigrationErrorKind, reason: str | None = None, temporary: bool = False
+    ) -> None:
+        self.kind = kind
+        super().__init__(*args, reason=reason, temporary=temporary)

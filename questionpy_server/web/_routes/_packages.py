@@ -3,10 +3,16 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
 from aiohttp import web
-from aiohttp.web_exceptions import HTTPMethodNotAllowed
 
 from questionpy_common.api.question import LmsPermissions
-from questionpy_server.models import QuestionCreateArguments, QuestionEditFormResponse, RequestBaseData
+from questionpy_server.models import (
+    QuestionCreateArguments,
+    QuestionDowngradeArguments,
+    QuestionEditFormResponse,
+    QuestionSidegradeArguments,
+    QuestionUpgradeArguments,
+    RequestBaseData,
+)
 from questionpy_server.package import Package
 from questionpy_server.web._decorators import ensure_package, ensure_required_parts
 from questionpy_server.web._utils import pydantic_json_response
@@ -74,10 +80,41 @@ async def post_question(
     return pydantic_json_response(data=question)
 
 
-@package_routes.post(r"/packages/{package_hash:\w+}/question/migrate")
-async def post_question_migrate(_request: web.Request) -> web.Response:
-    method = "POST"
-    raise HTTPMethodNotAllowed(method, [])
+@package_routes.post(r"/packages/{package_hash:\w+}/question/upgrade")
+@ensure_required_parts
+async def post_question_upgrade(request: web.Request, package: Package, data: QuestionUpgradeArguments) -> web.Response:
+    async with worker_context(request, package, data) as context:
+        new_question_state = await context.worker.upgrade_question(
+            context.request_info,
+            data.question_state,
+        )
+
+    return pydantic_json_response(data=new_question_state)
+
+
+@package_routes.post(r"/packages/{package_hash:\w+}/question/downgrade")
+@ensure_required_parts
+async def post_question_downgrade(
+    request: web.Request, package: Package, data: QuestionDowngradeArguments
+) -> web.Response:
+    async with worker_context(request, package, data) as context:
+        new_question_state = await context.worker.downgrade_question(context.request_info, data.question_state, data.to)
+
+    return pydantic_json_response(data=new_question_state)
+
+
+@package_routes.post(r"/packages/{package_hash:\w+}/question/sidegrade")
+@ensure_required_parts
+async def post_question_sidegrade(
+    request: web.Request, package: Package, data: QuestionSidegradeArguments
+) -> web.Response:
+    async with worker_context(request, package, data) as context:
+        new_question_state = await context.worker.sidegrade_question(
+            context.request_info,
+            data.question_state,
+        )
+
+    return pydantic_json_response(data=new_question_state)
 
 
 @package_routes.post(r"/package-extract-info")

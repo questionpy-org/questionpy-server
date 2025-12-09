@@ -11,7 +11,7 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, JsonValue
 
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
-from questionpy_common.api.qtype import InvalidQuestionStateError, OptionsFormValidationError
+from questionpy_common.api.qtype import InvalidQuestionStateError, MigrationError, OptionsFormValidationError
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import PackageNamespaceAndShortName, PackagePermissions, RequestInfo
@@ -35,7 +35,11 @@ class MessageIds(IntEnum):
     LOAD_QPY_PACKAGE = 10
     GET_QPY_PACKAGE_MANIFEST = 20
     GET_OPTIONS_FORM_DEFINITION = 30
+
     CREATE_QUESTION = 40
+    UPGRADE_QUESTION = 41
+    DOWNGRADE_QUESTION = 42
+    SIDEGRADE_QUESTION = 43
 
     START_ATTEMPT = 50
     VIEW_ATTEMPT = 51
@@ -48,7 +52,11 @@ class MessageIds(IntEnum):
     LOADED_QPY_PACKAGE = 1010
     RETURN_QPY_PACKAGE_MANIFEST = 1020
     RETURN_OPTIONS_FORM_DEFINITION = 1030
+
     RETURN_CREATE_QUESTION = 1040
+    RETURN_UPGRADE_QUESTION = 1041
+    RETURN_DOWNGRADE_QUESTION = 1042
+    RETURN_SIDEGRADE_QUESTION = 1043
 
     RETURN_START_ATTEMPT = 1050
     RETURN_VIEW_ATTEMPT = 1051
@@ -207,6 +215,37 @@ class ScoreAttempt(MessageToWorker):
         attempt_scored_model: AttemptScoredModel
 
 
+class UpgradeQuestion(MessageToWorker):
+    message_id: ClassVar[MessageIds] = MessageIds.UPGRADE_QUESTION
+    request_info: RequestInfo
+    question_state: str
+
+    class Response(MessageToServer):
+        message_id: ClassVar[MessageIds] = MessageIds.RETURN_UPGRADE_QUESTION
+        question_state: str
+
+
+class DowngradeQuestion(MessageToWorker):
+    message_id: ClassVar[MessageIds] = MessageIds.DOWNGRADE_QUESTION
+    request_info: RequestInfo
+    question_state: str
+    target_question_state_version: int
+
+    class Response(MessageToServer):
+        message_id: ClassVar[MessageIds] = MessageIds.RETURN_DOWNGRADE_QUESTION
+        question_state: str
+
+
+class SidegradeQuestion(MessageToWorker):
+    message_id: ClassVar[MessageIds] = MessageIds.SIDEGRADE_QUESTION
+    request_info: RequestInfo
+    question_state: str
+
+    class Response(MessageToServer):
+        message_id: ClassVar[MessageIds] = MessageIds.RETURN_SIDEGRADE_QUESTION
+        question_state: str
+
+
 class WorkerError(MessageToServer):
     """Error message."""
 
@@ -217,12 +256,13 @@ class WorkerError(MessageToServer):
         MEMORY_EXCEEDED = auto()
         QUESTION_STATE_INVALID = auto()
         FORM_OPTIONS_INVALID = auto()
+        MIGRATION_ERROR = auto()
 
     message_id: ClassVar[MessageIds] = MessageIds.ERROR
     expected_response_id: MessageIds
     type: ErrorType
+    exception_kwargs: dict[str, Any] = {}
     message: str | None
-    error_data: dict[str, str] | None = None
 
     original_stacktrace: str | None = None
     """The original worker-side stacktrace."""
@@ -230,15 +270,19 @@ class WorkerError(MessageToServer):
     @classmethod
     def from_exception(cls, error: Exception, cause: MessageToWorker) -> "WorkerError":
         """Get a WorkerError message from an exception."""
-        error_data: dict[str, str] | None = None
+        kwargs: dict[str, Any] = {}
 
         if isinstance(error, MemoryError):
             error_type = WorkerError.ErrorType.MEMORY_EXCEEDED
         elif isinstance(error, InvalidQuestionStateError):
             error_type = WorkerError.ErrorType.QUESTION_STATE_INVALID
+            kwargs = {"reason": error.reason, "temporary": error.temporary}
         elif isinstance(error, OptionsFormValidationError):
             error_type = WorkerError.ErrorType.FORM_OPTIONS_INVALID
-            error_data = error.errors
+            kwargs = {"errors": error.errors, "reason": error.reason, "temporary": error.temporary}
+        elif isinstance(error, MigrationError):
+            error_type = WorkerError.ErrorType.MIGRATION_ERROR
+            kwargs = {"kind": error.kind, "reason": error.reason, "temporary": error.temporary}
         else:
             error_type = WorkerError.ErrorType.UNKNOWN
 
@@ -252,7 +296,7 @@ class WorkerError(MessageToServer):
             message=str(error),
             expected_response_id=cause.Response.message_id,
             original_stacktrace=original_stacktrace,
-            error_data=error_data,
+            exception_kwargs=kwargs,
         )
 
     def to_exception(self, worker_name: str) -> Exception:
@@ -263,7 +307,9 @@ class WorkerError(MessageToServer):
         elif self.type == WorkerError.ErrorType.QUESTION_STATE_INVALID:
             error = InvalidQuestionStateError(self.message)
         elif self.type == WorkerError.ErrorType.FORM_OPTIONS_INVALID:
-            error = OptionsFormValidationError(self.error_data or {})
+            error = OptionsFormValidationError(**self.exception_kwargs)
+        elif self.type == WorkerError.ErrorType.MIGRATION_ERROR:
+            error = MigrationError(self.message, **self.exception_kwargs)
         else:
             error = WorkerUnknownError(self.message, worker_name=worker_name)
 
