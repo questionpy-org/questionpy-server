@@ -78,10 +78,10 @@ class QuestionTypeInterface(BasePackageInterface, Protocol):
 
 
 class OptionsFormValidationError(QPyBaseError):
-    def __init__(self, errors: dict[str, str]):
+    def __init__(self, errors: dict[str, str], reason: str | None = None, temporary: bool = False):  # noqa: FBT001, FBT002
         """There was at least one validation error."""
         self.errors = errors  # input element name -> error description
-        super().__init__("Form input data could not be validated successfully.")
+        super().__init__("Form input data could not be validated successfully.", reason=reason, temporary=temporary)
 
 
 class InvalidAttemptStateError(QPyBaseError):
@@ -105,4 +105,8 @@ class MigrationErrorKind(Enum):
 class MigrationError(QPyBaseError):
     """The migration failed."""
 
-    kind = MigrationErrorKind.OTHER_ERROR
+    def __init__(
+        self, *args: object, kind: MigrationErrorKind, reason: str | None = None, temporary: bool = False
+    ) -> None:
+        self.kind = kind
+        super().__init__(*args, reason=reason, temporary=temporary)

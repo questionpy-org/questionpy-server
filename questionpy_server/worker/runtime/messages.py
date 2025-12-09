@@ -261,8 +261,8 @@ class WorkerError(MessageToServer):
     message_id: ClassVar[MessageIds] = MessageIds.ERROR
     expected_response_id: MessageIds
     type: ErrorType
+    exception_kwargs: dict[str, Any] = {}
     message: str | None
-    error_data: dict[str, str] | None = None
 
     original_stacktrace: str | None = None
     """The original worker-side stacktrace."""
@@ -270,17 +270,19 @@ class WorkerError(MessageToServer):
     @classmethod
     def from_exception(cls, error: Exception, cause: MessageToWorker) -> "WorkerError":
         """Get a WorkerError message from an exception."""
-        error_data: dict[str, str] | None = None
+        kwargs: dict[str, Any] = {}
 
         if isinstance(error, MemoryError):
             error_type = WorkerError.ErrorType.MEMORY_EXCEEDED
         elif isinstance(error, InvalidQuestionStateError):
             error_type = WorkerError.ErrorType.QUESTION_STATE_INVALID
+            kwargs = {"reason": error.reason, "temporary": error.temporary}
         elif isinstance(error, OptionsFormValidationError):
             error_type = WorkerError.ErrorType.FORM_OPTIONS_INVALID
-            error_data = error.errors
+            kwargs = {"errors": error.errors, "reason": error.reason, "temporary": error.temporary}
         elif isinstance(error, MigrationError):
             error_type = WorkerError.ErrorType.MIGRATION_ERROR
+            kwargs = {"kind": error.kind, "reason": error.reason, "temporary": error.temporary}
         else:
             error_type = WorkerError.ErrorType.UNKNOWN
 
@@ -294,7 +296,7 @@ class WorkerError(MessageToServer):
             message=str(error),
             expected_response_id=cause.Response.message_id,
             original_stacktrace=original_stacktrace,
-            error_data=error_data,
+            exception_kwargs=kwargs,
         )
 
     def to_exception(self, worker_name: str) -> Exception:
@@ -305,9 +307,9 @@ class WorkerError(MessageToServer):
         elif self.type == WorkerError.ErrorType.QUESTION_STATE_INVALID:
             error = InvalidQuestionStateError(self.message)
         elif self.type == WorkerError.ErrorType.FORM_OPTIONS_INVALID:
-            error = OptionsFormValidationError(self.error_data or {})
+            error = OptionsFormValidationError(**self.exception_kwargs)
         elif self.type == WorkerError.ErrorType.MIGRATION_ERROR:
-            error = MigrationError(self.message)
+            error = MigrationError(self.message, **self.exception_kwargs)
         else:
             error = WorkerUnknownError(self.message, worker_name=worker_name)
 
