@@ -12,7 +12,7 @@ from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.models import PackageInfo, PackageVersionsInfo, PackageVersionSpecificInfo
 from questionpy_server.package import Package
-from questionpy_server.utils.manifest import ComparableManifest, SemVer, read_manifest
+from questionpy_server.utils.manifest import ComparableManifest, SemVer, read_manifest_from_zip
 
 
 class Indexer:
@@ -127,7 +127,7 @@ class Indexer:
                 # Create new package...
                 if isinstance(path_or_manifest, Path):
                     # ...from path.
-                    manifest = await read_manifest(path_or_manifest)
+                    manifest = await read_manifest_from_zip(path_or_manifest)
                     package = Package(package_hash, manifest, source, path_or_manifest)
                 else:
                     # ...from manifest.
