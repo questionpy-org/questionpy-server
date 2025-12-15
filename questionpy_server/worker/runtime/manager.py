@@ -12,7 +12,6 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, NoReturn, TypeVar, cast
 
 from questionpy_common import PackageNamespaceAndShortName
-from questionpy_common.constants import MAX_QPY_DEPENDENCY_LEVELS
 from questionpy_common.environment import (
     Environment,
     OnRequestCallback,
@@ -329,19 +328,3 @@ class WorkerNotInitializedError(Exception):
 
 class MainPackageNotLoadedError(Exception):
     pass
-
-
-class DependencyError(Exception):
-    def __init__(self, message: str, stack: tuple[PackageNamespaceAndShortName, ...]) -> None:
-        super().__init__(message)
-        self.stack = stack
-
-
-class CircularDependencyError(DependencyError):
-    def __init__(self, nssn: PackageNamespaceAndShortName, stack: tuple[PackageNamespaceAndShortName, ...]):
-        super().__init__(f"'{nssn}'. Dependency stack: {stack}", stack)
-
-
-class TooDeeplyNestedDependencyError(DependencyError):
-    def __init__(self, stack: tuple[PackageNamespaceAndShortName, ...]) -> None:
-        super().__init__(f"Dependency graph is deeper than '{MAX_QPY_DEPENDENCY_LEVELS}' levels at '{stack}'.", stack)

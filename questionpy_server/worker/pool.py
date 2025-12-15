@@ -16,6 +16,7 @@ from pydantic import ByteSize
 
 from questionpy_common.environment import PackagePermissions
 from questionpy_common.error import QPyBaseError
+from questionpy_server.dependencies import WorkerDependencyResolver
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
 from questionpy_server.worker.runtime.package_location import (
     DirPackageLocation,
@@ -43,18 +44,27 @@ class _IdleWorkersIdentifier(NamedTuple):
 
 
 class WorkerPool:
-    def __init__(self, max_workers: int, max_memory: int, worker_type: type[Worker] = SubprocessWorker):
+    def __init__(
+        self,
+        max_workers: int,
+        max_memory: int,
+        *,
+        worker_type: type[Worker] = SubprocessWorker,
+        dependency_resolver: WorkerDependencyResolver,
+    ) -> None:
         """Initialize the worker pool.
 
         Args:
             max_workers (int): maximum number of workers being executed in parallel
             max_memory (int): maximum memory (in bytes) that all workers in the pool are allowed to consume
             worker_type (type[Worker]): worker implementation
+            dependency_resolver: dependency resolver
         """
         self.max_workers = max_workers
         self.max_memory = max_memory
 
         self._worker_type = worker_type
+        self._dependency_resolver = dependency_resolver
 
         self._lock: Lock = Lock()
         self._semaphore: Semaphore = Semaphore(self.max_workers)

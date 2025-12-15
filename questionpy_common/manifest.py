@@ -163,7 +163,11 @@ class DistStaticQPyDependency(BaseModel):
     """Transitive dependencies of this dependency."""
 
     hash: str
-    """Hash of the ZIP package whose contents lie in `dir_name`."""
+    """Hash of the ZIP package whose contents are included in this package."""
+
+    @property
+    def nssn(self) -> PackageNamespaceAndShortName:
+        return PackageNamespaceAndShortName(self.namespace, self.short_name)
 
 
 type DependencyLockStrategy = Literal["required", "preferred-no-downgrade", "preferred-allow-downgrade"]
@@ -180,6 +184,10 @@ class AbstractDynamicQPyDependency(BaseModel, ABC):
     short_name: Annotated[str, AfterValidator(ensure_is_valid_name)]
     version: QPyDependencyVersionSpecifier | None = None
     include_prereleases: bool = False
+
+    @property
+    def nssn(self) -> PackageNamespaceAndShortName:
+        return PackageNamespaceAndShortName(self.namespace, self.short_name)
 
 
 class DistDynamicQPyDependency(AbstractDynamicQPyDependency):
