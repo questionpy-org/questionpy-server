@@ -10,11 +10,12 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel, JsonValue
 
+from questionpy_common import PackageNamespaceAndShortName
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.api.qtype import InvalidQuestionStateError, OptionsFormValidationError
 from questionpy_common.api.question import QuestionModel
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import PackageNamespaceAndShortName, PackagePermissions, RequestInfo
+from questionpy_common.environment import PackagePermissions, RequestInfo
 from questionpy_common.error import QPyBaseError
 from questionpy_common.manifest import Manifest
 from questionpy_server.worker.runtime.package_location import PackageLocation

@@ -10,6 +10,7 @@ from typing import Annotated, Literal, NewType
 from pydantic import AfterValidator, BaseModel, ByteSize, PositiveInt, StringConstraints, conset, field_validator
 from pydantic.fields import Field
 
+from questionpy_common import PackageNamespaceAndShortName
 from questionpy_common.constants import (
     ENVIRONMENT_VARIABLE_REGEX,
     NAME_MAX_LENGTH,
@@ -132,6 +133,10 @@ class SourceManifest(BaseModel):
     @property
     def identifier(self) -> str:
         return f"@{self.namespace}/{self.short_name}"
+
+    @property
+    def nssn(self) -> PackageNamespaceAndShortName:
+        return PackageNamespaceAndShortName(self.namespace, self.short_name)
 
 
 class PackageFile(BaseModel):

@@ -11,12 +11,12 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, NoReturn, TypeVar, cast
 
+from questionpy_common import PackageNamespaceAndShortName
 from questionpy_common.constants import MAX_QPY_DEPENDENCY_LEVELS
 from questionpy_common.environment import (
     Environment,
     OnRequestCallback,
     Package,
-    PackageNamespaceAndShortName,
     PackagePermissions,
     PackageState,
     RequestInfo,

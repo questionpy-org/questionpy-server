@@ -11,12 +11,12 @@ from pathlib import Path
 from types import ModuleType
 from zipfile import ZipFile
 
+from questionpy_common import PackageNamespaceAndShortName
 from questionpy_common.api.package import QPyPackageInterface
 from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME
 from questionpy_common.environment import (
     Environment,
     Package,
-    PackageNamespaceAndShortName,
     PackageNotInitializedError,
     PackageNotLoadedError,
     PackageState,
