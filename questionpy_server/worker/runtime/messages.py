@@ -18,6 +18,7 @@ from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import PackagePermissions, RequestInfo
 from questionpy_common.error import QPyBaseError
 from questionpy_common.manifest import Manifest
+from questionpy_server.dependencies import SolutionAndLocation
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
 messages_header_struct: Struct = Struct("=LL")
@@ -117,6 +118,9 @@ class LoadQPyPackage(MessageToWorker):
     location: PackageLocation
     main: bool
     """Set this package as the main package and execute its entry point."""
+
+    dependencies: dict[PackageNamespaceAndShortName, SolutionAndLocation]
+    """All resolved dependencies in the root package's tree. Does not include the root package itself."""
 
     class Response(MessageToServer):
         """Success message in return to LoadQPyPackage."""

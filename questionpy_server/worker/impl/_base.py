@@ -112,7 +112,7 @@ class BaseWorker(Worker, ABC):
 
     async def _load_package(self, package_location: PackageLocation, *, main: bool) -> None:
         loaded = await self.send_and_wait_for_response(
-            LoadQPyPackage(location=package_location, main=main),
+            LoadQPyPackage(location=package_location, main=main, dependencies=self._dependencies),
             LoadQPyPackage.Response,
             self.permissions.bootstrap_timeout,
         )
@@ -373,7 +373,7 @@ class LimitTimeUsageMixin(Worker, ABC):
     the cpu limit in real time.
     """
 
-    _real_time_limit_factor = 3
+    _real_time_limit_factor = 1000
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)

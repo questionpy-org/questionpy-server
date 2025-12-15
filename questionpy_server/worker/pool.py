@@ -16,7 +16,10 @@ from pydantic import ByteSize
 
 from questionpy_common.environment import PackagePermissions
 from questionpy_common.error import QPyBaseError
+from questionpy_common.manifest import Manifest
 from questionpy_server.dependencies import WorkerDependencyResolver
+from questionpy_server.package import Package
+from questionpy_server.utils.manifest import read_manifest_from_location
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
 from questionpy_server.worker.runtime.package_location import (
     DirPackageLocation,
@@ -111,7 +114,7 @@ class WorkerPool:
     @asynccontextmanager
     async def get_worker(
         self,
-        package: PackageLocation,
+        package: Package | PackageLocation,
         user: str | None,
         context: str,
         permissions: PackagePermissions,
@@ -122,16 +125,24 @@ class WorkerPool:
         A context manager is used to ensure that a worker is always given back to the pool.
 
         Args:
-            package: path to QuestionPy package
+            package: The main package to be run, either as a [Package][questionpy_server.package.Package] instance, or a
+                     specific [PackageLocation][questionpy_server.worker.runtime.package_location.PackageLocation].
             user: the user requesting the worker
             context: context within the lms
             permissions: package permissions
             environment_variables: environment variables to be set in the worker
 
         Returns:
-            A worker
+            A new or previously idle worker running the given package.
         """
         self._workers_requested += 1
+
+        if isinstance(package, Package):
+            manifest = package.manifest
+            package_location: PackageLocation = await package.get_zip_package_location()
+        else:
+            manifest = await read_manifest_from_location(package)
+            package_location = package
 
         # Limit the number of running workers.
         async with self._semaphore:
@@ -149,7 +160,12 @@ class WorkerPool:
                 async with self._lock, self._condition:
                     await self._condition.wait_for(lambda: self._memory_available(permissions.memory))
                     worker = await self._create_or_reuse_worker(
-                        package, user, context, permissions, environment_variables
+                        package_location=package_location,
+                        manifest=manifest,
+                        user=user,
+                        context=context,
+                        permissions=permissions,
+                        environment_variables=environment_variables,
                     )
                     self._workers_in_use += 1
 
@@ -157,7 +173,7 @@ class WorkerPool:
             finally:
                 if worker:
                     async with self._condition:
-                        await self._handle_idle_worker(package, user, context, worker)
+                        await self._handle_idle_worker(package_location, user, context, worker)
                         self._condition.notify()
                         self._workers_in_use -= 1
 
@@ -219,16 +235,17 @@ class WorkerPool:
 
     async def _create_or_reuse_worker(
         self,
-        package: PackageLocation,
+        *,
+        package_location: PackageLocation,
+        manifest: Manifest,
         user: str | None,
         context: str,
         permissions: PackagePermissions,
         environment_variables: dict[str, str],
     ) -> Worker:
         """If possible, get an idle worker or create a new one."""
-        # Since the `PackagePermissions` only dependent on the `user` and `context` the worker
-        # permissions are the same.
-        identifier = _IdleWorkersIdentifier(package, user, context)
+        # Since the `PackagePermissions` only depend on the `user` and `context`, the worker permissions are the same.
+        identifier = _IdleWorkersIdentifier(package_location, user, context)
         if identifier in self._idle_workers:
             # There is an idle worker with this package loaded - reuse the most recent one.
             worker = self._idle_workers[identifier].popleft()
@@ -239,18 +256,21 @@ class WorkerPool:
 
             self._memory_idle -= worker.permissions.memory
         else:
+            dependencies = await self._dependency_resolver.resolve_and_retrieve(manifest)
+
             # We need to create a new worker - free as much memory as needed to start the worker.
             await self._free_memory(permissions.memory)
 
-            name = self._generate_worker_name(package)
+            name = self._generate_worker_name(package_location)
             worker_home = self._working_dir / f"worker-{name}"
             await asyncio.to_thread(worker_home.mkdir)
 
             worker = self._worker_type(
                 name=name,
-                package=package,
+                package=package_location,
                 permissions=permissions,
                 worker_home=worker_home,
+                dependencies=dependencies,
                 environment_variables=environment_variables,
             )
             await worker.start()
