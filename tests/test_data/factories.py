@@ -31,7 +31,7 @@ class RepoMetaFactory(ModelFactory):
 class RepoPackageVersionsFactory(CustomFactory):
     __model__ = RepoPackageVersions
 
-    manifest = Use(lambda: ManifestFactory.build())
+    manifest = Use(lambda: ManifestFactory.build())  # noqa: PLW0108
 
 
 class ManifestFactory(CustomFactory):
