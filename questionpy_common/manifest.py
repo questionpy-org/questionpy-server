@@ -7,7 +7,15 @@ from enum import StrEnum
 from keyword import iskeyword, issoftkeyword
 from typing import Annotated, Literal, NewType
 
-from pydantic import AfterValidator, BaseModel, ByteSize, PositiveInt, StringConstraints, conset, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ByteSize,
+    PositiveInt,
+    StringConstraints,
+    conset,
+    field_validator,
+)
 from pydantic.fields import Field
 
 from questionpy_common import PackageNamespaceAndShortName
@@ -147,8 +155,13 @@ class PackageFile(BaseModel):
 
 
 class DistStaticQPyDependency(BaseModel):
-    dir_name: str
-    """Name (without `dist/dependencies/qpy/`) of the directory the dependency package contents reside in."""
+    namespace: Annotated[str, AfterValidator(ensure_is_valid_name)]
+    short_name: Annotated[str, AfterValidator(ensure_is_valid_name)]
+    version: Annotated[str, Field(pattern=RE_SEMVER)]
+
+    dependencies: "DistDependencies"
+    """Transitive dependencies of this dependency."""
+
     hash: str
     """Hash of the ZIP package whose contents lie in `dir_name`."""
 
