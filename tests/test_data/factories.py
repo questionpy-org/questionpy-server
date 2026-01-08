@@ -11,7 +11,7 @@ from semver import Version
 
 from questionpy_common.manifest import Bcp47LanguageTag, DistDependencies, PartialPackagePermissions
 from questionpy_server.repository.models import RepoMeta, RepoPackageVersions
-from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.utils.manifest import Manifest
 
 
 class CustomFactory(ModelFactory[Any]):
@@ -35,7 +35,7 @@ class RepoPackageVersionsFactory(CustomFactory):
 
 
 class ManifestFactory(CustomFactory):
-    __model__ = ComparableManifest
+    __model__ = Manifest
 
     short_name = Use(lambda: ModelFactory.__faker__.word().lower() + "_sn")
     namespace = Use(lambda: ModelFactory.__faker__.word().lower() + "_ns")

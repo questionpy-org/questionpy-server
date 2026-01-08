@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from semver import Version
 
 from questionpy_server import WorkerPool
 from questionpy_server.collector.abc import BaseCollector
@@ -15,7 +16,7 @@ from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.package import PackageSources
-from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.utils.manifest import Manifest
 from tests.conftest import PACKAGE
 
 
@@ -23,7 +24,7 @@ from tests.conftest import PACKAGE
 @patch("questionpy_server.collector.lms_collector.LMSCollector", spec=LMSCollector)
 async def test_register_package_with_path_and_manifest(
     collector: LMSCollector,
-    kind: Path | ComparableManifest,
+    kind: Path | Manifest,
     worker_pool: WorkerPool,
 ) -> None:
     indexer = Indexer()
@@ -42,7 +43,9 @@ async def test_register_package_from_lms(collector: LMSCollector, worker_pool: W
     await indexer.register_package(PACKAGE.hash, PACKAGE.manifest, collector)
 
     # Package is not accessible by identifier and version.
-    package = indexer.get_by_identifier_and_version(PACKAGE.manifest.identifier, PACKAGE.manifest.version)
+    package = indexer.get_by_identifier_and_version(
+        PACKAGE.manifest.identifier, Version.parse(PACKAGE.manifest.version)
+    )
     assert package is None
 
     # Package is not accessible by identifier.
@@ -71,14 +74,16 @@ async def test_register_package_from_local_and_repo_collector(
     assert package.manifest == PACKAGE.manifest
 
     # Package is accessible by identifier and version.
-    new_package = indexer.get_by_identifier_and_version(PACKAGE.manifest.identifier, PACKAGE.manifest.version)
+    new_package = indexer.get_by_identifier_and_version(
+        PACKAGE.manifest.identifier, Version.parse(PACKAGE.manifest.version)
+    )
     assert new_package is not None
     assert new_package is package
 
     # Package is accessible by identifier.
     packages_by_identifier = indexer.get_by_identifier(PACKAGE.manifest.identifier)
     assert len(packages_by_identifier) == 1
-    assert packages_by_identifier[package.manifest.version] is package
+    assert packages_by_identifier[Version.parse(package.manifest.version)] is package
 
     # Package is accessible by retrieving all packages.
     packages = indexer.get_package_versions_infos()
@@ -110,7 +115,7 @@ async def test_register_package_with_same_hash_as_existing_package(worker_pool: 
     # Package will only be listed once.
     packages_by_identifier = indexer.get_by_identifier(PACKAGE.manifest.identifier)
     assert len(packages_by_identifier) == 1
-    assert packages_by_identifier[package.manifest.version] is package
+    assert packages_by_identifier[Version.parse(package.manifest.version)] is package
 
     packages = indexer.get_package_versions_infos()
     assert len(packages) == 1
@@ -163,7 +168,9 @@ async def test_unregister_package_with_local_and_repo_source(collector: BaseColl
     assert package is None
 
     # Package is not accessible by identifier and version.
-    package = indexer.get_by_identifier_and_version(PACKAGE.manifest.identifier, PACKAGE.manifest.version)
+    package = indexer.get_by_identifier_and_version(
+        PACKAGE.manifest.identifier, Version.parse(PACKAGE.manifest.version)
+    )
     assert package is None
 
     # Package is not accessible by identifier.
@@ -192,7 +199,9 @@ async def test_unregister_package_with_multiple_sources(worker_pool: WorkerPool)
     assert package is not None
 
     # Package is still accessible by identifier and version.
-    package = indexer.get_by_identifier_and_version(PACKAGE.manifest.identifier, PACKAGE.manifest.version)
+    package = indexer.get_by_identifier_and_version(
+        PACKAGE.manifest.identifier, Version.parse(PACKAGE.manifest.version)
+    )
     assert package is not None
 
     # Package is still accessible by identifier.
@@ -207,7 +216,9 @@ async def test_unregister_package_with_multiple_sources(worker_pool: WorkerPool)
     assert package is not None
 
     # Package is not accessible by identifier and version.
-    package = indexer.get_by_identifier_and_version(PACKAGE.manifest.identifier, PACKAGE.manifest.version)
+    package = indexer.get_by_identifier_and_version(
+        PACKAGE.manifest.identifier, Version.parse(PACKAGE.manifest.version)
+    )
     assert package is None
 
     # Package is not accessible by identifier.

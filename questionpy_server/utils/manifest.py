@@ -9,7 +9,7 @@ from typing import IO, Annotated
 from zipfile import BadZipFile, ZipFile
 
 from pydantic import PlainSerializer, PlainValidator, ValidationError
-from semver import VersionInfo as _Version
+from semver import Version
 
 from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, MAX_MANIFEST_SIZE
 from questionpy_common.error import QPyBaseError
@@ -20,18 +20,12 @@ from questionpy_server.worker.runtime.package_location import (
     ZipPackageLocation,
 )
 
-type SemVer = Annotated[_Version, PlainValidator(_Version.parse), PlainSerializer(_Version.__str__)]
-
-
-class ComparableManifest(Manifest):
-    version: SemVer  # type: ignore[assignment]
-
 
 class ManifestError(QPyBaseError):
     pass
 
 
-def _read_manifest_from_file_sync(manifest_file: IO[bytes]) -> ComparableManifest:
+def _read_manifest_from_file_sync(manifest_file: IO[bytes]) -> Manifest:
     try:
         buffer = manifest_file.read(MAX_MANIFEST_SIZE + 1)
 
@@ -39,13 +33,13 @@ def _read_manifest_from_file_sync(manifest_file: IO[bytes]) -> ComparableManifes
             msg = f"Manifest is too large. Maximum size is {MAX_MANIFEST_SIZE.human_readable()}."
             raise ManifestError(msg)
 
-        return ComparableManifest.model_validate_json(buffer)
+        return Manifest.model_validate_json(buffer)
     except ValidationError as e:
         msg = f"Manifest is invalid: {e}"
         raise ManifestError(msg) from e
 
 
-def _read_manifest_from_path_sync(manifest_path: Path) -> ComparableManifest:
+def _read_manifest_from_path_sync(manifest_path: Path) -> Manifest:
     try:
         with manifest_path.open("rb") as file:
             return _read_manifest_from_file_sync(file)
@@ -54,7 +48,7 @@ def _read_manifest_from_path_sync(manifest_path: Path) -> ComparableManifest:
         raise ManifestError(msg) from e
 
 
-def _read_manifest_from_zip_sync(package_path: Path) -> ComparableManifest:
+def _read_manifest_from_zip_sync(package_path: Path) -> Manifest:
     try:
         with ZipFile(package_path) as zip_file, zip_file.open(f"{DIST_DIR}/{MANIFEST_FILENAME}") as manifest_file:
             return _read_manifest_from_file_sync(manifest_file)
@@ -67,7 +61,7 @@ def _read_manifest_from_zip_sync(package_path: Path) -> ComparableManifest:
         raise ManifestError(msg) from e
 
 
-async def read_manifest_from_zip(package_path: Path) -> ComparableManifest:
+async def read_manifest_from_zip(package_path: Path) -> Manifest:
     """Reads the manifest from a zipped package.
 
     Raises:
@@ -76,11 +70,14 @@ async def read_manifest_from_zip(package_path: Path) -> ComparableManifest:
     return await asyncio.to_thread(_read_manifest_from_zip_sync, package_path)
 
 
-async def read_manifest_from_location(location: PackageLocation) -> ComparableManifest:
+async def read_manifest_from_location(location: PackageLocation) -> Manifest:
     if isinstance(location, ZipPackageLocation):
         return await read_manifest_from_zip(location.path)
     if isinstance(location, FunctionPackageLocation):
-        return ComparableManifest(**location.manifest.model_dump())
+        return Manifest(**location.manifest.model_dump())
 
     manifest_path = location.path / DIST_DIR / MANIFEST_FILENAME
     return await to_thread(_read_manifest_from_path_sync, manifest_path)
+
+
+type ParsableSemverVersion = Annotated[Version, PlainValidator(Version.parse), PlainSerializer(Version.__str__)]

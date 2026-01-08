@@ -7,6 +7,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import semver
 from pydantic import HttpUrl
 
 from questionpy_server.cache import LRUCache
@@ -15,7 +16,6 @@ from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.models import PackageVersionsInfo
-from questionpy_server.utils.manifest import SemVer
 
 if TYPE_CHECKING:
     from questionpy_server.collector.abc import BaseCollector
@@ -87,7 +87,7 @@ class PackageCollection:
         """
         return self._indexer.get_by_hash(package_hash)
 
-    def get_by_identifier(self, identifier: str) -> dict[SemVer, "Package"]:
+    def get_by_identifier(self, identifier: str) -> dict[semver.Version, "Package"]:
         """Returns a dict of packages with the given identifier and available versions.
 
         Args:
@@ -98,7 +98,7 @@ class PackageCollection:
         """
         return self._indexer.get_by_identifier(identifier)
 
-    def get_by_identifier_and_version(self, identifier: str, version: SemVer) -> "Package | None":
+    def get_by_identifier_and_version(self, identifier: str, version: semver.Version) -> "Package | None":
         """Returns a package with the given identifier and version.
 
         Args:

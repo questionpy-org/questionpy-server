@@ -3,6 +3,8 @@
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 from typing import NamedTuple
 
+import semver
+
 from questionpy_server.package import Package
 from questionpy_server.settings import PackageSelector, Selectable
 
@@ -18,12 +20,13 @@ def _is_wildcard_matching(selector_value: str, package_value: str) -> bool:
 
 
 def _is_matching(selector: PackageSelector, query: SelectorQuery) -> bool:
+    manifest = query.package.manifest
     return (
         # Package data.
         _is_wildcard_matching(selector.hash, query.package.hash)
         and _is_wildcard_matching(selector.namespace, query.package.manifest.namespace)
         and _is_wildcard_matching(selector.short_name, query.package.manifest.short_name)
-        and (selector.version == "*" or query.package.manifest.version.match(selector.version))
+        and (selector.version == "*" or semver.Version.parse(manifest.version).match(selector.version))
         # Package origin.
         and _is_wildcard_matching(selector.origin.repositories, "*")  # TODO: handle repositories
         and (selector.origin.local is None or selector.origin.local == query.package.sources.is_local())

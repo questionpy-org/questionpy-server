@@ -21,7 +21,6 @@ from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestInfo
 from questionpy_common.manifest import Manifest, PackageFile
 from questionpy_server.models import LoadedPackage, QuestionCreated
-from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import PackageFileData, Worker, WorkerArgs, WorkerState
 from questionpy_server.worker.exception import (
     StaticFileSizeMismatchError,
@@ -226,9 +225,9 @@ class BaseWorker(Worker, ABC):
             except TimeoutError:
                 log.info("Worker was killed because it did not stop gracefully")
 
-    async def get_manifest(self) -> ComparableManifest:
+    async def get_manifest(self) -> Manifest:
         ret = await self.send_and_wait_for_response(GetQPyPackageManifest(), GetQPyPackageManifest.Response)
-        return ComparableManifest(**ret.manifest.model_dump())
+        return ret.manifest
 
     async def get_options_form(
         self, request_info: RequestInfo, question_state: str | None

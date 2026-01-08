@@ -13,7 +13,7 @@ from pydantic import TypeAdapter
 
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.models import PackageVersionInfo, PackageVersionsInfo, RequestErrorCode
-from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.utils.manifest import Manifest
 from questionpy_server.web.app import QPyServer
 from tests.conftest import PACKAGE
 from tests.test_data.factories import ManifestFactory
@@ -35,11 +35,11 @@ from tests.test_data.factories import ManifestFactory
     ],
 )
 async def test_packages(qpy_server: QPyServer, aiohttp_client: AiohttpClient, packages: dict[str, set[str]]) -> None:
-    async def add_package_version(server: QPyServer, manifest: ComparableManifest) -> None:
-        package_hash = sha256((manifest.short_name + manifest.namespace + str(manifest.version)).encode()).hexdigest()
+    async def add_package_version(server: QPyServer, manifest: Manifest) -> None:
+        package_hash = sha256((manifest.short_name + manifest.namespace + manifest.version).encode()).hexdigest()
         await server.package_collection._indexer.register_package(package_hash, manifest, Mock(spec=LocalCollector))
 
-    manifests: dict[str, dict[str, ComparableManifest]] = {}
+    manifests: dict[str, dict[str, Manifest]] = {}
     for namespace, versions in packages.items():
         for version in versions:
             expected_manifest = ManifestFactory.build(namespace=namespace, short_name=namespace, version=version)

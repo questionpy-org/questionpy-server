@@ -29,7 +29,7 @@ from questionpy_server.settings import (
     WebserviceSettings,
     WorkerPoolSettings,
 )
-from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.utils.manifest import Manifest
 from questionpy_server.web.app import QPyServer
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
 from questionpy_server.worker.impl.thread import ThreadWorker
@@ -45,7 +45,7 @@ class TestZipPackage(ZipPackageLocation):
         super().__init__(path, calculate_hash(path))
 
         with ZipFile(self.path) as package:
-            self.manifest = ComparableManifest.model_validate_json(package.read(f"{DIST_DIR}/{MANIFEST_FILENAME}"))
+            self.manifest = Manifest.model_validate_json(package.read(f"{DIST_DIR}/{MANIFEST_FILENAME}"))
 
 
 @dataclass(unsafe_hash=True)
@@ -55,7 +55,7 @@ class TestDirPackage(DirPackageLocation):
     def __init__(self, path: Path) -> None:
         super().__init__(path)
 
-        self.manifest = ComparableManifest.model_validate_json((path / MANIFEST_FILENAME).read_text())
+        self.manifest = Manifest.model_validate_json((path / MANIFEST_FILENAME).read_text())
 
     def inject_static_file_into_dist(self, name: str, content: str | bytes) -> int:
         """Inserts a static file only into dist. Can be used to produce invalid static file configurations."""

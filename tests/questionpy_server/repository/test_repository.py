@@ -14,7 +14,7 @@ from _pytest.tmpdir import TempPathFactory
 from questionpy_common.constants import KiB
 from questionpy_server.cache import CacheItemTooLargeError, LRUCache, LRUCacheSupervisor
 from questionpy_server.repository import RepoMeta, RepoPackage, RepoPackageIndex, Repository
-from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.utils.manifest import Manifest
 from tests.test_data.factories import ManifestFactory, RepoMetaFactory, RepoPackageVersionsFactory
 
 REPO_URL = "https://example.com/repo/"
@@ -88,7 +88,7 @@ async def test_get_packages(tmp_path_factory: TempPathFactory) -> None:
                 expected_manifest["api_version"] = versions.api_version
 
                 # Check if the combined manifest is correct.
-                assert package.manifest == ComparableManifest(**expected_manifest)
+                assert package.manifest == Manifest(**expected_manifest)
 
 
 async def test_get_packages_cached(tmp_path_factory: TempPathFactory) -> None:

@@ -15,7 +15,7 @@ from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import PackagePermissions, RequestInfo
 from questionpy_common.manifest import PackageFile
 from questionpy_server.models import LoadedPackage, QuestionCreated
-from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.utils.manifest import Manifest
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
 from questionpy_server.worker.runtime.package_location import PackageLocation
 
@@ -114,7 +114,7 @@ class Worker(ABC):
         """Get the worker's current resource usage. If unknown or unsupported, return None."""
 
     @abstractmethod
-    async def get_manifest(self) -> ComparableManifest:
+    async def get_manifest(self) -> Manifest:
         """Get manifest of the main package in the worker."""
 
     @abstractmethod

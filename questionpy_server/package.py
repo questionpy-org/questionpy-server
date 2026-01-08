@@ -11,7 +11,7 @@ from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.models import PackageVersionInfo
-from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.utils.manifest import Manifest
 from questionpy_server.worker.runtime.package_location import ZipPackageLocation
 
 if TYPE_CHECKING:
@@ -103,7 +103,7 @@ class PackageSources:
 
 class Package:
     hash: str
-    manifest: ComparableManifest
+    manifest: Manifest
 
     sources: PackageSources
 
@@ -113,7 +113,7 @@ class Package:
     def __init__(
         self,
         package_hash: str,
-        manifest: ComparableManifest,
+        manifest: Manifest,
         source: "BaseCollector | None" = None,
         path: Path | None = None,
     ):
