@@ -76,7 +76,7 @@ async def read_manifest_from_location(location: PackageLocation) -> Manifest:
     if isinstance(location, FunctionPackageLocation):
         return Manifest(**location.manifest.model_dump())
 
-    manifest_path = location.path / DIST_DIR / MANIFEST_FILENAME
+    manifest_path = location.path / MANIFEST_FILENAME
     return await to_thread(_read_manifest_from_path_sync, manifest_path)
 
 
