@@ -5,7 +5,7 @@
 import asyncio
 from asyncio import to_thread
 from pathlib import Path
-from typing import IO, Annotated
+from typing import IO, Annotated, Any
 from zipfile import BadZipFile, ZipFile
 
 from pydantic import PlainSerializer, PlainValidator, ValidationError
@@ -80,4 +80,14 @@ async def read_manifest_from_location(location: PackageLocation) -> Manifest:
     return await to_thread(_read_manifest_from_path_sync, manifest_path)
 
 
-type ParsableSemverVersion = Annotated[Version, PlainValidator(Version.parse), PlainSerializer(Version.__str__)]
+def _maybe_parse_version(value: Any) -> Any:
+    if isinstance(value, Version):
+        return value
+    if isinstance(value, str):
+        return Version.parse(value)
+    return value
+
+
+type ParsableSemverVersion = Annotated[
+    Version, PlainValidator(_maybe_parse_version, json_schema_input_type=str), PlainSerializer(Version.__str__)
+]
