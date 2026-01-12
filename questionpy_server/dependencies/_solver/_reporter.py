@@ -12,7 +12,7 @@ from questionpy_common.constants import MAX_QPY_DEPENDENCY_LEVELS
 from ._model import (
     Candidate,
     Requirement,
-    RootPackage,
+    RootRequirementAndCandidate,
 )
 from .errors import DependencyCycleError, TooDeeplyNestedDependencyError
 
@@ -29,7 +29,7 @@ class QPyResolvelibReporter(resolvelib.BaseReporter[Requirement, Candidate, Pack
         self._messages: list[str] = []
 
     def pinning(self, candidate: Candidate) -> None:
-        if isinstance(candidate, RootPackage):
+        if isinstance(candidate, RootRequirementAndCandidate):
             # Not very interesting...
             return
 

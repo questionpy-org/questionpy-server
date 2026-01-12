@@ -13,7 +13,7 @@ from questionpy_common.manifest import (
 )
 from questionpy_server.dependencies._dynamic_resolver_abc import DynamicDependencyResolver
 
-from ._model import RootPackage
+from ._model import RootRequirementAndCandidate
 from ._provider import QPyResolvelibProvider
 from ._reporter import QPyResolvelibReporter
 from .errors import DependencyConflictError, QPyDependencyError
@@ -37,7 +37,9 @@ def resolve_dependency_tree(
     reporter = QPyResolvelibReporter(root.nssn)
     resolver = resolvelib.Resolver(provider, reporter)
 
-    root_node = RootPackage(root.nssn, Version.parse(root.version), DistDependencies(qpy=list(root_dependencies)))
+    root_node = RootRequirementAndCandidate(
+        root.nssn, Version.parse(root.version), DistDependencies(qpy=list(root_dependencies))
+    )
 
     try:
         result = resolver.resolve((root_node,))
@@ -65,4 +67,8 @@ def resolve_dependency_tree(
     else:
         reporter.log_successful_resolution()
 
-    return {nssn: candidate for nssn, candidate in result.mapping.items() if not isinstance(candidate, RootPackage)}
+    return {
+        nssn: candidate
+        for nssn, candidate in result.mapping.items()
+        if not isinstance(candidate, RootRequirementAndCandidate)
+    }

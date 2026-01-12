@@ -1,12 +1,11 @@
 from collections.abc import Iterable, Iterator, Mapping, Sequence
-from typing import cast
 
 import resolvelib
 from resolvelib.structs import Matches, RequirementInformation
 from semver import Version
 
 from questionpy_common import PackageNamespaceAndShortName
-from questionpy_common.dependencies import DependencySolution, DynamicDependencySolution, StaticDependencySolution
+from questionpy_common.dependencies import DynamicDependencySolution, StaticDependencySolution
 from questionpy_common.manifest import AbstractDynamicQPyDependency, DistDynamicQPyDependency, DistStaticQPyDependency
 from questionpy_common.version_specifiers import QPyDependencyVersionSpecifier
 from questionpy_server.dependencies._dynamic_resolver_abc import (
@@ -17,7 +16,7 @@ from ._model import (
     Candidate,
     DynamicRequirement,
     Requirement,
-    RootPackage,
+    RootRequirementAndCandidate,
     StaticRequirement,
 )
 
@@ -46,75 +45,96 @@ def _merge_dynamic_deps(dep: AbstractDynamicQPyDependency, *deps: AbstractDynami
 
 def _partition_reqs(
     reqs: Iterable[Requirement],
-) -> tuple[Sequence[DynamicRequirement], Sequence[StaticRequirement]]:
+) -> tuple[Sequence[DynamicRequirement], Sequence[StaticRequirement], RootRequirementAndCandidate | None]:
     dynamic: list[DynamicRequirement] = []
     static: list[StaticRequirement] = []
+    root: RootRequirementAndCandidate | None = None
 
     for req in reqs:
         if isinstance(req, DynamicRequirement):
             dynamic.append(req)
         elif isinstance(req, StaticRequirement):
             static.append(req)
+        else:
+            root = req
 
-    return dynamic, static
+    return dynamic, static, root
 
 
-def _find_solutions(
-    nssn: PackageNamespaceAndShortName,
-    reqs: Iterable[DynamicRequirement | StaticRequirement],
-    resolver: DynamicDependencyResolver,
-) -> Iterable[DependencySolution]:
-    dynamic_reqs, static_reqs = _partition_reqs(reqs)
+def _do_dynamic_reqs_allow_candidate(dynamic_reqs: Sequence[DynamicRequirement], cand_version: str | Version) -> bool:
+    if isinstance(cand_version, str):
+        cand_version = Version.parse(cand_version)
 
-    if static_reqs:
-        for static_req in static_reqs[1:]:
-            # We only compare the hash, since future changes in the manifest format might lead to inconsequential
-            # differences between the 'dependencies' fields.
-            if static_req.dep.hash != static_reqs[0].dep.hash:
-                # There are multiple _different_ static versions of the dependency required.
-                return ()
-
-        # All the static dependencies are equivalent. We'll use the first.
-        chosen_static_req = static_reqs[0]
-        chosen_static_version = Version.parse(chosen_static_req.dep.version)
-
-        for dynamic_req in dynamic_reqs:
-            if dynamic_req.dep.version and not dynamic_req.dep.version.allows(chosen_static_version):
-                # At least one dynamic dependency does not allow the static version.
-                return ()
-
-        return (
-            StaticDependencySolution(
-                nssn=nssn,
-                owner=chosen_static_req.owner,
-                hash=chosen_static_req.dep.hash,
-                version=chosen_static_req.dep.version,
-                dependencies=chosen_static_req.dep.dependencies,
-            ),
+    for dynamic_req in dynamic_reqs:
+        allows = (dynamic_req.dep.include_prereleases or cand_version.prerelease is None) and (
+            dynamic_req.dep.version is None or dynamic_req.dep.version.allows(cand_version)
         )
+        if not allows:
+            return False
 
-    # Only dynamic dependencies for this NSSN have so far been discovered.
+    return True
+
+
+def _find_static_matches(
+    nssn: PackageNamespaceAndShortName,
+    static_reqs: Sequence[StaticRequirement],
+    dynamic_reqs: Sequence[DynamicRequirement],
+) -> Iterable[StaticDependencySolution]:
+    """When one or more static requirements exists for a package, check that they're the same and return solutions."""
+    for static_req in static_reqs[1:]:
+        # We only compare the hash, since future changes in the manifest format might lead to inconsequential
+        # differences between the 'dependencies' fields.
+        if static_req.dep.hash != static_reqs[0].dep.hash:
+            # There are multiple _different_ static versions of the dependency required.
+            return ()
+
+    # All the static dependencies are equivalent.
+
+    if not _do_dynamic_reqs_allow_candidate(dynamic_reqs, static_reqs[0].dep.version):
+        # At least one dynamic dependency does not allow the static version.
+        return ()
+
+    return (
+        StaticDependencySolution(
+            nssn=nssn,
+            owner=static_req.owner,
+            hash=static_req.dep.hash,
+            version=static_req.dep.version,
+            dependencies=static_req.dep.dependencies,
+        )
+        for static_req in static_reqs
+    )
+
+
+def _find_dynamic_matches(
+    nssn: PackageNamespaceAndShortName, dynamic_reqs: Sequence[DynamicRequirement], resolver: DynamicDependencyResolver
+) -> Iterator[DynamicDependencySolution]:
+    """When only dynamic requirements exist for a package, find all matching available package versions."""
     merged = _merge_dynamic_deps(*(req.dep for req in dynamic_reqs))
 
     # TODO: Use locked version if possible.
-    matching_package_versions = resolver.get_matching_versions(
-        nssn=nssn,
-        version_spec=merged.version,
-        include_prereleases=merged.include_prereleases,
+    # We sort from highest (i.e. latest) version to lowest (i.e. oldest), since resolvelib tries candidates in order.
+    matching_package_versions = sorted(
+        resolver.get_matching_versions(
+            nssn=nssn,
+            version_spec=merged.version,
+            include_prereleases=merged.include_prereleases,
+        ),
+        key=lambda apv: apv.version,
+        reverse=True,
     )
 
     return (
         DynamicDependencySolution(
             nssn=nssn,
-            hash=available_package.hash,
-            version=available_package.manifest.version,
-            dependencies=available_package.manifest.dependencies,
+            hash=apv.hash,
+            version=apv.manifest.version,
+            dependencies=apv.manifest.dependencies,
         )
-        for available_package in matching_package_versions
+        for apv in matching_package_versions
     )
 
 
-# Implement logic so the resolver understands the requirement format.
 class QPyResolvelibProvider(resolvelib.AbstractProvider[Requirement, Candidate, PackageNamespaceAndShortName]):
     def __init__(self, dynamic_resolver: DynamicDependencyResolver) -> None:
         self._dynamic_resolver = dynamic_resolver
@@ -177,28 +197,37 @@ class QPyResolvelibProvider(resolvelib.AbstractProvider[Requirement, Candidate, 
         requirements: Mapping[PackageNamespaceAndShortName, Iterator[Requirement]],
         incompatibilities: Mapping[PackageNamespaceAndShortName, Iterator[Candidate]],
     ) -> Matches[Candidate]:
-        reqs = list(requirements.get(identifier, ()))
-        incompatible_candidates = list(incompatibilities.get(identifier, ()))
+        reqs = tuple(requirements.get(identifier, ()))
+        incompatible_candidates = tuple(incompatibilities.get(identifier, ()))
 
-        root_req = next((req for req in reqs if isinstance(req, RootPackage)), None)
+        if not reqs:
+            msg = f"There is no requirement on '{identifier}', why are we resolving it?"
+            raise RuntimeError(msg)
+
+        dynamic_reqs, static_reqs, root_req = _partition_reqs(reqs)
+
         if root_req:
             if root_req in incompatible_candidates:
+                # The root requirement has for some reason been marked as incompatible in a previous backtracking round.
                 return ()
+            if static_reqs:
+                # There is also a static dependency on the root package, which isn't allowed.
+                return ()
+
+            # If there is a dynamic dependency on the root package, it's always a cycle.
+            # We could return () in that case, but letting the cycle check later on handle this will lead to a better
+            # error message than we could generate here.
+            if not _do_dynamic_reqs_allow_candidate(dynamic_reqs, root_req.version):
+                # Of course, if the version doesn't match, we still prevent it.
+                return ()
+
             return (root_req,)
 
-        # If we're here, then there is no root requirement. (i.e., this is not the root package.)
+        if static_reqs:
+            return _find_static_matches(identifier, static_reqs, dynamic_reqs)
 
-        return sorted(
-            (
-                solution
-                for solution in _find_solutions(
-                    identifier, cast("list[DynamicRequirement | StaticRequirement]", reqs), self._dynamic_resolver
-                )
-                if solution not in incompatible_candidates
-            ),
-            key=lambda solution: solution.version,
-            reverse=True,
-        )
+        # Only dynamic dependencies for this NSSN have so far been discovered.
+        return _find_dynamic_matches(identifier, dynamic_reqs, self._dynamic_resolver)
 
     def is_satisfied_by(self, requirement: Requirement, candidate: Candidate) -> bool:
         if isinstance(requirement, StaticRequirement):
@@ -207,7 +236,7 @@ class QPyResolvelibProvider(resolvelib.AbstractProvider[Requirement, Candidate, 
             return isinstance(candidate, StaticDependencySolution) and candidate.hash == requirement.dep.hash
 
         # The root requirement is only satisfied by the root candidate.
-        if isinstance(requirement, RootPackage):
+        if isinstance(requirement, RootRequirementAndCandidate):
             return requirement == candidate
 
         # Dynamic requirements can be satisfied by any kind of candidate so long as the versions match.

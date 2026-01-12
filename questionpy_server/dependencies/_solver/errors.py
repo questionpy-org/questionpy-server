@@ -6,7 +6,7 @@ from questionpy_common import PackageNamespaceAndShortName
 from questionpy_common.constants import MAX_QPY_DEPENDENCY_LEVELS
 from questionpy_common.manifest import AbstractDynamicQPyDependency, DistStaticQPyDependency
 
-from ._model import Candidate, Requirement, RootPackage
+from ._model import Candidate, Requirement, RootRequirementAndCandidate
 
 
 def _dep_version_to_str(dep: AbstractDynamicQPyDependency | DistStaticQPyDependency) -> str:
@@ -32,7 +32,7 @@ class DependencyConflictError(QPyDependencyError):
     ) -> None:
         msg = f"No version of '{nssn}' could be found that satisfies all of the following dependencies:"
         for req, parent in causes:
-            if isinstance(req, RootPackage):
+            if isinstance(req, RootRequirementAndCandidate):
                 msg += f"\n\t- root package ({req.version})"
             else:
                 parent_str = f"'{parent.nssn}:{parent.version}'" if parent else "unexpected top-level requirement"
