@@ -6,6 +6,7 @@ from pydantic import Field
 from questionpy_common import PackageNamespaceAndShortName
 from questionpy_common.constants import RE_SEMVER
 from questionpy_common.manifest import DistDependencies
+from questionpy_common.package_location import PackageLocation
 
 
 @dataclass(frozen=True)
@@ -53,3 +54,5 @@ class DynamicDependencySolution:
 
 
 type DependencySolution = StaticDependencySolution | DynamicDependencySolution
+
+type SolutionAndLocation = tuple[DynamicDependencySolution, PackageLocation] | tuple[StaticDependencySolution, None]

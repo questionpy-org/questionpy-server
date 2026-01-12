@@ -13,14 +13,14 @@ from pydantic import BaseModel
 from questionpy_common import PackageNamespaceAndShortName
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.api.question import LmsPermissions
+from questionpy_common.dependencies import SolutionAndLocation
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import PackagePermissions, RequestInfo
 from questionpy_common.manifest import PackageFile
-from questionpy_server.dependencies import SolutionAndLocation
+from questionpy_common.package_location import PackageLocation
 from questionpy_server.models import LoadedPackage, QuestionCreated
 from questionpy_server.utils.manifest import Manifest
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
-from questionpy_server.worker.runtime.package_location import PackageLocation
 
 
 class WorkerResources(BaseModel):

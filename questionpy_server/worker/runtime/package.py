@@ -22,7 +22,7 @@ from questionpy_common.environment import (
     PackageState,
 )
 from questionpy_common.manifest import DistStaticQPyDependency, Manifest
-from questionpy_server.worker.runtime.package_location import (
+from questionpy_common.package_location import (
     DirPackageLocation,
     FunctionPackageLocation,
     PackageLocation,

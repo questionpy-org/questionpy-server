@@ -14,19 +14,20 @@ from typing import NamedTuple, Self, assert_never
 
 from pydantic import ByteSize
 
+from questionpy_common.dependencies import DependencySolution, SolutionAndLocation, StaticDependencySolution
 from questionpy_common.environment import PackagePermissions
 from questionpy_common.error import QPyBaseError
 from questionpy_common.manifest import Manifest
-from questionpy_server.dependencies import WorkerDependencyResolver
-from questionpy_server.package import Package
-from questionpy_server.utils.manifest import read_manifest_from_location
-from questionpy_server.worker.impl.subprocess import SubprocessWorker
-from questionpy_server.worker.runtime.package_location import (
+from questionpy_common.package_location import (
     DirPackageLocation,
     FunctionPackageLocation,
     PackageLocation,
     ZipPackageLocation,
 )
+from questionpy_server.dependencies import DynamicDependencyResolver, resolve_dependency_tree
+from questionpy_server.package import Package
+from questionpy_server.utils.manifest import read_manifest_from_location
+from questionpy_server.worker.impl.subprocess import SubprocessWorker
 
 from . import Worker, WorkerState
 
@@ -46,6 +47,17 @@ class _IdleWorkersIdentifier(NamedTuple):
     context: str
 
 
+async def _get_location_if_dynamic(
+    resolver: DynamicDependencyResolver, solution: DependencySolution
+) -> SolutionAndLocation:
+    if isinstance(solution, StaticDependencySolution):
+        return solution, None
+
+    package = await resolver.get_package_location(solution.hash)
+
+    return solution, package
+
+
 class WorkerPool:
     def __init__(
         self,
@@ -53,7 +65,7 @@ class WorkerPool:
         max_memory: int,
         *,
         worker_type: type[Worker] = SubprocessWorker,
-        dependency_resolver: WorkerDependencyResolver,
+        dependency_resolver: DynamicDependencyResolver,
     ) -> None:
         """Initialize the worker pool.
 
@@ -61,7 +73,7 @@ class WorkerPool:
             max_workers (int): maximum number of workers being executed in parallel
             max_memory (int): maximum memory (in bytes) that all workers in the pool are allowed to consume
             worker_type (type[Worker]): worker implementation
-            dependency_resolver: dependency resolver
+            dependency_resolver: resolver for dynamic dependencies of the package
         """
         self.max_workers = max_workers
         self.max_memory = max_memory
@@ -256,7 +268,11 @@ class WorkerPool:
 
             self._memory_idle -= worker.permissions.memory
         else:
-            dependencies = await self._dependency_resolver.resolve_and_retrieve(manifest)
+            solutions = resolve_dependency_tree(manifest, manifest.dependencies.qpy, self._dependency_resolver)
+            solutions_and_locations = {
+                nssn: await _get_location_if_dynamic(self._dependency_resolver, solution)
+                for nssn, solution in solutions.items()
+            }
 
             # We need to create a new worker - free as much memory as needed to start the worker.
             await self._free_memory(permissions.memory)
@@ -270,7 +286,7 @@ class WorkerPool:
                 package=package_location,
                 permissions=permissions,
                 worker_home=worker_home,
-                dependencies=dependencies,
+                dependencies=solutions_and_locations,
                 environment_variables=environment_variables,
             )
             await worker.start()

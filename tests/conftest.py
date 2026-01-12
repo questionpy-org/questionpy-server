@@ -4,7 +4,6 @@
 
 import mimetypes
 import tempfile
-import unittest.mock
 from collections.abc import AsyncGenerator, Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,7 +16,8 @@ from aiohttp.test_utils import TestClient
 from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, MiB
 from questionpy_common.environment import PackagePermissions
 from questionpy_common.manifest import PackageFile
-from questionpy_server.dependencies import WorkerDependencyResolver
+from questionpy_common.package_location import DirPackageLocation, ZipPackageLocation
+from questionpy_server.dependencies._dynamic_resolver_abc import NoopDependencyResolver
 from questionpy_server.hash import calculate_hash
 from questionpy_server.settings import (
     AuthSettings,
@@ -36,7 +36,6 @@ from questionpy_server.web.app import QPyServer
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
 from questionpy_server.worker.impl.thread import ThreadWorker
 from questionpy_server.worker.pool import WorkerPool
-from questionpy_server.worker.runtime.package_location import DirPackageLocation, ZipPackageLocation
 
 
 @dataclass(unsafe_hash=True)
@@ -154,6 +153,6 @@ def package_factory(tmp_path_factory: pytest.TempPathFactory) -> TestPackageFact
 
 @pytest.fixture(params=(SubprocessWorker, ThreadWorker))
 async def worker_pool(request: pytest.FixtureRequest) -> AsyncGenerator[WorkerPool]:
-    mock_resolver = unittest.mock.Mock(WorkerDependencyResolver)
+    mock_resolver = NoopDependencyResolver()
     async with WorkerPool(1, 512 * MiB, worker_type=request.param, dependency_resolver=mock_resolver) as pool:
         yield pool

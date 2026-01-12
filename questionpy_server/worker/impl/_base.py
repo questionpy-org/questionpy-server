@@ -20,6 +20,12 @@ from questionpy_common.constants import DIST_DIR
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestInfo
 from questionpy_common.manifest import Manifest, PackageFile
+from questionpy_common.package_location import (
+    DirPackageLocation,
+    FunctionPackageLocation,
+    PackageLocation,
+    ZipPackageLocation,
+)
 from questionpy_server.models import LoadedPackage, QuestionCreated
 from questionpy_server.worker import PackageFileData, Worker, WorkerArgs, WorkerState
 from questionpy_server.worker.exception import (
@@ -45,12 +51,6 @@ from questionpy_server.worker.runtime.messages import (
     StartAttempt,
     ViewAttempt,
     WorkerError,
-)
-from questionpy_server.worker.runtime.package_location import (
-    DirPackageLocation,
-    FunctionPackageLocation,
-    PackageLocation,
-    ZipPackageLocation,
 )
 
 if TYPE_CHECKING:

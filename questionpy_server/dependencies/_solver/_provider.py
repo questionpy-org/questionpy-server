@@ -6,15 +6,11 @@ from resolvelib.structs import Matches, RequirementInformation
 from semver import Version
 
 from questionpy_common import PackageNamespaceAndShortName
+from questionpy_common.dependencies import DependencySolution, DynamicDependencySolution, StaticDependencySolution
 from questionpy_common.manifest import AbstractDynamicQPyDependency, DistDynamicQPyDependency, DistStaticQPyDependency
 from questionpy_common.version_specifiers import QPyDependencyVersionSpecifier
 from questionpy_server.dependencies._dynamic_resolver_abc import (
     DynamicDependencyResolver,
-)
-from questionpy_server.dependencies._solutions import (
-    DependencySolution,
-    DynamicDependencySolution,
-    StaticDependencySolution,
 )
 
 from ._model import (
@@ -101,7 +97,7 @@ def _find_solutions(
     merged = _merge_dynamic_deps(*(req.dep for req in dynamic_reqs))
 
     # TODO: Use locked version if possible.
-    matching_package_versions = resolver.resolve_all(
+    matching_package_versions = resolver.get_matching_versions(
         nssn=nssn,
         version_spec=merged.version,
         include_prereleases=merged.include_prereleases,

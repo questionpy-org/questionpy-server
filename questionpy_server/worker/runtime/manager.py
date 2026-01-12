@@ -13,6 +13,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, NoReturn, TypeVar, cast
 
 from questionpy_common import PackageNamespaceAndShortName
+from questionpy_common.dependencies import SolutionAndLocation, StaticDependencySolution
 from questionpy_common.environment import (
     Environment,
     OnRequestCallback,
@@ -23,7 +24,7 @@ from questionpy_common.environment import (
     set_qpy_environment,
 )
 from questionpy_common.manifest import PackageType
-from questionpy_server.dependencies import SolutionAndLocation, StaticDependencySolution
+from questionpy_common.package_location import PackageLocation
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
 from questionpy_server.worker.runtime.messages import (
     CreateQuestionFromOptions,
@@ -41,7 +42,6 @@ from questionpy_server.worker.runtime.messages import (
     WorkerError,
 )
 from questionpy_server.worker.runtime.package import ImportablePackage, NoInitFunctionError, open_qpy_package
-from questionpy_server.worker.runtime.package_location import PackageLocation
 
 if TYPE_CHECKING:
     from questionpy_common.api.qtype import QuestionTypeInterface

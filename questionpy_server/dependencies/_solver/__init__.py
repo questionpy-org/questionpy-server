@@ -5,13 +5,13 @@ from resolvelib import ResolutionImpossible, ResolutionTooDeep
 from semver import Version
 
 from questionpy_common import PackageNamespaceAndShortName
+from questionpy_common.dependencies import DependencySolution
 from questionpy_common.manifest import (
     DistDependencies,
     DistQPyDependency,
     SourceManifest,
 )
 from questionpy_server.dependencies._dynamic_resolver_abc import DynamicDependencyResolver
-from questionpy_server.dependencies._solutions import DependencySolution
 
 from ._model import RootPackage
 from ._provider import QPyResolvelibProvider

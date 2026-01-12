@@ -6,13 +6,13 @@ import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from questionpy_common.package_location import ZipPackageLocation
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.lms_collector import LMSCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.models import PackageVersionInfo
 from questionpy_server.utils.manifest import Manifest
-from questionpy_server.worker.runtime.package_location import ZipPackageLocation
 
 if TYPE_CHECKING:
     from questionpy_server.collector.abc import BaseCollector

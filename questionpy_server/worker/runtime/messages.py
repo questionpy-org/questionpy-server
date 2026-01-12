@@ -14,12 +14,12 @@ from questionpy_common import PackageNamespaceAndShortName
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.api.qtype import InvalidQuestionStateError, OptionsFormValidationError
 from questionpy_common.api.question import QuestionModel
+from questionpy_common.dependencies import SolutionAndLocation
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import PackagePermissions, RequestInfo
 from questionpy_common.error import QPyBaseError
 from questionpy_common.manifest import Manifest
-from questionpy_server.dependencies import SolutionAndLocation
-from questionpy_server.worker.runtime.package_location import PackageLocation
+from questionpy_common.package_location import PackageLocation
 
 messages_header_struct: Struct = Struct("=LL")
 """4 bytes unsigned long int message id and 4 bytes unsigned long int payload length"""

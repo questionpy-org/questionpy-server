@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from semver import Version
 
 from questionpy_common import PackageNamespaceAndShortName
+from questionpy_common.dependencies import DynamicDependencySolution, StaticDependencySolution
 from questionpy_common.manifest import AbstractDynamicQPyDependency, DistDependencies, DistStaticQPyDependency
-from questionpy_server.dependencies._solutions import DynamicDependencySolution, StaticDependencySolution
 
 
 @dataclass(frozen=True)

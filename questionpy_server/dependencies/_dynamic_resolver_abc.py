@@ -1,11 +1,11 @@
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from dataclasses import dataclass
-
-from semver import Version
+from typing import final
 
 from questionpy_common import PackageNamespaceAndShortName
+from questionpy_common.package_location import PackageLocation
 from questionpy_common.version_specifiers import QPyDependencyVersionSpecifier
 from questionpy_server.utils.manifest import Manifest, ParsableSemverVersion
 
@@ -19,38 +19,10 @@ class AvailablePackageVersion:
     version: ParsableSemverVersion
 
 
-def _format_dependency(nssn: PackageNamespaceAndShortName, version_spec: QPyDependencyVersionSpecifier | None) -> str:
-    return f"@{nssn.namespace}/{nssn.short_name}{' ' + str(version_spec) if version_spec else ''}"
-
-
-class NoPackageMatchingVersionSpecError(Exception):
-    def __init__(
-        self,
-        nssn: PackageNamespaceAndShortName,
-        version_spec: QPyDependencyVersionSpecifier | None,
-        available_versions: Sequence[Version],
-        *,
-        include_prereleases: bool,
-    ) -> None:
-        msg = f"No package found for '{_format_dependency(nssn, version_spec)}'."
-
-        latest = max(available_versions, default=None)
-        if latest is None:
-            msg += " There are no versions of that package available."
-        else:
-            msg += f" There are {len(available_versions)} versions available, of which '{latest}' is the latest."
-
-        if include_prereleases:
-            msg += " (Including prereleases.)"
-        else:
-            msg += " (Excluding prereleases.)"
-
+class NoPackageWithHashError(Exception):
+    def __init__(self, hash_: str) -> None:
+        msg = f"Previously found package with hash '{hash_}' cannot be retrieved."
         super().__init__(msg)
-
-        self.nssn = nssn
-        self.version_spec = version_spec
-        self.include_prereleases = include_prereleases
-        self.available_versions = available_versions
 
 
 class DynamicDependencyResolver(ABC):
@@ -61,11 +33,40 @@ class DynamicDependencyResolver(ABC):
     """
 
     @abstractmethod
-    def resolve_all(
+    def get_matching_versions(
         self,
         nssn: PackageNamespaceAndShortName,
         version_spec: QPyDependencyVersionSpecifier | None,
         *,
         include_prereleases: bool,
     ) -> Iterable[AvailablePackageVersion]:
-        pass
+        """Returns all package versions matching the given restrictions, in any order.
+
+        When this resolver has no packages matching the given restrictions, no error is thrown, just an empty iterable
+        returned.
+        """
+
+    @abstractmethod
+    async def get_package_location(self, hash_: str) -> PackageLocation:
+        """Gets a location for a package that was previously returned by `get_matching_versions`.
+
+        Raises:
+            NoPackageWithHashError
+        """
+
+
+@final
+class NoopDependencyResolver(DynamicDependencyResolver):
+    """A dependency resolver that does not provide any dependencies."""
+
+    def get_matching_versions(
+        self,
+        nssn: PackageNamespaceAndShortName,
+        version_spec: QPyDependencyVersionSpecifier | None,
+        *,
+        include_prereleases: bool,
+    ) -> Iterable[AvailablePackageVersion]:
+        return ()
+
+    async def get_package_location(self, hash_: str) -> PackageLocation:
+        raise NoPackageWithHashError(hash_)

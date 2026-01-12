@@ -12,7 +12,7 @@ from aiohttp import web
 from questionpy_server import __version__
 from questionpy_server.cache import LRUCache, LRUCacheSupervisor
 from questionpy_server.collector import PackageCollection
-from questionpy_server.dependencies import WorkerDependencyResolver
+from questionpy_server.dependencies import PackageCollectionDependencyResolver
 from questionpy_server.settings import Settings
 from questionpy_server.web.middlewares import middlewares
 from questionpy_server.worker.pool import WorkerPool
@@ -48,7 +48,7 @@ class QPyServer:
             self.package_cache,
         )
 
-        worker_dependency_resolver = WorkerDependencyResolver(self.package_collection)
+        worker_dependency_resolver = PackageCollectionDependencyResolver(self.package_collection)
         self.worker_pool = WorkerPool(
             settings.worker_pool.max_cpus,
             settings.worker_pool.max_memory,
