@@ -163,6 +163,34 @@ class WorkerManager:
         # This is a separate method to allow it to be mocked separately.
         return open_qpy_package(location, worker_home)
 
+    def _init_package(self, nssn: PackageNamespaceAndShortName, env: Environment) -> None:
+        package = self._packages[nssn]
+
+        # Make the package's dependencies accessible to the package.
+        for dep in package.manifest.dependencies.qpy:
+            dep_nssn = PackageNamespaceAndShortName(dep.namespace, dep.short_name)
+            dep_package = self._packages.get(dep_nssn)
+            if not dep_package:
+                err_msg = f"Unfulfilled dependency of '{nssn}': '{dep_nssn}'"
+                raise RuntimeError(err_msg)
+
+            package.dependencies[dep_nssn] = dep_package
+
+        if package.state < PackageState.LOADED:
+            package.load()
+
+        if package.state < PackageState.INITIALIZED:
+            is_question_like = package.manifest.type in {PackageType.QUESTION, PackageType.QUESTIONTYPE}
+            try:
+                package.init(env)
+            except NoInitFunctionError:
+                if is_question_like:
+                    # Questions and question types MUST have init functions. (Others MAY.)
+                    raise
+
+            if package is env.main_package and is_question_like:
+                self._question_type = cast("QuestionTypeInterface", package.interface)
+
     def on_msg_load_qpy_package(self, msg: LoadQPyPackage) -> MessageToServer:
         if not self._env or not self._worker_home:
             self._raise_not_initialized(msg)
@@ -193,32 +221,7 @@ class WorkerManager:
             set_qpy_environment(self._env)
 
         for nssn in chain(linearized, (root_nssn,)):
-            package = self._packages[nssn]
-
-            # Make the package's dependencies accessible to the package.
-            for dep in package.manifest.dependencies.qpy:
-                dep_nssn = PackageNamespaceAndShortName(dep.namespace, dep.short_name)
-                dep_package = self._packages.get(dep_nssn)
-                if not dep_package:
-                    err_msg = f"Unfulfilled dependency of '{nssn}': '{dep_nssn}'"
-                    raise RuntimeError(err_msg)
-
-                package.dependencies[dep_nssn] = dep_package
-
-            if package.state < PackageState.LOADED:
-                package.load()
-
-            if package.state < PackageState.INITIALIZED:
-                is_question_like = package.manifest.type in {PackageType.QUESTION, PackageType.QUESTIONTYPE}
-                try:
-                    package.init(self._env)
-                except NoInitFunctionError:
-                    if is_question_like:
-                        # Questions and question types MUST have init functions. (Others MAY.)
-                        raise
-
-                if package is root_package and msg.main and is_question_like:
-                    self._question_type = cast("QuestionTypeInterface", package.interface)
+            self._init_package(nssn, self._env)
 
         return LoadQPyPackage.Response(root_nssn=root_nssn, loaded_packages=linearized)
 
