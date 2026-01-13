@@ -268,11 +268,14 @@ class WorkerPool:
 
             self._memory_idle -= worker.permissions.memory
         else:
-            solutions = resolve_dependency_tree(manifest, manifest.dependencies.qpy, self._dependency_resolver)
-            solutions_and_locations = {
-                nssn: await _get_location_if_dynamic(self._dependency_resolver, solution)
-                for nssn, solution in solutions.items()
-            }
+            if manifest.dependencies.qpy:
+                solutions = resolve_dependency_tree(manifest, manifest.dependencies.qpy, self._dependency_resolver)
+                solutions_and_locations = {
+                    nssn: await _get_location_if_dynamic(self._dependency_resolver, solution)
+                    for nssn, solution in solutions.items()
+                }
+            else:
+                solutions_and_locations = {}
 
             # We need to create a new worker - free as much memory as needed to start the worker.
             await self._free_memory(permissions.memory)
