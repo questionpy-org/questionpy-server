@@ -161,22 +161,15 @@ class QPyResolvelibProvider(resolvelib.AbstractProvider[Requirement, Candidate, 
         # Within those groups, we use alphabetical order, for consistency.
         # This strategy is inspired by pip.
 
-        static_deps: list[DistStaticQPyDependency] = []
-        dynamic_deps: list[AbstractDynamicQPyDependency] = []
+        dynamic_reqs, static_reqs, root_req = _partition_reqs(
+            info.requirement for info in information.get(identifier, ())
+        )
 
-        is_root = False
-        for info in information.get(identifier, ()):
-            if isinstance(info.requirement, DynamicRequirement):
-                dynamic_deps.append(info.requirement.dep)
-            elif isinstance(info.requirement, StaticRequirement):
-                static_deps.append(info.requirement.dep)
-            else:
-                is_root = True
+        is_root = root_req is not None
+        is_static = len(static_reqs) > 0
 
-        is_static = bool(static_deps)
-
-        if dynamic_deps:
-            merged = _merge_dynamic_deps(*dynamic_deps)
+        if dynamic_reqs:
+            merged = _merge_dynamic_deps(*(req.dep for req in dynamic_reqs))
             is_pinned = any(clause.operator == "==" for clause in merged.version.clauses) if merged.version else False
             is_restricted = merged.version is not None and len(merged.version.clauses) > 0
         else:
