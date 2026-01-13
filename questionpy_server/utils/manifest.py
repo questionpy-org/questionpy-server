@@ -4,6 +4,7 @@
 
 import asyncio
 from asyncio import to_thread
+from contextlib import ExitStack
 from pathlib import Path
 from typing import IO, Annotated, Any
 from zipfile import BadZipFile, ZipFile
@@ -48,9 +49,14 @@ def _read_manifest_from_path_sync(manifest_path: Path) -> Manifest:
         raise ManifestError(msg) from e
 
 
-def _read_manifest_from_zip_sync(package_path: Path) -> Manifest:
+def _read_manifest_from_zip_sync(package: Path | ZipFile) -> Manifest:
     try:
-        with ZipFile(package_path) as zip_file, zip_file.open(f"{DIST_DIR}/{MANIFEST_FILENAME}") as manifest_file:
+        with ExitStack() as stack:
+            if isinstance(package, Path):
+                package = stack.enter_context(ZipFile(package))
+
+            manifest_file = stack.enter_context(package.open(f"{DIST_DIR}/{MANIFEST_FILENAME}"))
+
             return _read_manifest_from_file_sync(manifest_file)
     except BadZipFile as e:
         msg = f"Could not read manifest from package: {e}"
@@ -61,13 +67,13 @@ def _read_manifest_from_zip_sync(package_path: Path) -> Manifest:
         raise ManifestError(msg) from e
 
 
-async def read_manifest_from_zip(package_path: Path) -> Manifest:
+async def read_manifest_from_zip(package: Path | ZipFile) -> Manifest:
     """Reads the manifest from a zipped package.
 
     Raises:
-        ManifestError: if the manifest could not be read, is too large, or is invalid
+        ManifestError: if the manifest could not be read, it is too large or is invalid
     """
-    return await asyncio.to_thread(_read_manifest_from_zip_sync, package_path)
+    return await asyncio.to_thread(_read_manifest_from_zip_sync, package)
 
 
 async def read_manifest_from_location(location: PackageLocation) -> Manifest:
