@@ -19,7 +19,7 @@ from tests.conftest import DEFAULT_PACKAGE_PERMISSIONS, PACKAGE, TestPackageFact
 from tests.questionpy_server.worker.impl.conftest import patch_worker_pool
 
 if TYPE_CHECKING:
-    from questionpy_server.worker.runtime.package_location import PackageLocation
+    from questionpy_common.package_location import PackageLocation
 
 
 async def test_should_get_manifest(worker_pool: WorkerPool) -> None:

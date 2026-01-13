@@ -10,14 +10,16 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel, JsonValue
 
+from questionpy_common import PackageNamespaceAndShortName
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.api.qtype import InvalidQuestionStateError, OptionsFormValidationError
 from questionpy_common.api.question import QuestionModel
+from questionpy_common.dependencies import SolutionAndLocation
 from questionpy_common.elements import OptionsFormDefinition
-from questionpy_common.environment import PackageNamespaceAndShortName, PackagePermissions, RequestInfo
+from questionpy_common.environment import PackagePermissions, RequestInfo
 from questionpy_common.error import QPyBaseError
 from questionpy_common.manifest import Manifest
-from questionpy_server.worker.runtime.package_location import PackageLocation
+from questionpy_common.package_location import PackageLocation
 
 messages_header_struct: Struct = Struct("=LL")
 """4 bytes unsigned long int message id and 4 bytes unsigned long int payload length"""
@@ -116,6 +118,9 @@ class LoadQPyPackage(MessageToWorker):
     location: PackageLocation
     main: bool
     """Set this package as the main package and execute its entry point."""
+
+    dependencies: dict[PackageNamespaceAndShortName, SolutionAndLocation]
+    """All resolved dependencies in the root package's tree. Does not include the root package itself."""
 
     class Response(MessageToServer):
         """Success message in return to LoadQPyPackage."""

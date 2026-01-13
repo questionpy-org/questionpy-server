@@ -7,13 +7,15 @@ from asyncio import Lock
 from pathlib import Path
 from typing import overload
 
-from questionpy_server import WorkerPool
+import semver
+from semver import VersionInfo as _Version
+
 from questionpy_server.collector.abc import BaseCollector
 from questionpy_server.collector.local_collector import LocalCollector
 from questionpy_server.collector.repo_collector import RepoCollector
 from questionpy_server.models import PackageInfo, PackageVersionsInfo, PackageVersionSpecificInfo
 from questionpy_server.package import Package
-from questionpy_server.utils.manifest import ComparableManifest, SemVer, read_manifest
+from questionpy_server.utils.manifest import Manifest, read_manifest_from_zip
 
 
 class Indexer:
@@ -23,11 +25,9 @@ class Indexer:
     only indexed by its hash.
     """
 
-    def __init__(self, worker_pool: WorkerPool):
-        self._worker_pool = worker_pool
-
+    def __init__(self) -> None:
         self._index_by_hash: dict[str, Package] = {}
-        self._index_by_identifier: dict[str, dict[SemVer, Package]] = {}
+        self._index_by_identifier: dict[str, dict[semver.Version, Package]] = {}
         """dict[identifier, dict[version, Package]]"""
 
         self._package_versions_infos: list[PackageVersionsInfo] | None = None
@@ -45,7 +45,7 @@ class Indexer:
         """
         return self._index_by_hash.get(package_hash, None)
 
-    def get_by_identifier(self, identifier: str) -> dict[SemVer, Package]:
+    def get_by_identifier(self, identifier: str) -> dict[semver.Version, Package]:
         """Returns a dict of packages with the given identifier and available versions.
 
         Args:
@@ -56,7 +56,7 @@ class Indexer:
         """
         return self._index_by_identifier.get(identifier, {}).copy()
 
-    def get_by_identifier_and_version(self, identifier: str, version: SemVer) -> Package | None:
+    def get_by_identifier_and_version(self, identifier: str, version: semver.Version) -> Package | None:
         """Returns the package with the given identifier and version or None if it does not exist.
 
         Args:
@@ -100,20 +100,20 @@ class Indexer:
 
     @overload
     async def register_package(
-        self, package_hash: str, path_or_manifest: ComparableManifest, source: BaseCollector
+        self, package_hash: str, path_or_manifest: Manifest, source: BaseCollector
     ) -> Package: ...
 
     @overload
     async def register_package(self, package_hash: str, path_or_manifest: Path, source: BaseCollector) -> Package: ...
 
     async def register_package(
-        self, package_hash: str, path_or_manifest: Path | ComparableManifest, source: BaseCollector
+        self, package_hash: str, path_or_manifest: Path | Manifest, source: BaseCollector
     ) -> Package:
         """Registers a package in the index.
 
         Args:
             package_hash (str): The hash of the package.
-            path_or_manifest (Union[Path, ComparableManifest]): The manifest of the package.
+            path_or_manifest (Union[Path, Manifest]): The manifest of the package.
             source (BaseCollector): The source of the package.
 
         Raises:
@@ -130,7 +130,7 @@ class Indexer:
                 # Create new package...
                 if isinstance(path_or_manifest, Path):
                     # ...from path.
-                    manifest = await read_manifest(path_or_manifest)
+                    manifest = await read_manifest_from_zip(path_or_manifest)
                     package = Package(package_hash, manifest, source, path_or_manifest)
                 else:
                     # ...from manifest.
@@ -140,7 +140,8 @@ class Indexer:
             # Check if package should be accessible by identifier and version.
             if isinstance(source, LocalCollector | RepoCollector):
                 package_versions = self._index_by_identifier.setdefault(package.manifest.identifier, {})
-                existing_package = package_versions.get(package.manifest.version, None)
+                comparable_manifest = package.manifest
+                existing_package = package_versions.get(_Version.parse(comparable_manifest.version), None)
                 if existing_package and existing_package != package:
                     # Package with the same identifier and version already exists; log a warning.
                     log = logging.getLogger("questionpy-server:indexer")
@@ -152,7 +153,8 @@ class Indexer:
                         existing_package.hash,
                     )
                 else:
-                    package_versions[package.manifest.version] = package
+                    manifest1 = package.manifest
+                    package_versions[_Version.parse(manifest1.version)] = package
 
                 # Force recalculation of list[PackageVersionsInfo].
                 self._package_versions_infos = None
@@ -182,7 +184,8 @@ class Indexer:
             package_versions = self._index_by_identifier.get(package.manifest.identifier, None)
             if package_versions:
                 # Remove package from index.
-                package_versions.pop(package.manifest.version, None)
+                manifest = package.manifest
+                package_versions.pop(_Version.parse(manifest.version), None)
                 # If there are no more packages with the same identifier, remove the identifier from the index.
                 if not package_versions:
                     self._index_by_identifier.pop(package.manifest.identifier, None)

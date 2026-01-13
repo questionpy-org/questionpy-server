@@ -2,15 +2,31 @@
 #  QuestionPy is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 
-import re
+from abc import ABC
 from enum import StrEnum
 from keyword import iskeyword, issoftkeyword
-from typing import Annotated, NewType
+from typing import Annotated, Literal, NewType
 
-from pydantic import BaseModel, ByteSize, PositiveInt, StringConstraints, conset, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ByteSize,
+    PositiveInt,
+    StringConstraints,
+    conset,
+    field_validator,
+)
 from pydantic.fields import Field
 
-from questionpy_common.constants import ENVIRONMENT_VARIABLE_REGEX
+from questionpy_common import PackageNamespaceAndShortName
+from questionpy_common.constants import (
+    ENVIRONMENT_VARIABLE_REGEX,
+    NAME_MAX_LENGTH,
+    RE_API,
+    RE_SEMVER,
+    RE_VALID_CHARS_NAME,
+)
+from questionpy_common.version_specifiers import QPyDependencyVersionSpecifier
 
 
 class PackageType(StrEnum):
@@ -19,21 +35,8 @@ class PackageType(StrEnum):
     QUESTION = "QUESTION"
 
 
-# Defaults.
 DEFAULT_NAMESPACE = "local"
 DEFAULT_PACKAGETYPE = PackageType.QUESTIONTYPE
-
-# Regular expressions.
-RE_SEMVER = (
-    r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)"
-    r"(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
-)
-RE_API = r"^(0|[1-9]\d*)\.(0|[1-9]\d*)$"
-# The SemVer and Api version patterns are used on pydantic fields, which uses Rust regexes, so re.compiling them makes
-# no sense. We match RE_VALID_CHARS_NAME in Python though, so here it does.
-RE_VALID_CHARS_NAME = re.compile(r"^[a-z\d_]+$")
-
-NAME_MAX_LENGTH = 127
 
 
 # Validators.
@@ -139,6 +142,10 @@ class SourceManifest(BaseModel):
     def identifier(self) -> str:
         return f"@{self.namespace}/{self.short_name}"
 
+    @property
+    def nssn(self) -> PackageNamespaceAndShortName:
+        return PackageNamespaceAndShortName(self.namespace, self.short_name)
+
 
 class PackageFile(BaseModel):
     """Represents a static file included in a built package."""
@@ -148,13 +155,46 @@ class PackageFile(BaseModel):
 
 
 class DistStaticQPyDependency(BaseModel):
-    dir_name: str
-    """Name (without `dist/dependencies/qpy/`) of the directory the dependency package contents reside in."""
+    namespace: Annotated[str, AfterValidator(ensure_is_valid_name)]
+    short_name: Annotated[str, AfterValidator(ensure_is_valid_name)]
+    version: Annotated[str, Field(pattern=RE_SEMVER)]
+
+    dependencies: "DistDependencies"
+    """Transitive dependencies of this dependency."""
+
     hash: str
-    """Hash of the ZIP package whose contents lie in `dir_name`."""
+    """Hash of the ZIP package whose contents are included in this package."""
+
+    @property
+    def nssn(self) -> PackageNamespaceAndShortName:
+        return PackageNamespaceAndShortName(self.namespace, self.short_name)
 
 
-type DistQPyDependency = DistStaticQPyDependency
+type DependencyLockStrategy = Literal["required", "preferred-no-downgrade", "preferred-allow-downgrade"]
+
+
+class LockedDependencyInfo(BaseModel):
+    strategy: DependencyLockStrategy
+    locked_version: Annotated[str, Field(pattern=RE_SEMVER)]
+    locked_hash: str
+
+
+class AbstractDynamicQPyDependency(BaseModel, ABC):
+    namespace: Annotated[str, AfterValidator(ensure_is_valid_name)]
+    short_name: Annotated[str, AfterValidator(ensure_is_valid_name)]
+    version: QPyDependencyVersionSpecifier | None = None
+    include_prereleases: bool = False
+
+    @property
+    def nssn(self) -> PackageNamespaceAndShortName:
+        return PackageNamespaceAndShortName(self.namespace, self.short_name)
+
+
+class DistDynamicQPyDependency(AbstractDynamicQPyDependency):
+    locked: LockedDependencyInfo | None = None
+
+
+type DistQPyDependency = DistStaticQPyDependency | DistDynamicQPyDependency
 
 
 class DistDependencies(BaseModel):

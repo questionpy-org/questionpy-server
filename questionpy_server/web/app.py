@@ -12,6 +12,7 @@ from aiohttp import web
 from questionpy_server import __version__
 from questionpy_server.cache import LRUCache, LRUCacheSupervisor
 from questionpy_server.collector import PackageCollection
+from questionpy_server.dependencies import PackageCollectionDependencyResolver
 from questionpy_server.settings import Settings
 from questionpy_server.web.middlewares import middlewares
 from questionpy_server.worker.pool import WorkerPool
@@ -33,9 +34,6 @@ class QPyServer:
         self.web_app.add_routes(routes)
         self.web_app[self.APP_KEY] = self
 
-        self.worker_pool = WorkerPool(
-            settings.worker_pool.max_cpus, settings.worker_pool.max_memory, worker_type=settings.worker_pool.type
-        )
         self.package_permissions = PackagePermissionsHandler(settings.permissions)
         self.environment_variables = EnvironmentVariablesHandler(settings.environment_variables)
 
@@ -48,7 +46,14 @@ class QPyServer:
             settings.collector.repositories,
             self.repo_index_cache,
             self.package_cache,
-            self.worker_pool,
+        )
+
+        worker_dependency_resolver = PackageCollectionDependencyResolver(self.package_collection)
+        self.worker_pool = WorkerPool(
+            settings.worker_pool.max_cpus,
+            settings.worker_pool.max_memory,
+            worker_type=settings.worker_pool.type,
+            dependency_resolver=worker_dependency_resolver,
         )
 
         self.web_app.cleanup_ctx.append(self._worker_pool_ctx)

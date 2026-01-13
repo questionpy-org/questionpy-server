@@ -20,8 +20,13 @@ from questionpy_common.constants import DIST_DIR
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import RequestInfo
 from questionpy_common.manifest import Manifest, PackageFile
+from questionpy_common.package_location import (
+    DirPackageLocation,
+    FunctionPackageLocation,
+    PackageLocation,
+    ZipPackageLocation,
+)
 from questionpy_server.models import LoadedPackage, QuestionCreated
-from questionpy_server.utils.manifest import ComparableManifest
 from questionpy_server.worker import PackageFileData, Worker, WorkerArgs, WorkerState
 from questionpy_server.worker.exception import (
     StaticFileSizeMismatchError,
@@ -46,12 +51,6 @@ from questionpy_server.worker.runtime.messages import (
     StartAttempt,
     ViewAttempt,
     WorkerError,
-)
-from questionpy_server.worker.runtime.package_location import (
-    DirPackageLocation,
-    FunctionPackageLocation,
-    PackageLocation,
-    ZipPackageLocation,
 )
 
 if TYPE_CHECKING:
@@ -113,7 +112,7 @@ class BaseWorker(Worker, ABC):
 
     async def _load_package(self, package_location: PackageLocation, *, main: bool) -> None:
         loaded = await self.send_and_wait_for_response(
-            LoadQPyPackage(location=package_location, main=main),
+            LoadQPyPackage(location=package_location, main=main, dependencies=self._dependencies),
             LoadQPyPackage.Response,
             self.permissions.bootstrap_timeout,
         )
@@ -226,9 +225,9 @@ class BaseWorker(Worker, ABC):
             except TimeoutError:
                 log.info("Worker was killed because it did not stop gracefully")
 
-    async def get_manifest(self) -> ComparableManifest:
+    async def get_manifest(self) -> Manifest:
         ret = await self.send_and_wait_for_response(GetQPyPackageManifest(), GetQPyPackageManifest.Response)
-        return ComparableManifest(**ret.manifest.model_dump())
+        return ret.manifest
 
     async def get_options_form(
         self, request_info: RequestInfo, question_state: str | None
@@ -374,7 +373,7 @@ class LimitTimeUsageMixin(Worker, ABC):
     the cpu limit in real time.
     """
 
-    _real_time_limit_factor = 3
+    _real_time_limit_factor = 1000
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)

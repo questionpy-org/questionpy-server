@@ -1,6 +1,6 @@
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
-from typing import NamedTuple
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from typing import Any, NamedTuple, overload
 
 from aiohttp import web
 
@@ -32,13 +32,30 @@ class WorkerContext(NamedTuple):
     permissions: PackagePermissions
 
 
+@overload
+def worker_context(
+    request: web.Request, package: Package, *, context: str
+) -> AbstractAsyncContextManager[WorkerContext]: ...
+
+
+@overload
+def worker_context(
+    request: web.Request, package: Package, data: RequestBaseData
+) -> AbstractAsyncContextManager[WorkerContext]: ...
+
+
 @asynccontextmanager
-async def worker_context(request: web.Request, package: Package, data: RequestBaseData) -> AsyncIterator[WorkerContext]:
+async def worker_context(
+    request: web.Request, package: Package, data: Any = None, *, context: Any = None
+) -> AsyncIterator[WorkerContext]:
     """Returns the worker context for the given request."""
+    if data:
+        context = data.context
+
     qpyserver = request.app[QPyServer.APP_KEY]
     current_user = request.get(CURRENT_USER_KEY)
 
-    selector_query = SelectorQuery(package, current_user, data.context)
+    selector_query = SelectorQuery(package, current_user, context)
     permissions = qpyserver.package_permissions.get(selector_query)
     environment_variables = qpyserver.environment_variables.get(selector_query)
 
@@ -49,7 +66,7 @@ async def worker_context(request: web.Request, package: Package, data: RequestBa
         lms_provided_attributes = data.lms_provided_attributes
 
     async with qpyserver.worker_pool.get_worker(
-        location, current_user, data.context, permissions, environment_variables
+        location, current_user, context, permissions, environment_variables
     ) as worker:
         yield WorkerContext(
             worker,

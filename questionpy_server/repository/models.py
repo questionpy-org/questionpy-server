@@ -8,7 +8,7 @@ from functools import total_ordering
 
 from pydantic import BaseModel, PositiveInt
 
-from questionpy_server.utils.manifest import ComparableManifest, SemVer
+from questionpy_server.utils.manifest import Manifest, ParsableSemverVersion
 
 
 class RepoMeta(BaseModel):
@@ -28,7 +28,7 @@ class RepoMeta(BaseModel):
 class RepoPackageVersion(BaseModel):
     """Represents a specific version of a package in the repository."""
 
-    version: SemVer
+    version: ParsableSemverVersion
     """Version of the package."""
     api_version: str
     """Compatible API version of the package."""
@@ -57,7 +57,7 @@ class RepoPackageVersion(BaseModel):
 class RepoPackageVersions(BaseModel):
     """Represents a package with all its versions in the repository."""
 
-    manifest: ComparableManifest
+    manifest: Manifest
     """Manifest of the most recent version of the package."""
     versions: list[RepoPackageVersion]
     """List of all versions of the package."""
@@ -74,7 +74,7 @@ class RepoPackageIndex(BaseModel):
 class RepoPackage:
     """Represents a package in the repository."""
 
-    manifest: ComparableManifest
+    manifest: Manifest
     """Manifest of the package."""
 
     path: str
@@ -85,7 +85,7 @@ class RepoPackage:
     """SHA256 hash of the package."""
 
     @classmethod
-    def combine(cls, manifest: ComparableManifest, repo_package_version: RepoPackageVersion) -> "RepoPackage":
+    def combine(cls, manifest: Manifest, repo_package_version: RepoPackageVersion) -> "RepoPackage":
         """Combines the manifest of a package with a specific version of that package.
 
         Args:
@@ -94,7 +94,7 @@ class RepoPackage:
         """
         # Replace package version and api version with actual versions.
         modified_manifest = manifest.model_copy(deep=True)
-        modified_manifest.version = repo_package_version.version
+        modified_manifest.version = str(repo_package_version.version)
         modified_manifest.api_version = repo_package_version.api_version
 
         return cls(

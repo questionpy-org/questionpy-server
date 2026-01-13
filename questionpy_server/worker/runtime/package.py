@@ -11,18 +11,18 @@ from pathlib import Path
 from types import ModuleType
 from zipfile import ZipFile
 
+from questionpy_common import PackageNamespaceAndShortName
 from questionpy_common.api.package import QPyPackageInterface
 from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME
 from questionpy_common.environment import (
     Environment,
     Package,
-    PackageNamespaceAndShortName,
     PackageNotInitializedError,
     PackageNotLoadedError,
     PackageState,
 )
 from questionpy_common.manifest import DistStaticQPyDependency, Manifest
-from questionpy_server.worker.runtime.package_location import (
+from questionpy_common.package_location import (
     DirPackageLocation,
     FunctionPackageLocation,
     PackageLocation,
@@ -81,7 +81,7 @@ class ImportablePackage(ABC, Package):
         """
 
     @abstractmethod
-    def resolve_static_dependencies(self) -> list[PackageLocation]:
+    def resolve_static_dependency(self, nssn: PackageNamespaceAndShortName) -> PackageLocation:
         pass
 
 
@@ -100,12 +100,33 @@ class RegularPackage(ImportablePackage):
 
     __str__ = __repr__
 
-    def resolve_static_dependencies(self) -> list[PackageLocation]:
-        return [
-            DirPackageLocation(self.path / "dependencies" / "qpy" / dep.dir_name / DIST_DIR)
-            for dep in self.manifest.dependencies.qpy
-            if isinstance(dep, DistStaticQPyDependency)
-        ]
+    def resolve_static_dependency(self, nssn: PackageNamespaceAndShortName) -> PackageLocation:
+        dep = next(
+            (
+                dep
+                for dep in self.manifest.dependencies.qpy
+                if isinstance(dep, DistStaticQPyDependency)
+                and dep.namespace == nssn.namespace
+                and dep.short_name == nssn.short_name
+                for dep in self.manifest.dependencies.qpy
+            ),
+            None,
+        )
+        if not dep:
+            msg = f"Package '{self.manifest.nssn}' does not provide static dependency '{nssn}'."
+            raise RuntimeError(msg)
+
+        dep_dist_path = (
+            self.path / "dependencies" / "qpy" / f"{dep.namespace}-{dep.short_name}-{dep.version}" / DIST_DIR
+        )
+        if not dep_dist_path.exists():
+            msg = (
+                f"Package '{self.manifest.nssn}' lists static dependency '{nssn}', but '{dep_dist_path}' is not "
+                f"present."
+            )
+            raise RuntimeError(msg)
+
+        return DirPackageLocation(dep_dist_path)
 
     def load(self) -> None:
         for new_path in (
@@ -166,8 +187,8 @@ class FunctionBasedPackage(ImportablePackage):
 
     __str__ = __repr__
 
-    def resolve_static_dependencies(self) -> list[PackageLocation]:
-        return []
+    def resolve_static_dependency(self, nssn: PackageNamespaceAndShortName) -> PackageLocation:
+        raise NotImplementedError
 
 
 def _package_dir(worker_home: Path, manifest: Manifest) -> Path:

@@ -2,6 +2,7 @@
 #  The QuestionPy Server is free software released under terms of the MIT license. See LICENSE.md.
 #  (c) Technische Universität Berlin, innoCampus <info@isis.tu-berlin.de>
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -9,15 +10,17 @@ from typing import TypedDict, TypeVar, Unpack
 
 from pydantic import BaseModel
 
+from questionpy_common import PackageNamespaceAndShortName
 from questionpy_common.api.attempt import AttemptModel, AttemptScoredModel, AttemptStartedModel
 from questionpy_common.api.question import LmsPermissions
+from questionpy_common.dependencies import SolutionAndLocation
 from questionpy_common.elements import OptionsFormDefinition
 from questionpy_common.environment import PackagePermissions, RequestInfo
 from questionpy_common.manifest import PackageFile
+from questionpy_common.package_location import PackageLocation
 from questionpy_server.models import LoadedPackage, QuestionCreated
-from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.utils.manifest import Manifest
 from questionpy_server.worker.runtime.messages import MessageToServer, MessageToWorker
-from questionpy_server.worker.runtime.package_location import PackageLocation
 
 
 class WorkerResources(BaseModel):
@@ -55,14 +58,21 @@ _M = TypeVar("_M", bound=MessageToServer)
 class WorkerArgs(TypedDict):
     name: str
     """A unique name given to the worker by its pool."""
+
     package: PackageLocation
     """The main package that the worker should load when [start][questionpy_server.worker.Worker.start] is called."""
+
     worker_home: Path
     """An existing directory owned by the worker, with the same lifetime as the worker."""
+
     permissions: PackagePermissions
     """The package permissions."""
+
     environment_variables: dict[str, str]
     """Environment variables to be set in the worker."""
+
+    dependencies: Mapping[PackageNamespaceAndShortName, SolutionAndLocation]
+    """All resolved dependencies in the root package's tree. Does not include the root package itself."""
 
 
 class Worker(ABC):
@@ -75,6 +85,7 @@ class Worker(ABC):
         self.worker_home = kwargs["worker_home"]
         self.permissions = kwargs["permissions"]
         self.environment_variables = kwargs["environment_variables"]
+        self._dependencies = kwargs["dependencies"]
 
         self.state = WorkerState.NOT_RUNNING
         self.loaded_packages: list[LoadedPackage] = []
@@ -114,7 +125,7 @@ class Worker(ABC):
         """Get the worker's current resource usage. If unknown or unsupported, return None."""
 
     @abstractmethod
-    async def get_manifest(self) -> ComparableManifest:
+    async def get_manifest(self) -> Manifest:
         """Get manifest of the main package in the worker."""
 
     @abstractmethod

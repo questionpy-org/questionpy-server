@@ -16,6 +16,8 @@ from aiohttp.test_utils import TestClient
 from questionpy_common.constants import DIST_DIR, MANIFEST_FILENAME, MiB
 from questionpy_common.environment import PackagePermissions
 from questionpy_common.manifest import PackageFile
+from questionpy_common.package_location import DirPackageLocation, ZipPackageLocation
+from questionpy_server.dependencies._dynamic_resolver_abc import NoopDependencyResolver
 from questionpy_server.hash import calculate_hash
 from questionpy_server.settings import (
     AuthSettings,
@@ -29,12 +31,11 @@ from questionpy_server.settings import (
     WebserviceSettings,
     WorkerPoolSettings,
 )
-from questionpy_server.utils.manifest import ComparableManifest
+from questionpy_server.utils.manifest import Manifest
 from questionpy_server.web.app import QPyServer
 from questionpy_server.worker.impl.subprocess import SubprocessWorker
 from questionpy_server.worker.impl.thread import ThreadWorker
 from questionpy_server.worker.pool import WorkerPool
-from questionpy_server.worker.runtime.package_location import DirPackageLocation, ZipPackageLocation
 
 
 @dataclass(unsafe_hash=True)
@@ -45,7 +46,7 @@ class TestZipPackage(ZipPackageLocation):
         super().__init__(path, calculate_hash(path))
 
         with ZipFile(self.path) as package:
-            self.manifest = ComparableManifest.model_validate_json(package.read(f"{DIST_DIR}/{MANIFEST_FILENAME}"))
+            self.manifest = Manifest.model_validate_json(package.read(f"{DIST_DIR}/{MANIFEST_FILENAME}"))
 
 
 @dataclass(unsafe_hash=True)
@@ -55,7 +56,7 @@ class TestDirPackage(DirPackageLocation):
     def __init__(self, path: Path) -> None:
         super().__init__(path)
 
-        self.manifest = ComparableManifest.model_validate_json((path / MANIFEST_FILENAME).read_text())
+        self.manifest = Manifest.model_validate_json((path / MANIFEST_FILENAME).read_text())
 
     def inject_static_file_into_dist(self, name: str, content: str | bytes) -> int:
         """Inserts a static file only into dist. Can be used to produce invalid static file configurations."""
@@ -152,5 +153,6 @@ def package_factory(tmp_path_factory: pytest.TempPathFactory) -> TestPackageFact
 
 @pytest.fixture(params=(SubprocessWorker, ThreadWorker))
 async def worker_pool(request: pytest.FixtureRequest) -> AsyncGenerator[WorkerPool]:
-    async with WorkerPool(1, 512 * MiB, worker_type=request.param) as pool:
+    mock_resolver = NoopDependencyResolver()
+    async with WorkerPool(1, 512 * MiB, worker_type=request.param, dependency_resolver=mock_resolver) as pool:
         yield pool

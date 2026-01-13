@@ -7,22 +7,24 @@ from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from graphlib import TopologicalSorter
+from itertools import chain
 from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, NoReturn, TypeVar, cast
 
-from questionpy_common.constants import MAX_QPY_DEPENDENCY_LEVELS
+from questionpy_common import PackageNamespaceAndShortName
+from questionpy_common.dependencies import SolutionAndLocation, StaticDependencySolution
 from questionpy_common.environment import (
     Environment,
     OnRequestCallback,
     Package,
-    PackageNamespaceAndShortName,
     PackagePermissions,
     PackageState,
     RequestInfo,
     set_qpy_environment,
 )
 from questionpy_common.manifest import PackageType
+from questionpy_common.package_location import PackageLocation
 from questionpy_server.worker.runtime.connection import WorkerToServerConnection
 from questionpy_server.worker.runtime.messages import (
     CreateQuestionFromOptions,
@@ -40,7 +42,6 @@ from questionpy_server.worker.runtime.messages import (
     WorkerError,
 )
 from questionpy_server.worker.runtime.package import ImportablePackage, NoInitFunctionError, open_qpy_package
-from questionpy_server.worker.runtime.package_location import PackageLocation
 
 if TYPE_CHECKING:
     from questionpy_common.api.qtype import QuestionTypeInterface
@@ -88,12 +89,14 @@ M = TypeVar("M", bound=MessageToWorker)
 type OnMessageCallback[M: MessageToWorker] = Callable[[M], MessageToServer]
 
 
-def _linearize_packages(
-    packages: Mapping[PackageNamespaceAndShortName, ImportablePackage],
+def _linearize_dependencies(
+    solutions: Mapping[PackageNamespaceAndShortName, SolutionAndLocation],
 ) -> Sequence[PackageNamespaceAndShortName]:
     sorter = TopologicalSorter[PackageNamespaceAndShortName]()
-    for nssn, package in packages.items():
-        sorter.add(nssn, *package.dependencies.keys())
+
+    for nssn, (solution, _) in solutions.items():
+        dep_nssns = [PackageNamespaceAndShortName(dep.namespace, dep.short_name) for dep in solution.dependencies.qpy]
+        sorter.add(nssn, *dep_nssns)
 
     return tuple(sorter.static_order())
 
@@ -160,68 +163,65 @@ class WorkerManager:
         # This is a separate method to allow it to be mocked separately.
         return open_qpy_package(location, worker_home)
 
-    def _open_packages_recursively(
-        self,
-        msg: LoadQPyPackage,
-        package_location: PackageLocation,
-        stack: tuple[PackageNamespaceAndShortName, ...] = (),
-    ) -> tuple[PackageNamespaceAndShortName, ImportablePackage]:
-        if not self._env or not self._worker_home:
-            self._raise_not_initialized(msg)
+    def _init_package(self, nssn: PackageNamespaceAndShortName, env: Environment) -> None:
+        package = self._packages[nssn]
 
-        package = self._open_package(package_location, self._worker_home)
-        nssn = PackageNamespaceAndShortName(package.manifest.namespace, package.manifest.short_name)
+        # Make the package's dependencies accessible to the package.
+        for dep in package.manifest.dependencies.qpy:
+            dep_nssn = PackageNamespaceAndShortName(dep.namespace, dep.short_name)
+            dep_package = self._packages.get(dep_nssn)
+            if not dep_package:
+                err_msg = f"Unfulfilled dependency of '{nssn}': '{dep_nssn}'"
+                raise RuntimeError(err_msg)
 
-        if nssn in stack and self._packages[nssn].manifest.version == package.manifest.version:
-            raise CircularDependencyError(nssn, stack)
-
-        if nssn in self._packages:
-            # For now, we don't support two packages using the same static dependency, even if they would use the same
-            # version. Supporting the latter case would require us to either trust or check that both dependency's
-            # content is identical.
-            err_msg = f"Package '{nssn}' is already loaded. Dependency stack: {stack}"
-            raise DependencyError(err_msg, stack)
-
-        self._packages[nssn] = package
-
-        new_stack = (*stack, nssn)
-
-        if len(stack) >= MAX_QPY_DEPENDENCY_LEVELS and package.manifest.dependencies.qpy:
-            raise TooDeeplyNestedDependencyError(new_stack)
-
-        for dep_location in package.resolve_static_dependencies():
-            dep_nssn, dep_package = self._open_packages_recursively(msg, dep_location, new_stack)
             package.dependencies[dep_nssn] = dep_package
 
-        return nssn, package
+        if package.state < PackageState.LOADED:
+            package.load()
+
+        if package.state < PackageState.INITIALIZED:
+            is_question_like = package.manifest.type in {PackageType.QUESTION, PackageType.QUESTIONTYPE}
+            try:
+                package.init(env)
+            except NoInitFunctionError:
+                if is_question_like:
+                    # Questions and question types MUST have init functions. (Others MAY.)
+                    raise
+
+            if package is env.main_package and is_question_like:
+                self._question_type = cast("QuestionTypeInterface", package.interface)
 
     def on_msg_load_qpy_package(self, msg: LoadQPyPackage) -> MessageToServer:
         if not self._env or not self._worker_home:
             self._raise_not_initialized(msg)
 
-        root_nssn, root_package = self._open_packages_recursively(msg, msg.location, ())
+        root_package = self._open_package(msg.location, self._worker_home)
+        root_nssn = root_package.manifest.nssn
+        self._packages[root_nssn] = root_package
+
+        linearized = _linearize_dependencies(msg.dependencies)
+
+        for nssn in reversed(linearized):
+            solution, package_location = msg.dependencies[nssn]
+            if isinstance(solution, StaticDependencySolution):
+                owner = self._packages.get(solution.owner)
+                if not owner:
+                    # Since we open packages in reverse topological order, this shouldn't happen.
+                    # (Unless the tree passed to us by the server contains errors.)
+                    err_msg = f"Cannot open static dependency '{nssn}' before owner '{solution.owner}'."
+                    raise RuntimeError(err_msg)
+
+                package_location = owner.resolve_static_dependency(nssn)
+
+            # MyPy doesn't narrow the type properly.
+            self._packages[nssn] = self._open_package(cast("PackageLocation", package_location), self._worker_home)
 
         if msg.main:
             self._env = dataclasses.replace(self._env, _main_package=root_package)
             set_qpy_environment(self._env)
 
-        linearized = _linearize_packages(self._packages)
-        for nssn in linearized:
-            package = self._packages[nssn]
-            if package.state < PackageState.LOADED:
-                package.load()
-
-            if package.state < PackageState.INITIALIZED:
-                is_question_like = package.manifest.type in {PackageType.QUESTION, PackageType.QUESTIONTYPE}
-                try:
-                    package.init(self._env)
-                except NoInitFunctionError:
-                    if is_question_like:
-                        # Questions and question types MUST have init functions. (Others MAY.)
-                        raise
-
-                if package is root_package and msg.main and is_question_like:
-                    self._question_type = cast("QuestionTypeInterface", package.interface)
+        for nssn in chain(linearized, (root_nssn,)):
+            self._init_package(nssn, self._env)
 
         return LoadQPyPackage.Response(root_nssn=root_nssn, loaded_packages=linearized)
 
@@ -329,19 +329,3 @@ class WorkerNotInitializedError(Exception):
 
 class MainPackageNotLoadedError(Exception):
     pass
-
-
-class DependencyError(Exception):
-    def __init__(self, message: str, stack: tuple[PackageNamespaceAndShortName, ...]) -> None:
-        super().__init__(message)
-        self.stack = stack
-
-
-class CircularDependencyError(DependencyError):
-    def __init__(self, nssn: PackageNamespaceAndShortName, stack: tuple[PackageNamespaceAndShortName, ...]):
-        super().__init__(f"'{nssn}'. Dependency stack: {stack}", stack)
-
-
-class TooDeeplyNestedDependencyError(DependencyError):
-    def __init__(self, stack: tuple[PackageNamespaceAndShortName, ...]) -> None:
-        super().__init__(f"Dependency graph is deeper than '{MAX_QPY_DEPENDENCY_LEVELS}' levels at '{stack}'.", stack)

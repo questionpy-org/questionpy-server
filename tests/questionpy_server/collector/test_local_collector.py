@@ -25,7 +25,7 @@ from tests.conftest import PACKAGE, PACKAGE_2
 def create_local_collector(tmp_path_factory: TempPathFactory, worker_pool: WorkerPool) -> tuple[LocalCollector, Path]:
     """Create and return a local collector along with the directory it is using."""
     path = tmp_path_factory.mktemp("qpy")
-    indexer = Indexer(worker_pool)
+    indexer = Indexer()
     return LocalCollector(path, indexer), path
 
 
@@ -81,7 +81,7 @@ async def test_ignore_files_with_wrong_extension(tmp_path_factory: TempPathFacto
     ignore_file = directory / "wrong.extension"
     ignore_file.touch()
 
-    indexer = Indexer(worker_pool)
+    indexer = Indexer()
     local_collector = LocalCollector(directory, indexer)
 
     async with local_collector:
@@ -97,7 +97,7 @@ async def test_ignore_files_with_wrong_extension(tmp_path_factory: TempPathFacto
 
 async def test_package_exists_before_init(tmp_path_factory: TempPathFactory, worker_pool: WorkerPool) -> None:
     path = tmp_path_factory.mktemp("qpy")
-    indexer = Indexer(worker_pool)
+    indexer = Indexer()
     local_collector = LocalCollector(path, indexer)
 
     package_path = copy(PACKAGE.path, path)
@@ -254,7 +254,7 @@ async def test_package_gets_moved_to_different_folder(
         # Use new_directory as the directory to be watched and directory to be the new directory of the package.
         directory, new_directory = new_directory, directory
 
-    indexer = Indexer(worker_pool)
+    indexer = Indexer()
     local_collector = LocalCollector(directory, indexer)
 
     # Create a package in the directory.

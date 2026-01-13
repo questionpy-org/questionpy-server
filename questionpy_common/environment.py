@@ -7,10 +7,11 @@ from dataclasses import dataclass
 from enum import Enum
 from functools import total_ordering
 from importlib.resources.abc import Traversable
-from typing import NamedTuple, Protocol
+from typing import Protocol
 
 from pydantic import BaseModel, JsonValue
 
+from questionpy_common import PackageNamespaceAndShortName
 from questionpy_common.api.package import QPyPackageInterface
 from questionpy_common.manifest import Bcp47LanguageTag, Manifest
 
@@ -21,7 +22,6 @@ __all__ = [
     "OnRequestCallback",
     "Package",
     "PackageInitFunction",
-    "PackageNamespaceAndShortName",
     "PackageNotInitializedError",
     "PackageNotLoadedError",
     "PackagePermissions",
@@ -77,16 +77,6 @@ class PackageState(Enum):
         if isinstance(other, PackageState):
             return self.value < other.value
         return NotImplemented
-
-
-class PackageNamespaceAndShortName(NamedTuple):
-    """Tuple of namespace and short name, identifying any version of a specific package."""
-
-    namespace: str
-    short_name: str
-
-    def __str__(self) -> str:
-        return f"@{self.namespace}/{self.short_name}"
 
 
 class Package(Protocol):

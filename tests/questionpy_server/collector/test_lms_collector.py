@@ -26,7 +26,7 @@ def create_lms_collector(tmp_path_factory: TempPathFactory, worker_pool: WorkerP
     cache_path.mkdir()
     cache = LRUCache(supervisor_cache, cache_path, extension=".qpy")
 
-    indexer = Indexer(worker_pool)
+    indexer = Indexer()
     return LMSCollector(cache, indexer), cache
 
 
