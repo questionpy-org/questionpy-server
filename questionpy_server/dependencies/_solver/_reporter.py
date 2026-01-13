@@ -85,18 +85,21 @@ class QPyResolvelibReporter(resolvelib.BaseReporter[Requirement, Candidate, Pack
             )
 
 
-class _GraphCycleAndDepth(NamedTuple):
+class _GraphCycleAndLongestPath(NamedTuple):
     first_cycle: tuple[PackageNamespaceAndShortName, ...] | None
     longest_path: tuple[PackageNamespaceAndShortName, ...]
 
 
 def _find_cycle_and_longest_path(
     mapping: Mapping[PackageNamespaceAndShortName, Candidate], root_nssn: PackageNamespaceAndShortName
-) -> _GraphCycleAndDepth:
+) -> _GraphCycleAndLongestPath:
+    """Performs a depth-first search to find the first cycle and the longest path starting from `root_nssn`."""
     seen = set[PackageNamespaceAndShortName]()
     longest_path: tuple[PackageNamespaceAndShortName, ...] = (root_nssn,)
 
-    def recursive(path: tuple[PackageNamespaceAndShortName, ...]) -> tuple[PackageNamespaceAndShortName, ...] | None:
+    def recursive_dfs(
+        path: tuple[PackageNamespaceAndShortName, ...],
+    ) -> tuple[PackageNamespaceAndShortName, ...] | None:
         node = path[-1]
         seen.add(node)
         candidate = mapping[node]
@@ -113,10 +116,10 @@ def _find_cycle_and_longest_path(
                 return new_path
 
             if dep.nssn not in seen:
-                cycle = recursive(new_path)
+                cycle = recursive_dfs(new_path)
                 if cycle is not None:
                     return cycle
 
         return None
 
-    return _GraphCycleAndDepth(recursive((root_nssn,)), longest_path)
+    return _GraphCycleAndLongestPath(recursive_dfs((root_nssn,)), longest_path)
