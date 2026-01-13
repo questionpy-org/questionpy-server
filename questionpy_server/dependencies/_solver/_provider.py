@@ -79,22 +79,22 @@ def _find_static_matches(
     nssn: PackageNamespaceAndShortName,
     static_reqs: Sequence[StaticRequirement],
     dynamic_reqs: Sequence[DynamicRequirement],
-) -> Iterable[StaticDependencySolution]:
-    """When one or more static requirements exists for a package, check that they're the same and return solutions."""
+) -> list[Candidate]:
+    """When one or more static requirements exist for a package, check that they're the same and return solutions."""
     for static_req in static_reqs[1:]:
         # We only compare the hash, since future changes in the manifest format might lead to inconsequential
         # differences between the 'dependencies' fields.
         if static_req.dep.hash != static_reqs[0].dep.hash:
             # There are multiple _different_ static versions of the dependency required.
-            return ()
+            return []
 
     # All the static dependencies are equivalent.
 
     if not _do_dynamic_reqs_allow_candidate(dynamic_reqs, static_reqs[0].dep.version):
         # At least one dynamic dependency does not allow the static version.
-        return ()
+        return []
 
-    return (
+    return [
         StaticDependencySolution(
             nssn=nssn,
             owner=static_req.owner,
@@ -103,12 +103,12 @@ def _find_static_matches(
             dependencies=static_req.dep.dependencies,
         )
         for static_req in static_reqs
-    )
+    ]
 
 
 def _find_dynamic_matches(
     nssn: PackageNamespaceAndShortName, dynamic_reqs: Sequence[DynamicRequirement], resolver: DynamicDependencyResolver
-) -> Iterator[DynamicDependencySolution]:
+) -> list[Candidate]:
     """When only dynamic requirements exist for a package, find all matching available package versions."""
     merged = _merge_dynamic_deps(*(req.dep for req in dynamic_reqs))
 
@@ -124,7 +124,7 @@ def _find_dynamic_matches(
         reverse=True,
     )
 
-    return (
+    return [
         DynamicDependencySolution(
             nssn=nssn,
             hash=apv.hash,
@@ -132,7 +132,7 @@ def _find_dynamic_matches(
             dependencies=apv.manifest.dependencies,
         )
         for apv in matching_package_versions
-    )
+    ]
 
 
 class QPyResolvelibProvider(resolvelib.AbstractProvider[Requirement, Candidate, PackageNamespaceAndShortName]):
@@ -217,10 +217,15 @@ class QPyResolvelibProvider(resolvelib.AbstractProvider[Requirement, Candidate, 
             return (root_req,)
 
         if static_reqs:
-            return _find_static_matches(identifier, static_reqs, dynamic_reqs)
+            matches = _find_static_matches(identifier, static_reqs, dynamic_reqs)
+        else:
+            # Only dynamic dependencies for this NSSN have so far been discovered.
+            matches = _find_dynamic_matches(identifier, dynamic_reqs, self._dynamic_resolver)
 
-        # Only dynamic dependencies for this NSSN have so far been discovered.
-        return _find_dynamic_matches(identifier, dynamic_reqs, self._dynamic_resolver)
+        for incompatible_candidate in incompatible_candidates:
+            matches.remove(incompatible_candidate)
+
+        return matches
 
     def is_satisfied_by(self, requirement: Requirement, candidate: Candidate) -> bool:
         if isinstance(requirement, StaticRequirement):
