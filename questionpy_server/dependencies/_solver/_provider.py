@@ -238,10 +238,7 @@ class QPyResolvelibProvider(resolvelib.AbstractProvider[Requirement, Candidate, 
             return requirement == candidate
 
         # Dynamic requirements can be satisfied by any kind of candidate so long as the versions match.
-        parsed_version = Version.parse(candidate.version) if isinstance(candidate.version, str) else candidate.version
-        return (requirement.dep.include_prereleases or parsed_version.prerelease is None) and (
-            requirement.dep.version is None or requirement.dep.version.allows(parsed_version)
-        )
+        return _do_dynamic_reqs_allow_candidate((requirement,), candidate.version)
 
     def get_dependencies(self, candidate: Candidate) -> Iterable[Requirement]:
         for dep in candidate.dependencies.qpy:
